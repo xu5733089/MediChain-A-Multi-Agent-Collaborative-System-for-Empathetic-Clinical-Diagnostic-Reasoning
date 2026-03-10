@@ -7,8 +7,8 @@ medichain-backend/chroma_db/
 medichain-backend/medichain.db
 
 # Node
-node_modules/
-dist/
+medichain-frontend/node_modules/
+medichain-frontend/dist/
 
 # OS
 .DS_Store
