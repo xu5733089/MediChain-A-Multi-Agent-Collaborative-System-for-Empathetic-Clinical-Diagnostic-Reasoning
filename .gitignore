@@ -1,0 +1,15 @@
+# Python
+medichain-backend/venv/
+medichain-backend/__pycache__/
+medichain-backend/*.pyc
+medichain-backend/.env
+medichain-backend/chroma_db/
+medichain-backend/medichain.db
+
+# Node
+node_modules/
+dist/
+
+# OS
+.DS_Store
+Thumbs.db
