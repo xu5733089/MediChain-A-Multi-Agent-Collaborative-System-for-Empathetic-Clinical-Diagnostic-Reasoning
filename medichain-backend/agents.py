@@ -5,7 +5,7 @@ import os
 import anthropic
 from rag import search, format_references_for_prompt
 
-client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 MODEL = "claude-sonnet-4-20250514"
 
 # ── 智能体 System Prompts ──────────────────────────────────

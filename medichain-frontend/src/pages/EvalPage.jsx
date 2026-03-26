@@ -1,0 +1,154 @@
+import { useEffect, useState } from "react";
+import { AmbientBlobs, ECGLine, IllustFlower, ParticleField } from "../components/illustrations";
+
+export default function EvalPage({ api }) {
+  const [questions, setQuestions] = useState([]);
+  const [history, setHistory] = useState({ records: [], stats: { total: 0, single_accuracy: 0, multi_accuracy: 0, improvement: 0 } });
+  const [running, setRunning] = useState(null);
+  const [results, setResults] = useState({});
+  const [selQ, setSelQ] = useState(null);
+
+  useEffect(() => { loadData(); }, []);
+
+  async function loadData() {
+    try {
+      const [qs, hist] = await Promise.all([api.questions(), api.evalHist()]);
+      setQuestions(qs.questions || []);
+      setHistory(hist);
+      const rm = {};
+      for (const r of hist.records || []) {
+        if (!rm[r.question_id]) {
+          rm[r.question_id] = {
+            single: { answer: r.single_answer, reasoning: r.single_reasoning },
+            multi: { answer: r.multi_answer, reasoning: r.multi_reasoning },
+            single_correct: !!r.single_correct,
+            multi_correct: !!r.multi_correct,
+          };
+        }
+      }
+      setResults(rm);
+    } catch {}
+  }
+
+  async function runQ(qid) {
+    setRunning(qid);
+    try {
+      const d = await api.evalRun({ question_id: qid, mode: "both" });
+      setResults(p => ({ ...p, [qid]: d }));
+      await loadData();
+    } catch (e) {
+      alert(e.message);
+    }
+    setRunning(null);
+  }
+
+  async function runAll() {
+    for (const q of questions) {
+      await runQ(q.id);
+      await new Promise(r => setTimeout(r, 500));
+    }
+  }
+
+  const st = history.stats;
+  const catClass = { "Cardiology": "rose", "Neurology": "navy", "Endocrinology": "amber", "Pulmonology": "sage" };
+
+  return (
+    <div style={{ minHeight: "100vh", background: "var(--paper)", paddingTop: 72, paddingBottom: 56, position: "relative", zIndex: 1, overflow: "hidden" }}>
+      <AmbientBlobs />
+      <IllustFlower size={150} style={{ position: "fixed", top: "4%", left: "0%", animation: "float3 9s ease-in-out infinite", pointerEvents: "none" }} color="var(--navy)" opacity={0.1} />
+      <ParticleField count={10} style={{ position: "fixed", inset: 0, opacity: 0.5 }} />
+      <div style={{ maxWidth: 1060, margin: "0 auto", padding: "28px 28px 0", position: "relative", zIndex: 1 }}>
+        <div className="fade-up" style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 28, flexWrap: "wrap", gap: 18 }}>
+          <div>
+            <div className="eyebrow">PROJ-14 · USMLE Accuracy Benchmark</div>
+            <h2 style={{ fontFamily: "var(--serif)", fontSize: 56, fontWeight: 400, color: "var(--ink)", letterSpacing: -1.2, lineHeight: 0.9 }}>
+              MedQA<br /><span className="grad-heading">Evaluation</span>
+            </h2>
+            <p style={{ fontFamily: "var(--body)", fontSize: 16, color: "var(--ink3)", marginTop: 10 }}>Multi-agent vs single-LLM on clinical reasoning tasks</p>
+          </div>
+          <button onClick={runAll} disabled={!!running} className="btn-rose" style={{ padding: "12px 28px", fontSize: 15 }}>
+            {running ? "Running…" : "▶ Run all questions"}
+          </button>
+        </div>
+        <div className="gold-rule" />
+        <ECGLine style={{ opacity: 0.32, marginBottom: 22 }} />
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 18 }}>
+          {[
+            { l: "Total Runs", v: st.total, c: "var(--ink2)", bar: "var(--ink4)", pct: null },
+            { l: "Single LLM", v: st.single_accuracy, c: "var(--navy)", bar: "var(--navyB)", pct: st.total > 0 ? st.single_accuracy : null },
+            { l: "Multi-Agent", v: st.multi_accuracy, c: "var(--rose)", bar: "var(--roseB)", pct: st.total > 0 ? st.multi_accuracy : null },
+            { l: "Improvement", v: (st.improvement >= 0 ? "+" : "") + st.improvement, c: st.improvement >= 0 ? "var(--sage)" : "var(--rose)", bar: st.improvement >= 0 ? "var(--sageB)" : "var(--roseB)", pct: null },
+          ].map(({ l, v, c, bar, pct }, i) => (
+            <div key={l} className="stat-card fade-up" style={{ animationDelay: `${i * 0.08}s` }}>
+              <div className="accent-bar" style={{ background: `linear-gradient(90deg,${bar},transparent)` }} />
+              <p className="ink-label" style={{ marginBottom: 6, marginTop: 2 }}>{l}</p>
+              <p style={{ fontFamily: "var(--serif)", fontSize: 44, fontWeight: 400, color: c, lineHeight: 1, marginBottom: pct !== null ? 10 : 0 }}>{v}{pct !== null ? "%" : ""}</p>
+              {pct !== null && (
+                <div className="prog-track"><div className="prog-fill" style={{ width: `${pct}%`, background: `linear-gradient(90deg,${c},${bar})` }} /></div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {questions.map((q, qi) => {
+            const r = results[q.id];
+            const isR = running === q.id;
+            return (
+              <div key={q.id} className="card fade-up" style={{ animationDelay: `${qi * 0.05}s`, overflow: "hidden", borderColor: selQ === q.id ? "var(--rose)" : undefined }}>
+                <div className="shine" />
+                <div onClick={() => setSelQ(selQ === q.id ? null : q.id)} style={{ padding: "16px 24px", cursor: "pointer", display: "flex", alignItems: "flex-start", gap: 14 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap", alignItems: "center" }}>
+                      <span className={`tag ${catClass[q.category] || ""}`} style={{ fontSize: 9 }}>{q.category}</span>
+                      {r && <>
+                        <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: r.single_correct ? "var(--sage)" : "var(--rose)" }}>Single: {r.single?.answer} {r.single_correct ? "✓" : "✗"}</span>
+                        <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: r.multi_correct ? "var(--sage)" : "var(--rose)" }}>Multi: {r.multi?.answer} {r.multi_correct ? "✓" : "✗"}</span>
+                      </>}
+                    </div>
+                    <p style={{ fontFamily: "var(--body)", fontSize: 15, color: "var(--ink)", lineHeight: 1.66 }}>{q.question}</p>
+                  </div>
+                  <button onClick={e => { e.stopPropagation(); runQ(q.id); }} disabled={isR || !!running}
+                    className={r ? "btn-outline" : "btn-rose"}
+                    style={{ padding: "8px 18px", fontSize: 13, flexShrink: 0, whiteSpace: "nowrap" }}>
+                    {isR ? "Running…" : r ? "↻ Re-run" : "▶ Run"}
+                  </button>
+                </div>
+                {selQ === q.id && (
+                  <div className="scale-in" style={{ padding: "0 24px 20px", borderTop: "1px dashed rgba(22,15,6,0.09)" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 14, marginBottom: r ? 14 : 0 }}>
+                      {Object.entries(q.options).map(([k, v]) => (
+                        <div key={k} style={{ display: "flex", gap: 8, padding: "11px 15px", borderRadius: 4, background: k === q.correct ? "var(--sagePale)" : "var(--paper3)", border: `1.5px solid ${k === q.correct ? "rgba(46,104,56,0.4)" : "rgba(22,15,6,0.09)"}`, alignItems: "flex-start", transition: "all 0.15s" }}>
+                          <span style={{ fontFamily: "var(--mono)", fontSize: 10, fontWeight: 600, color: k === q.correct ? "var(--sage)" : "var(--ink5)", flexShrink: 0 }}>{k}.</span>
+                          <span style={{ fontFamily: "var(--body)", fontSize: 13.5, color: k === q.correct ? "var(--ink)" : "var(--ink3)", flex: 1, lineHeight: 1.56 }}>{v}</span>
+                          <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
+                            {r?.single?.answer === k && <span style={{ fontSize: 8, background: "var(--navyPale)", color: "var(--navy)", padding: "1px 5px", borderRadius: 3, fontFamily: "var(--mono)" }}>S</span>}
+                            {r?.multi?.answer === k && <span style={{ fontSize: 8, background: "var(--rosePale)", color: "var(--rose)", padding: "1px 5px", borderRadius: 3, fontFamily: "var(--mono)" }}>M</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {r && (
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                        {[{ l: "Single LLM", c: "var(--navy)", bg: "var(--navyPale)", d: r.single, ok: r.single_correct }, { l: "Multi-agent", c: "var(--rose)", bg: "var(--rosePale)", d: r.multi, ok: r.multi_correct }].map(({ l, c, bg, d, ok }) => (
+                          <div key={l} style={{ background: bg, border: `1.5px solid ${c}30`, borderRadius: 4, padding: "14px 16px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                              <span style={{ fontFamily: "var(--body)", fontSize: 13, fontStyle: "italic", color: c }}>{l}</span>
+                              <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: ok ? "var(--sage)" : "var(--rose)", fontWeight: 600 }}>{d?.answer} {ok ? "✓" : "✗"}</span>
+                            </div>
+                            <p style={{ fontFamily: "var(--body)", fontSize: 12.5, color: "var(--ink3)", lineHeight: 1.78 }}>{d?.reasoning?.slice(0, 165)}{d?.reasoning?.length > 165 ? "…" : ""}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
