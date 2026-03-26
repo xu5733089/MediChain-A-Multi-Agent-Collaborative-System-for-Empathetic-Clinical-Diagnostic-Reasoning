@@ -195,20 +195,6 @@ body {
   border-radius: 6px 6px 0 0;
 }
 
-/* ─── Field ─── */
-.field {
-  width: 100%; background: var(--paper);
-  border: 1.5px solid rgba(22,15,6,0.16);
-  border-radius: 4px; padding: 11px 16px;
-  font-family: var(--body); font-size: 15px; color: var(--ink);
-  outline: none; transition: border-color 0.2s, box-shadow 0.2s;
-}
-.field:focus { border-color: var(--rose); box-shadow: 0 0 0 3px var(--roseDim); }
-.field::placeholder { color: var(--ink5); font-style: italic; }
-.field.err { border-color: var(--roseB); box-shadow: 0 0 0 3px var(--roseDim); }
-[data-theme="dark"] .field { border-color: rgba(248,240,224,0.13); }
-textarea.field { resize: vertical; min-height: 80px; }
-
 /* ─── Label ─── */
 .ink-label {
   display: block; font-family: var(--mono); font-size: 10px;

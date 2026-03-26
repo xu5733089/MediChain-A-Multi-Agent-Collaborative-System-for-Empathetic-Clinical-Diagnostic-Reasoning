@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AmbientBlobs, ECGLine, IllustFlower, IllustLeaf, ParticleField } from "../components/illustrations";
 import { AgentBadge, SevBadge, TypingDots } from "../components/ui";
 import { Badge } from "../components/ui/badge";
@@ -19,13 +19,11 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
 
   useEffect(() => { msgEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
   useEffect(() => { logEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [logs]);
-  useEffect(() => { init(); }, []);
-
-  function addLog(ag, text, time = new Date()) {
+  const addLog = useCallback((ag, text, time = new Date()) => {
     setLogs(p => [...p, { id: Math.random().toString(36).slice(2), agent: ag, text, time }]);
-  }
+  }, []);
 
-  async function init() {
+  const init = useCallback(async () => {
     setLoading(true);
     try {
       const d = await api.start(symptoms);
@@ -36,7 +34,9 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
       addLog("interviewer", `Connection error: ${e.message}`);
     }
     setLoading(false);
-  }
+  }, [api, symptoms, addLog]);
+
+  useEffect(() => { init(); }, [init]);
 
   async function send() {
     if (!input.trim() || loading || phase !== "interviewing" || !sid) return;

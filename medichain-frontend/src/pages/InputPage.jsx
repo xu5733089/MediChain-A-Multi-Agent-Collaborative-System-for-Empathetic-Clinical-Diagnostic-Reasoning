@@ -3,10 +3,11 @@ import { AmbientBlobs, ECGLine, IllustBranch, IllustFlower, IllustLeaf, IllustWr
 import { Banner, SevBadge } from "../components/ui";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Textarea } from "../components/ui/textarea";
 import { SEV } from "../core/constants";
 
-export default function InputPage({ api, onSubmit, onEval, selectedPatient, onClearPatient }) {
+export default function InputPage({ onSubmit, onEval, selectedPatient, onClearPatient }) {
   const [form, setForm] = useState({ description: "", bodyPart: "General", duration: "1–3 days", severity: 5, notes: selectedPatient?.conditions || "" });
   useEffect(() => { if (selectedPatient) setForm(f => ({ ...f, notes: selectedPatient.conditions || "" })); }, [selectedPatient]);
   const bodyParts = ["General", "Head / Face", "Neck", "Chest", "Abdomen", "Back", "Arm / Shoulder", "Leg / Hip", "Skin", "Multiple Areas"];
@@ -99,9 +100,14 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
                 {[{ label: "Body location", key: "bodyPart", opts: bodyParts }, { label: "Duration", key: "duration", opts: durations }].map(({ label, key, opts }) => (
                   <div key={key}>
                     <label className="ink-label">{label}</label>
-                    <select value={form[key]} onChange={e => setForm({ ...form, [key]: e.target.value })} className="field" style={{ background: "var(--paper)" }}>
-                      {opts.map(o => <option key={o}>{o}</option>)}
-                    </select>
+                    <Select value={form[key]} onValueChange={v => setForm({ ...form, [key]: v })}>
+                      <SelectTrigger style={{ fontFamily: "var(--body)" }}>
+                        <SelectValue placeholder={label} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {opts.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
                 ))}
               </div>

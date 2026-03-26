@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AmbientBlobs, ECGLine, IllustFlower, ParticleField } from "../components/illustrations";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
@@ -10,9 +10,7 @@ export default function EvalPage({ api }) {
   const [results, setResults] = useState({});
   const [selQ, setSelQ] = useState(null);
 
-  useEffect(() => { loadData(); }, []);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     try {
       const [qs, hist] = await Promise.all([api.questions(), api.evalHist()]);
       setQuestions(qs.questions || []);
@@ -30,7 +28,9 @@ export default function EvalPage({ api }) {
       }
       setResults(rm);
     } catch {}
-  }
+  }, [api]);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   async function runQ(qid) {
     setRunning(qid);

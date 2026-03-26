@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AmbientBlobs, ECGLine, IllustFlower, IllustLeaf } from "../components/illustrations";
 import { Button } from "../components/ui/button";
 import { fmtD } from "../core/utils";
@@ -9,15 +9,15 @@ export default function HistoryPage({ api, onNew }) {
   const [sel, setSel] = useState(null);
   const [detail, setDetail] = useState(null);
 
-  useEffect(() => { load(); }, []);
-
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       setSessions(await api.sessions());
     } catch {}
     setLoading(false);
-  }
+  }, [api]);
+
+  useEffect(() => { load(); }, [load]);
 
   async function loadDetail(id) {
     if (sel === id) {

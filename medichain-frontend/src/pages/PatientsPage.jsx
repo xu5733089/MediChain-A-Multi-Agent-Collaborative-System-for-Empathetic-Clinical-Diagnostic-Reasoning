@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AmbientBlobs, IllustBranch, IllustFlower } from "../components/illustrations";
 import { FormField, InkDivider } from "../components/ui";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { fmtD } from "../core/utils";
 
 export default function PatientsPage({ api, onStartConsult }) {
@@ -18,15 +19,15 @@ export default function PatientsPage({ api, onStartConsult }) {
   const [pSess, setPSess] = useState([]);
   const ff = k => v => setForm(p => ({ ...p, [k]: v }));
 
-  useEffect(() => { load(); }, []);
-
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       setPatients(await api.patients());
     } catch {}
     setLoading(false);
-  }
+  }, [api]);
+
+  useEffect(() => { load(); }, [load]);
 
   async function save() {
     setSaving(true);
@@ -120,10 +121,14 @@ export default function PatientsPage({ api, onStartConsult }) {
                 </div>
                 <div style={{ marginBottom: 16 }}>
                   <label className="ink-label">Gender</label>
-                  <select value={form.gender} onChange={e => ff("gender")(e.target.value)} className="field" style={{ background: "var(--paper)" }}>
-                    <option value="">—</option>
-                    {["Male", "Female", "Other"].map(g => <option key={g}>{g}</option>)}
-                  </select>
+                  <Select value={form.gender} onValueChange={v => ff("gender")(v)}>
+                    <SelectTrigger style={{ fontFamily: "var(--body)" }}>
+                      <SelectValue placeholder="—" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {["Male", "Female", "Other"].map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <FormField label="Blood Type" value={form.blood_type} onChange={ff("blood_type")} placeholder="A+, B-, O+, AB+…" />
