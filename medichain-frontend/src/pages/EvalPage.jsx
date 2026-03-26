@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { AmbientBlobs, ECGLine, IllustFlower, ParticleField } from "../components/illustrations";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
 
 export default function EvalPage({ api }) {
   const [questions, setQuestions] = useState([]);
@@ -66,9 +68,9 @@ export default function EvalPage({ api }) {
             </h2>
             <p style={{ fontFamily: "var(--body)", fontSize: 16, color: "var(--ink3)", marginTop: 10 }}>Multi-agent vs single-LLM on clinical reasoning tasks</p>
           </div>
-          <button onClick={runAll} disabled={!!running} className="btn-rose" style={{ padding: "12px 28px", fontSize: 15 }}>
+          <Button onClick={runAll} disabled={!!running} className="h-11 px-7 text-[15px]">
             {running ? "Running…" : "▶ Run all questions"}
-          </button>
+          </Button>
         </div>
         <div className="gold-rule" />
         <ECGLine style={{ opacity: 0.32, marginBottom: 22 }} />
@@ -101,7 +103,7 @@ export default function EvalPage({ api }) {
                 <div onClick={() => setSelQ(selQ === q.id ? null : q.id)} style={{ padding: "16px 24px", cursor: "pointer", display: "flex", alignItems: "flex-start", gap: 14 }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap", alignItems: "center" }}>
-                      <span className={`tag ${catClass[q.category] || ""}`} style={{ fontSize: 9 }}>{q.category}</span>
+                      <Badge variant={catClass[q.category] || "default"} className="text-[9px]">{q.category}</Badge>
                       {r && <>
                         <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: r.single_correct ? "var(--sage)" : "var(--rose)" }}>Single: {r.single?.answer} {r.single_correct ? "✓" : "✗"}</span>
                         <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: r.multi_correct ? "var(--sage)" : "var(--rose)" }}>Multi: {r.multi?.answer} {r.multi_correct ? "✓" : "✗"}</span>
@@ -109,11 +111,11 @@ export default function EvalPage({ api }) {
                     </div>
                     <p style={{ fontFamily: "var(--body)", fontSize: 15, color: "var(--ink)", lineHeight: 1.66 }}>{q.question}</p>
                   </div>
-                  <button onClick={e => { e.stopPropagation(); runQ(q.id); }} disabled={isR || !!running}
-                    className={r ? "btn-outline" : "btn-rose"}
-                    style={{ padding: "8px 18px", fontSize: 13, flexShrink: 0, whiteSpace: "nowrap" }}>
+                  <Button onClick={e => { e.stopPropagation(); runQ(q.id); }} disabled={isR || !!running}
+                    variant={r ? "outline" : "default"}
+                    className="h-9 shrink-0 whitespace-nowrap px-[18px] text-[13px]">
                     {isR ? "Running…" : r ? "↻ Re-run" : "▶ Run"}
-                  </button>
+                  </Button>
                 </div>
                 {selQ === q.id && (
                   <div className="scale-in" style={{ padding: "0 24px 20px", borderTop: "1px dashed rgba(22,15,6,0.09)" }}>

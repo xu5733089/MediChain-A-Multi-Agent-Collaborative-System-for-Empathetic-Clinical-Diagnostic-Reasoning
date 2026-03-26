@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { AmbientBlobs, ECGLine, IllustFlower, IllustLeaf, ParticleField } from "../components/illustrations";
 import { AgentBadge, SevBadge, TypingDots } from "../components/ui";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
 import { fmtT } from "../core/utils";
 
 export default function ChatPage({ api, symptoms, onComplete, onBack }) {
@@ -75,19 +78,19 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
     <div style={{ height: "100vh", background: "var(--paper)", display: "flex", flexDirection: "column", overflow: "hidden", paddingTop: 56, position: "relative", zIndex: 1 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", height: 42, borderBottom: "1px solid rgba(22,15,6,0.09)", background: "var(--paper2)", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <button onClick={onBack} className="btn-outline" style={{ padding: "4px 13px", fontSize: 13 }}>← Back</button>
+          <Button onClick={onBack} variant="outline" className="h-7 px-[13px] text-[13px]">← Back</Button>
           {sid && <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)", letterSpacing: "0.12em" }}>Session {sid.slice(0, 8).toUpperCase()}</span>}
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <span style={{ fontFamily: "var(--body)", fontSize: 13, fontStyle: "italic", color: phaseConf.c, background: phaseConf.bg, padding: "3px 12px", borderRadius: 20, border: `1px solid ${phaseConf.c}40` }}>{phaseConf.label}</span>
-          <button onClick={() => setPanel(v => !v)} className="btn-outline" style={{ padding: "4px 13px", fontSize: 13 }}>{panel ? "Hide" : "Show"} reasoning</button>
+          <Badge className="rounded-[20px] px-3 py-[3px] text-[13px] italic" style={{ fontFamily: "var(--body)", color: phaseConf.c, background: phaseConf.bg, borderColor: `${phaseConf.c}40` }}>{phaseConf.label}</Badge>
+          <Button onClick={() => setPanel(v => !v)} variant="outline" className="h-7 px-[13px] text-[13px]">{panel ? "Hide" : "Show"} reasoning</Button>
         </div>
       </div>
 
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
         <div style={{ flex: panel ? "0 0 54%" : 1, display: "flex", flexDirection: "column", borderRight: panel ? "1px solid rgba(22,15,6,0.09)" : "none" }}>
           <div style={{ padding: "9px 18px", borderBottom: "1px solid rgba(22,15,6,0.07)", background: "var(--sagePale)", flexShrink: 0, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            <span className="tag sage" style={{ fontSize: 9 }}>Active case</span>
+            <Badge variant="sage" className="text-[9px]">Active case</Badge>
             <span style={{ fontFamily: "var(--body)", fontSize: 14, fontStyle: "italic", color: "var(--ink2)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{symptoms.description}</span>
             <SevBadge n={symptoms.severity} />
           </div>
@@ -130,8 +133,8 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
 
           {phase === "interviewing" && (
             <div style={{ padding: "12px 18px", borderTop: "1px solid rgba(22,15,6,0.09)", display: "flex", gap: 10, background: "var(--paper2)", flexShrink: 0 }}>
-              <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()} placeholder="Type your response…" disabled={loading} className="field" style={{ flex: 1, fontSize: 15 }} />
-              <button onClick={send} disabled={!input.trim() || loading} className="btn-rose" style={{ padding: "0 22px", fontSize: 14, flexShrink: 0 }}>Send →</button>
+              <Input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()} placeholder="Type your response…" disabled={loading} style={{ flex: 1, fontSize: 15, fontFamily: "var(--body)" }} />
+              <Button onClick={send} disabled={!input.trim() || loading} className="h-10 px-[22px] text-sm shrink-0">Send →</Button>
             </div>
           )}
         </div>

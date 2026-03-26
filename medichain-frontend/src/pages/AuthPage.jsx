@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AmbientBlobs, Caduceus, ECGLine, IllustFlower, IllustLeaf, ParticleField } from "../components/illustrations";
 import { Banner, FormField, InkDivider } from "../components/ui";
+import { Button } from "../components/ui/button";
 
 export default function AuthPage({ api, onLogin, onSkip }) {
   const [mode, setMode] = useState("login");
@@ -79,9 +80,9 @@ export default function AuthPage({ api, onLogin, onSkip }) {
           <FormField label="Password" type="password" value={form.password} onChange={f("password")} placeholder="••••••••" error={errors.password} />
           {mode === "register" && <FormField label="Confirm Password" type="password" value={form.confirm} onChange={f("confirm")} placeholder="••••••••" error={errors.confirm} />}
 
-          <button onClick={submit} disabled={loading || !!ok} className="btn-rose" style={{ width: "100%", padding: "14px", fontSize: 16, marginTop: 4 }}>
+          <Button onClick={submit} disabled={loading || !!ok} className="mt-1 h-12 w-full text-base">
             {loading ? "Please wait…" : mode === "login" ? "Sign in →" : "Create account →"}
-          </button>
+          </Button>
 
           <InkDivider style={{ margin: "20px 0 16px" }} />
           <p style={{ textAlign: "center", fontFamily: "var(--body)", fontSize: 14, color: "var(--ink3)" }}>
@@ -96,7 +97,7 @@ export default function AuthPage({ api, onLogin, onSkip }) {
         </div>
 
         <div className="fade-up s3" style={{ textAlign: "center", marginTop: 20 }}>
-          <button onClick={onSkip} className="btn-outline" style={{ padding: "9px 28px", fontSize: 14 }}>Continue as guest →</button>
+          <Button onClick={onSkip} variant="outline" className="h-10 px-7 text-sm">Continue as guest →</Button>
         </div>
       </div>
     </div>

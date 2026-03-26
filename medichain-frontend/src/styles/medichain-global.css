@@ -195,49 +195,6 @@ body {
   border-radius: 6px 6px 0 0;
 }
 
-/* ─── Buttons ─── */
-.btn-rose {
-  font-family: var(--body); font-size: 15px; font-weight: 600;
-  padding: 11px 26px; cursor: pointer; letter-spacing: 0.02em;
-  border-radius: 4px; position: relative; overflow: hidden;
-  border: 2px solid var(--rose);
-  background: linear-gradient(135deg, var(--rose), var(--roseB));
-  color: #fff;
-  box-shadow: 0 4px 16px rgba(184,56,48,0.3);
-  transition: all 0.22s cubic-bezier(0.22,1,0.36,1);
-}
-.btn-rose::before {
-  content:''; position:absolute; inset:0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
-  opacity:0; transition: opacity 0.2s;
-}
-.btn-rose:hover { transform:translateY(-2px); box-shadow: 0 8px 28px rgba(184,56,48,0.42); }
-.btn-rose:hover::before { opacity:1; }
-.btn-rose:active { transform:translateY(0); }
-.btn-rose:disabled { opacity:0.38; cursor:not-allowed; transform:none; box-shadow:none; }
-
-.btn-ink {
-  font-family: var(--body); font-size: 15px; font-weight: 600;
-  padding: 11px 26px; cursor: pointer; letter-spacing: 0.02em;
-  border-radius: 4px; position: relative; overflow: hidden;
-  border: 2px solid var(--ink2);
-  background: var(--ink); color: var(--paper);
-  transition: all 0.22s cubic-bezier(0.22,1,0.36,1);
-  box-shadow: var(--shadow-sm);
-}
-.btn-ink:hover { transform:translateY(-2px); box-shadow: var(--shadow); }
-.btn-ink:disabled { opacity:0.35; cursor:not-allowed; transform:none; }
-
-.btn-outline {
-  font-family: var(--body); font-size: 14px; font-weight: 400;
-  padding: 9px 22px; cursor: pointer;
-  border-radius: 4px; border: 1.5px solid rgba(22,15,6,0.2);
-  background: transparent; color: var(--ink2);
-  transition: all 0.2s;
-}
-.btn-outline:hover { border-color: var(--rose); color: var(--rose); background: var(--roseDim); transform:translateY(-1px); }
-[data-theme="dark"] .btn-outline { border-color: rgba(248,240,224,0.18); color: var(--ink2); }
-
 /* ─── Field ─── */
 .field {
   width: 100%; background: var(--paper);
@@ -258,21 +215,6 @@ textarea.field { resize: vertical; min-height: 80px; }
   letter-spacing: 0.17em; text-transform: uppercase;
   color: var(--ink4); margin-bottom: 7px;
 }
-
-/* ─── Tag ─── */
-.tag {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em;
-  padding: 3px 12px; border-radius: 20px;
-  border: 1px solid rgba(22,15,6,0.16); color: var(--ink3); background: var(--paper3);
-  transition: all 0.15s;
-}
-.tag.rose  { border-color:var(--rose)60;  color:var(--rose);  background:var(--roseDim);  }
-.tag.sage  { border-color:var(--sage)60;  color:var(--sage);  background:var(--sageDim);  }
-.tag.amber { border-color:var(--amber)60; color:var(--amber); background:var(--amberDim); }
-.tag.navy  { border-color:var(--navy)60;  color:var(--navy);  background:var(--navyDim);  }
-.tag.gold  { border-color:var(--gold)60;  color:var(--gold);  background:rgba(192,128,0,0.1); }
-.tag.plum  { border-color:var(--plum)60;  color:var(--plum);  background:var(--plumDim);  }
 
 /* ─── Eyebrow ─── */
 .eyebrow {

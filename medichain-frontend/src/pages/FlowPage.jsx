@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { AmbientBlobs, ECGLine, IllustFlower, IllustWreath } from "../components/illustrations";
+import { Button } from "../components/ui/button";
 
 export default function FlowPage({ result, onBack }) {
   const [active, setActive] = useState(null);
@@ -23,7 +24,7 @@ export default function FlowPage({ result, onBack }) {
       <IllustWreath size={220} style={{ position: "fixed", top: "8%", right: "0%", pointerEvents: "none", animation: "drift 16s infinite" }} opacity={0.11} />
       <div style={{ maxWidth: 990, margin: "0 auto", padding: "28px 28px 0", position: "relative", zIndex: 1 }}>
         <div style={{ marginBottom: 28 }}>
-          <button onClick={onBack} className="btn-outline" style={{ fontSize: 13, padding: "6px 16px", marginBottom: 16 }}>← Back to results</button>
+          <Button onClick={onBack} variant="outline" className="mb-4 h-8 px-4 text-[13px]">← Back to results</Button>
           <div className="eyebrow">PROJ-13 · Reasoning Pipeline</div>
           <h2 style={{ fontFamily: "var(--serif)", fontSize: 52, fontWeight: 400, fontStyle: "italic", color: "var(--ink)", letterSpacing: -0.8 }}>Reasoning Flow</h2>
         </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { AmbientBlobs, ECGLine, IllustFlower, IllustLeaf } from "../components/illustrations";
+import { Button } from "../components/ui/button";
 import { fmtD } from "../core/utils";
 
 export default function HistoryPage({ api, onNew }) {
@@ -46,8 +47,8 @@ export default function HistoryPage({ api, onNew }) {
             </p>
           </div>
           <div style={{ display: "flex", gap: 10 }}>
-            <button onClick={load} className="btn-outline" style={{ padding: "9px 20px", fontSize: 14 }}>↻ Refresh</button>
-            <button onClick={onNew} className="btn-rose" style={{ padding: "9px 24px", fontSize: 14 }}>+ New consult</button>
+            <Button onClick={load} variant="outline" className="h-9 px-5 text-sm">↻ Refresh</Button>
+            <Button onClick={onNew} className="h-9 px-6 text-sm">+ New consult</Button>
           </div>
         </div>
         <div className="gold-rule" />
@@ -84,8 +85,8 @@ export default function HistoryPage({ api, onNew }) {
                       <div className="scale-in" style={{ background: "var(--paper3)", border: "1.5px solid var(--rose)40", borderTop: "none", borderRadius: "0 0 6px 6px", padding: "18px 24px" }}>
                         {detail.status === "done" && (
                           <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-                            <button onClick={() => window.open(api.exportUrl(s.id, "pdf"), "_blank")} className="btn-rose" style={{ padding: "6px 16px", fontSize: 13 }}>📄 PDF</button>
-                            <button onClick={() => window.open(api.exportUrl(s.id, "json"), "_blank")} className="btn-outline" style={{ padding: "6px 12px", fontSize: 13 }}>JSON</button>
+                            <Button onClick={() => window.open(api.exportUrl(s.id, "pdf"), "_blank")} className="h-8 px-4 text-[13px]">📄 PDF</Button>
+                            <Button onClick={() => window.open(api.exportUrl(s.id, "json"), "_blank")} variant="outline" className="h-8 px-3 text-[13px]">JSON</Button>
                           </div>
                         )}
                         <p style={{ fontFamily: "var(--body)", fontSize: 14, color: "var(--ink3)", lineHeight: 1.84 }}>

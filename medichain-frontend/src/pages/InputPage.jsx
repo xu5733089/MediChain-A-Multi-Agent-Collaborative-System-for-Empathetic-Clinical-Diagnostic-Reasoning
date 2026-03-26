@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { AmbientBlobs, ECGLine, IllustBranch, IllustFlower, IllustLeaf, IllustWreath, ParticleField } from "../components/illustrations";
 import { Banner, SevBadge } from "../components/ui";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
+import { Textarea } from "../components/ui/textarea";
 import { SEV } from "../core/constants";
 
 export default function InputPage({ api, onSubmit, onEval, selectedPatient, onClearPatient }) {
@@ -37,7 +40,7 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
                   <div className="live-dot" />
                   <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--sage)", letterSpacing: "0.14em" }}>3 AGENTS ONLINE</span>
                 </div>
-                <button onClick={onEval} className="btn-outline" style={{ fontSize: 13, padding: "7px 18px" }}>📊 MedQA Eval →</button>
+                <Button onClick={onEval} variant="outline" className="h-8 px-[18px] text-[13px]">📊 MedQA Eval →</Button>
               </div>
             </div>
             <div className="fade-up s2" style={{ flexShrink: 0, animation: "drift 16s ease-in-out infinite" }}>
@@ -57,7 +60,7 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
                 <p style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--sage)", letterSpacing: "0.12em" }}>Profile linked</p>
               </div>
             </div>
-            <button onClick={onClearPatient} className="btn-outline" style={{ padding: "5px 14px", fontSize: 13 }}>Unlink</button>
+            <Button onClick={onClearPatient} variant="outline" className="h-8 px-3.5 text-[13px]">Unlink</Button>
           </div>
         )}
 
@@ -70,19 +73,19 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
                 <p style={{ fontFamily: "var(--serif)", fontSize: 20, fontWeight: 600, color: "var(--ink)" }}>Primary complaint</p>
               </div>
               <label className="ink-label">Describe your symptoms in detail</label>
-              <textarea
+              <Textarea
                 value={form.description}
                 onChange={e => setForm({ ...form, description: e.target.value })}
                 placeholder="Describe your main symptom — when it started, where it is, what it feels like, what makes it better or worse…"
                 rows={6}
-                className="field"
-                style={{ borderColor: valid ? "var(--sage)" : undefined, boxShadow: valid ? "0 0 0 3px var(--sageDim)" : undefined }}
+                className="text-[15px]"
+                style={{ borderColor: valid ? "var(--sage)" : undefined, boxShadow: valid ? "0 0 0 3px var(--sageDim)" : undefined, fontFamily: "var(--body)" }}
               />
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: 9, alignItems: "center" }}>
                 <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: valid ? "var(--sage)" : "var(--ink5)", transition: "color 0.3s" }}>
                   {valid ? "✓  Sufficient detail" : `${form.description.length} / 15 min characters`}
                 </span>
-                {valid && <span className="tag sage scale-in">Ready ✓</span>}
+                {valid && <Badge variant="sage" className="scale-in">Ready ✓</Badge>}
               </div>
             </div>
 
@@ -128,7 +131,7 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
               <p style={{ fontFamily: "var(--serif)", fontSize: 18, fontWeight: 600, color: "var(--ink)", marginBottom: 12 }}>
                 Medical history <em style={{ fontStyle: "italic", fontWeight: 300, fontSize: 13, color: "var(--ink4)" }}>(optional)</em>
               </p>
-              <textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Known conditions, allergies, current medications…" rows={3} className="field" style={{ resize: "none" }} />
+              <Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Known conditions, allergies, current medications…" rows={3} className="text-[15px]" style={{ resize: "none", fontFamily: "var(--body)" }} />
             </div>
 
             <Banner type="warn" style={{ animation: "none" }}>
@@ -136,14 +139,13 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
               <span style={{ color: "var(--ink3)" }}> This system does not replace professional medical consultation.</span>
             </Banner>
 
-            <button
+            <Button
               onClick={() => valid && onSubmit({ ...form, patient_id: selectedPatient?.id || null })}
               disabled={!valid}
-              className="btn-rose fade-up s4"
-              style={{ width: "100%", padding: "15px", fontSize: 16 }}
+              className="fade-up s4 h-[54px] w-full text-base"
             >
               Begin consultation →
-            </button>
+            </Button>
           </div>
         </div>
       </div>

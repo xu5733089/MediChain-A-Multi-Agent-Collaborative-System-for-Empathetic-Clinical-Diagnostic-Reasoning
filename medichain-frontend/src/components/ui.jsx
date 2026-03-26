@@ -1,11 +1,18 @@
 import { AGENTS, SEV } from "../core/constants";
+import { Alert } from "./ui/alert";
+import { Badge } from "./ui/badge";
+import { Input } from "./ui/input";
+import { Textarea } from "./ui/textarea";
 
 export function AgentBadge({ k, sm }) {
   const a = AGENTS[k];
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: a.bg, color: a.c, border: `1px solid ${a.b}50`, borderRadius: 20, padding: sm ? "3px 10px" : "4px 14px", fontSize: sm ? 10 : 11, fontFamily: "var(--mono)", fontWeight: 500, letterSpacing: "0.1em" }}>
+    <Badge
+      className="gap-1.5 rounded-[20px] border px-3 py-1 font-medium tracking-[0.1em]"
+      style={{ background: a.bg, color: a.c, borderColor: `${a.b}50`, fontSize: sm ? 10 : 11 }}
+    >
       {a.icon} {a.label}
-    </span>
+    </Badge>
   );
 }
 
@@ -22,9 +29,9 @@ export function TypingDots() {
 export function SevBadge({ n }) {
   const s = SEV(n);
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: s.bg, color: s.c, padding: "4px 14px", borderRadius: 20, fontSize: 12, fontFamily: "var(--mono)", letterSpacing: "0.1em", fontWeight: 500 }}>
+    <Badge className="gap-1.5 rounded-[20px] px-3.5 py-1 text-xs font-medium tracking-[0.1em]" style={{ background: s.bg, color: s.c }}>
       {s.l} · {n}/10
-    </span>
+    </Badge>
   );
 }
 
@@ -47,8 +54,8 @@ export function FormField({ label, type = "text", value, onChange, placeholder, 
     <div style={{ marginBottom: 16, ...style }}>
       {label && <label className="ink-label">{label}</label>}
       {rows
-        ? <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={rows} className={`field${error ? " err" : ""}`} />
-        : <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className={`field${error ? " err" : ""}`} />}
+        ? <Textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={rows} className={error ? "border-[var(--roseB)] ring-2 ring-[var(--roseDim)]" : ""} />
+        : <Input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className={error ? "border-[var(--roseB)] ring-2 ring-[var(--roseDim)]" : ""} />}
       {error && <p style={{ marginTop: 5, fontSize: 12, color: "var(--roseB)", fontFamily: "var(--mono)", letterSpacing: "0.08em" }}>{error}</p>}
     </div>
   );
@@ -56,16 +63,16 @@ export function FormField({ label, type = "text", value, onChange, placeholder, 
 
 export function Banner({ type = "info", children, style }) {
   const conf = {
-    info: { bg: "var(--navyPale)", border: "var(--navy)50", icon: "ℹ" },
-    success: { bg: "var(--sagePale)", border: "var(--sage)50", icon: "✓" },
-    warn: { bg: "var(--amberPale)", border: "var(--amber)50", icon: "⚠" },
-    error: { bg: "var(--rosePale)", border: "var(--rose)50", icon: "✗" },
+    info: { variant: "info", icon: "ℹ" },
+    success: { variant: "success", icon: "✓" },
+    warn: { variant: "warn", icon: "⚠" },
+    error: { variant: "error", icon: "✗" },
   }[type];
 
   return (
-    <div style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "12px 16px", background: conf.bg, border: `1.5px solid ${conf.border}`, borderRadius: 4, ...style }}>
+    <Alert variant={conf.variant} style={{ display: "flex", gap: 10, alignItems: "flex-start", ...style }}>
       <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>{conf.icon}</span>
       <div style={{ fontFamily: "var(--body)", fontSize: 14, lineHeight: 1.65 }}>{children}</div>
-    </div>
+    </Alert>
   );
 }

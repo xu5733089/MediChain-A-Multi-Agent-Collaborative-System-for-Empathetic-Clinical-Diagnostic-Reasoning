@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { AmbientBlobs, ECGLine, IllustBranch, IllustLeaf } from "../components/illustrations";
 import { AgentBadge, Banner, InkDivider, SevBadge } from "../components/ui";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
 import { SEV } from "../core/constants";
 
 export default function ResultsPage({ api, result, onNew, onHistory, onFlow }) {
@@ -32,19 +34,19 @@ export default function ResultsPage({ api, result, onNew, onHistory, onFlow }) {
                 Diagnostic<br /><span className="grad-heading">Results</span>
               </h2>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <span className="tag">{symptoms.bodyPart || "General"}</span>
-                <span className="tag">{symptoms.duration || "—"}</span>
+                <Badge>{symptoms.bodyPart || "General"}</Badge>
+                <Badge>{symptoms.duration || "—"}</Badge>
                 <SevBadge n={symptoms.severity || 5} />
               </div>
             </div>
             <div style={{ display: "flex", gap: 9, flexWrap: "wrap", alignItems: "center" }}>
               {result.sessionId && <>
-                <button onClick={() => window.open(api.exportUrl(result.sessionId, "pdf"), "_blank")} className="btn-rose" style={{ padding: "9px 20px", fontSize: 14 }}>📄 PDF</button>
-                <button onClick={() => window.open(api.exportUrl(result.sessionId, "json"), "_blank")} className="btn-outline" style={{ padding: "9px 16px", fontSize: 14 }}>JSON</button>
+                <Button onClick={() => window.open(api.exportUrl(result.sessionId, "pdf"), "_blank")} className="h-9 px-5 text-sm">📄 PDF</Button>
+                <Button onClick={() => window.open(api.exportUrl(result.sessionId, "json"), "_blank")} variant="outline" className="h-9 px-4 text-sm">JSON</Button>
               </>}
-              <button onClick={onFlow} className="btn-outline" style={{ padding: "9px 16px", fontSize: 14 }}>Flow →</button>
-              <button onClick={onHistory} className="btn-outline" style={{ padding: "9px 16px", fontSize: 14 }}>History</button>
-              <button onClick={onNew} className="btn-ink" style={{ padding: "9px 20px", fontSize: 14 }}>+ New</button>
+              <Button onClick={onFlow} variant="outline" className="h-9 px-4 text-sm">Flow →</Button>
+              <Button onClick={onHistory} variant="outline" className="h-9 px-4 text-sm">History</Button>
+              <Button onClick={onNew} variant="secondary" className="h-9 px-5 text-sm">+ New</Button>
             </div>
           </div>
           <div className="gold-rule" />
