@@ -2,7 +2,7 @@ import * as React from "react";
 import { cva } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
-const alertVariants = cva("relative w-full rounded-md border px-4 py-3 text-sm", {
+const alertVariants = cva("relative w-full rounded-md border px-6 py-4 text-sm", {
   variants: {
     variant: {
       info: "border-[color:var(--navy)]/40 bg-[var(--navyPale)] text-[var(--ink2)]",
@@ -16,8 +16,8 @@ const alertVariants = cva("relative w-full rounded-md border px-4 py-3 text-sm",
   },
 });
 
-function Alert({ className, variant, ...props }) {
-  return <div role="alert" className={cn(alertVariants({ variant }), className)} {...props} />;
+function Alert({ className, variant, style, ...props }) {
+  return <div role="alert" className={cn(alertVariants({ variant }), className)} style={{ paddingLeft: 24, paddingRight: 24, paddingTop: 16, paddingBottom: 16, ...style }} {...props} />;
 }
 
 export { Alert };

@@ -5,14 +5,22 @@ import { cn } from "@/lib/utils";
 const Select = SelectPrimitive.Root;
 const SelectValue = SelectPrimitive.Value;
 
-const SelectTrigger = React.forwardRef(function SelectTrigger({ className, children, ...props }, ref) {
+const SelectTrigger = React.forwardRef(function SelectTrigger({ className, children, style, ...props }, ref) {
   return (
     <SelectPrimitive.Trigger
       ref={ref}
       className={cn(
-        "flex h-10 w-full items-center justify-between rounded-md border border-[rgba(22,15,6,0.16)] bg-[var(--paper)] px-3 py-2 text-sm text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--rose)] focus:ring-offset-2 focus:ring-offset-[var(--paper)] disabled:cursor-not-allowed disabled:opacity-50",
+        "flex h-12 w-full items-center justify-between rounded-md border border-[rgba(22,15,6,0.16)] bg-[var(--paper)] px-5 py-3 text-sm text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--rose)] focus:ring-offset-2 focus:ring-offset-[var(--paper)] disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}
+      style={{
+        height: 48,
+        paddingLeft: 20,
+        paddingRight: 20,
+        paddingTop: 12,
+        paddingBottom: 12,
+        ...style,
+      }}
       {...props}
     >
       {children}
@@ -45,12 +53,12 @@ const SelectItem = React.forwardRef(function SelectItem({ className, children, .
     <SelectPrimitive.Item
       ref={ref}
       className={cn(
-        "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-[var(--paper3)]",
+        "relative flex w-full cursor-default select-none items-center rounded-sm py-2.5 pl-10 pr-4 text-sm outline-none focus:bg-[var(--paper3)]",
         className
       )}
       {...props}
     >
-      <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+      <span className="absolute left-3 flex h-3.5 w-3.5 items-center justify-center">
         <SelectPrimitive.ItemIndicator>✓</SelectPrimitive.ItemIndicator>
       </span>
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>

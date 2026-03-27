@@ -50,7 +50,7 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
       addLog("interviewer", d.trigger_diagnose ? "Sufficient history collected. Initiating multi-agent pipeline." : "Continuing structured intake.");
       if (d.trigger_diagnose) {
         setPhase("analyzing");
-        addLog("diagnostician", "Querying ChromaDB vector store (PubMed corpus)…");
+        addLog("diagnostician", "Querying ChromaDB vector store (MedQuAD corpus)…");
         await new Promise(r => setTimeout(r, 700));
         const dd = await api.diagnose({ session_id: sid });
         addLog("diagnostician", dd.diagnosis);
@@ -76,14 +76,14 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
 
   return (
     <div style={{ height: "100vh", background: "var(--paper)", display: "flex", flexDirection: "column", overflow: "hidden", paddingTop: 56, position: "relative", zIndex: 1 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", height: 42, borderBottom: "1px solid rgba(22,15,6,0.09)", background: "var(--paper2)", flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", height: 44, borderBottom: "1px solid rgba(22,15,6,0.09)", background: "var(--paper2)", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Button onClick={onBack} variant="outline" className="h-7 px-[13px] text-[13px]">← Back</Button>
+          <Button onClick={onBack} variant="outline" className="h-8 px-4 text-[13px]">← Back</Button>
           {sid && <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)", letterSpacing: "0.12em" }}>Session {sid.slice(0, 8).toUpperCase()}</span>}
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <Badge className="rounded-[20px] px-3 py-[3px] text-[13px] italic" style={{ fontFamily: "var(--body)", color: phaseConf.c, background: phaseConf.bg, borderColor: `${phaseConf.c}40` }}>{phaseConf.label}</Badge>
-          <Button onClick={() => setPanel(v => !v)} variant="outline" className="h-7 px-[13px] text-[13px]">{panel ? "Hide" : "Show"} reasoning</Button>
+          <Button onClick={() => setPanel(v => !v)} variant="outline" className="h-8 px-4 text-[13px]">{panel ? "Hide" : "Show"} reasoning</Button>
         </div>
       </div>
 
@@ -119,7 +119,7 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
                 <IllustFlower size={60} style={{ position: "absolute", top: -10, right: -10, animation: "float3 4s infinite", pointerEvents: "none" }} color="var(--amber)" opacity={0.3} />
                 <div style={{ fontSize: 38, marginBottom: 10, animation: "pulse 1.5s ease-in-out infinite" }}>🔬</div>
                 <p style={{ fontFamily: "var(--serif)", fontSize: 19, fontStyle: "italic", color: "var(--amber)", marginBottom: 4, position: "relative", zIndex: 1 }}>Multi-agent analysis in progress…</p>
-                <p style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--ink4)", position: "relative", zIndex: 1 }}>Querying literature · Generating diagnosis · Peer review</p>
+                <p style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--ink4)", position: "relative", zIndex: 1 }}>Querying medical QA evidence · Generating diagnosis · Peer review</p>
                 <ECGLine style={{ marginTop: 14, opacity: 0.5 }} color="var(--amber)" />
               </div>
             )}
@@ -134,7 +134,14 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
           {phase === "interviewing" && (
             <div style={{ padding: "12px 18px", borderTop: "1px solid rgba(22,15,6,0.09)", display: "flex", gap: 10, background: "var(--paper2)", flexShrink: 0 }}>
               <Input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()} placeholder="Type your response…" disabled={loading} style={{ flex: 1, fontSize: 15, fontFamily: "var(--body)" }} />
-              <Button onClick={send} disabled={!input.trim() || loading} className="h-10 px-[22px] text-sm shrink-0">Send →</Button>
+              <Button
+                onClick={send}
+                disabled={!input.trim() || loading}
+                className="h-11 px-7 text-sm shrink-0"
+                style={{ paddingLeft: 26, paddingRight: 26, minWidth: 112 }}
+              >
+                Send →
+              </Button>
             </div>
           )}
         </div>

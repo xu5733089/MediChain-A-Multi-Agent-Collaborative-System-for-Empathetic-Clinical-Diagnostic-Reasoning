@@ -15,7 +15,7 @@ export default function ResultsPage({ api, result, onNew, onHistory, onFlow }) {
   const tabs = [
     { id: "diagnosis", l: "🔬 Diagnosis" },
     { id: "review", l: "⚖️ Critic Review" },
-    { id: "refs", l: `📚 Literature (${refs.length})` },
+    { id: "refs", l: `📚 Evidence (${refs.length})` },
     { id: "transcript", l: "💬 Transcript" },
   ];
 
@@ -94,8 +94,10 @@ export default function ResultsPage({ api, result, onNew, onHistory, onFlow }) {
                     </div>
                     <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", flexShrink: 0 }}>{r.score}</span>
                   </div>
-                  <p style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--ink4)", marginBottom: 6, paddingLeft: 26, fontStyle: "italic" }}>{r.authors} · {r.year}</p>
-                  <a href={r.url} target="_blank" rel="noreferrer" style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--rose)", textDecoration: "none", paddingLeft: 26, fontWeight: 600 }}>View on PubMed →</a>
+                  <p style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--ink4)", marginBottom: 6, paddingLeft: 26, fontStyle: "italic" }}>
+                    {r.source || "Unknown source"} · {r.focus || "Unknown focus"} · {r.qtype || "N/A"} · QID: {r.qid || "N/A"}
+                  </p>
+                  <a href={r.url} target="_blank" rel="noreferrer" style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--rose)", textDecoration: "none", paddingLeft: 26, fontWeight: 600 }}>Open source URL →</a>
                 </div>
               ))}
               {tab === "transcript" && transcript.map((m, i) => (

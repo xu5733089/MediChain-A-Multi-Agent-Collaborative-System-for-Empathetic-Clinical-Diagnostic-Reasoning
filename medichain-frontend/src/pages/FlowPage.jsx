@@ -11,7 +11,7 @@ export default function FlowPage({ result, onBack }) {
   const nodes = [
     { id: "input", x: 58, y: 22, w: 190, h: 54, icon: "📋", title: "Patient Input", c: "var(--ink4)", info: (result.symptoms?.description || "").slice(0, 90) },
     { id: "interview", x: 58, y: 140, w: 200, h: 108, icon: "🩺", title: "Interviewer", c: "var(--sage)", info: `${transcript.length} exchanges\nSOCRATES framework\nStructured history-taking` },
-    { id: "rag", x: 290, y: 140, w: 182, h: 108, icon: "📚", title: "ChromaDB RAG", c: "var(--navy)", info: `${refs.length} docs retrieved\nall-MiniLM-L6-v2\nPubMed corpus` },
+    { id: "rag", x: 290, y: 140, w: 182, h: 108, icon: "📚", title: "ChromaDB RAG", c: "var(--navy)", info: `${refs.length} docs retrieved\nall-MiniLM-L6-v2\nMedQuAD corpus` },
     { id: "diag", x: 172, y: 308, w: 196, h: 100, icon: "🔬", title: "Diagnostician", c: "var(--navy)", info: diagnosis.slice(0, 200) + "…" },
     { id: "critic", x: 172, y: 466, w: 196, h: 100, icon: "⚖️", title: "Critic Agent", c: "var(--amber)", info: review.slice(0, 200) + "…" },
     { id: "report", x: 172, y: 624, w: 196, h: 54, icon: "✅", title: "Final Report", c: "var(--sage)", info: `PDF · JSON · Session ${result.sessionId?.slice(0, 8)}` },

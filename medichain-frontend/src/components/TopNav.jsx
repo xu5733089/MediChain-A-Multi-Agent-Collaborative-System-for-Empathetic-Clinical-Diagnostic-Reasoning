@@ -29,7 +29,7 @@ export default function TopNav({ user, onLogout, onNav, page, dark, toggle }) {
         )}
 
         <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-          <Button onClick={toggle} variant="outline" className="h-8 px-3.5 text-[13px]">{dark ? "☀ Light" : "◐ Dark"}</Button>
+          <Button onClick={toggle} variant="outline" className="h-9 px-5 text-[13px]" style={{ paddingLeft: 20, paddingRight: 20 }}>{dark ? "☀ Light" : "◐ Dark"}</Button>
           {user ? (
             <div style={{ position: "relative" }}>
               <button onClick={() => setMenu(v => !v)} style={{ display: "flex", alignItems: "center", gap: 9, background: "var(--paper3)", border: "1.5px solid rgba(22,15,6,0.13)", borderRadius: 28, padding: "5px 14px 5px 6px", cursor: "pointer", transition: "all 0.18s" }}>

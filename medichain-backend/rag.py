@@ -49,13 +49,17 @@ def add_documents(documents: list[dict]) -> int:
     批量添加文献到向量库。
     每个 document 格式：
     {
-        "id":       str,   # 唯一 ID（如 PubMed PMID）
-        "text":     str,   # 摘要全文
+        "id":       str,   # 唯一 ID（主键）
+        "text":     str,   # 用于向量化的正文
         "title":    str,
         "authors":  str,
         "year":     str,
-        "source":   str,   # 期刊名
+        "source":   str,
         "url":      str,
+        "qid":      str,   # MedQuAD 问题 ID（可选）
+        "focus":    str,   # 疾病主题（可选）
+        "qtype":    str,   # 问题类型（可选）
+        "document_id": str,# 原始文档 ID（可选）
     }
     """
     col = _get_collection()
@@ -75,6 +79,10 @@ def add_documents(documents: list[dict]) -> int:
                 "year":    d["year"],
                 "source":  d["source"],
                 "url":     d["url"],
+                "qid":     d.get("qid", ""),
+                "focus":   d.get("focus", ""),
+                "qtype":   d.get("qtype", ""),
+                "document_id": d.get("document_id", ""),
             }
             for d in new_docs
         ],
@@ -90,6 +98,7 @@ def search(query: str, n_results: int = 5) -> list[dict]:
         {
             "title": ..., "authors": ..., "year": ...,
             "source": ..., "url": ...,
+            "qid": ..., "focus": ..., "qtype": ..., "document_id": ...,
             "excerpt": ...,   # 摘要前300字
             "score": float,   # 相似度 (0~1, 越高越相关)
         },
@@ -122,6 +131,10 @@ def search(query: str, n_results: int = 5) -> list[dict]:
                 "year":    meta.get("year", ""),
                 "source":  meta.get("source", ""),
                 "url":     meta.get("url", ""),
+                "qid":     meta.get("qid", ""),
+                "focus":   meta.get("focus", ""),
+                "qtype":   meta.get("qtype", ""),
+                "document_id": meta.get("document_id", ""),
                 "excerpt": doc[:300] + ("…" if len(doc) > 300 else ""),
                 "score":   score,
             }
@@ -132,13 +145,18 @@ def search(query: str, n_results: int = 5) -> list[dict]:
 def format_references_for_prompt(refs: list[dict]) -> str:
     """将检索到的文献格式化为 prompt 中使用的字符串"""
     if not refs:
-        return "No relevant medical literature found in local database."
+        return "No relevant medical QA knowledge found in local database."
 
-    lines = ["=== RELEVANT MEDICAL LITERATURE (RAG) ==="]
+    lines = ["=== RELEVANT MEDICAL QA KNOWLEDGE (RAG) ==="]
     for i, r in enumerate(refs, 1):
+        source = r.get("source", "") or "UnknownSource"
+        focus = r.get("focus", "") or r.get("title", "Untitled")
+        qid = r.get("qid", "") or "N/A"
+        qtype = r.get("qtype", "") or "N/A"
         lines.append(
             f"\n[{i}] {r['title']}\n"
-            f"    Authors: {r['authors']} ({r['year']}) — {r['source']}\n"
+            f"    Citation Key: [{source} | {focus} | {qid}]\n"
+            f"    Source: {source} | Focus: {focus} | QType: {qtype} | QID: {qid}\n"
             f"    Relevance Score: {r['score']:.2f}\n"
             f"    Excerpt: {r['excerpt']}\n"
             f"    URL: {r['url']}"

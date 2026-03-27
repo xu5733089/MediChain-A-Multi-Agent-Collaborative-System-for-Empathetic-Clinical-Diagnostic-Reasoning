@@ -234,7 +234,7 @@ body {
 .mode-pill { display: flex; border: 1.5px solid rgba(22,15,6,0.16); border-radius: 30px; overflow: hidden; background: var(--paper3); }
 .mode-opt  {
   font-family: var(--body); font-size: 14px; flex:1; text-align:center;
-  padding: 9px 22px; border: none; background: transparent; color: var(--ink4);
+  padding: 11px 30px; border: none; background: transparent; color: var(--ink4);
   cursor: pointer; transition: all 0.2s; border-radius: 30px;
 }
 .mode-opt.on { background: linear-gradient(135deg,var(--rose),var(--roseB)); color: #fff; font-weight: 600; }
