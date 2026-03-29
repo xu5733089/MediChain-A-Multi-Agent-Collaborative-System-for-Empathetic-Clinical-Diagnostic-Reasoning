@@ -96,14 +96,32 @@ def _styles():
     return s
 
 
-def _severity_color(n: int):
+def _severity_color(n):
+    if isinstance(n, str):
+        lv = n.strip().lower()
+        if lv == "mild":
+            return GREEN
+        if lv == "moderate":
+            return YELLOW
+        if lv == "severe":
+            return RED
+        n = 5
     if n <= 3: return GREEN
     if n <= 6: return YELLOW
     if n <= 8: return ORANGE
     return RED
 
 
-def _severity_label(n: int) -> str:
+def _severity_label(n) -> str:
+    if isinstance(n, str):
+        lv = n.strip().lower()
+        if lv == "mild":
+            return "Mild"
+        if lv == "moderate":
+            return "Moderate"
+        if lv == "severe":
+            return "Severe"
+        n = 5
     if n <= 3: return "Mild"
     if n <= 5: return "Moderate"
     if n <= 7: return "Significant"
@@ -177,7 +195,7 @@ def generate_pdf(session: dict) -> bytes:
     # ── 2. 病例摘要卡片 ──────────────────────────────────────
     story.append(Paragraph("PATIENT CASE SUMMARY", s["section"]))
 
-    sev = symptoms.get("severity", 0)
+    sev = symptoms.get("severity_level") or symptoms.get("severity", 0)
     summary_data = [
         [
             _lv("CHIEF COMPLAINT", symptoms.get("description","—"), s),
@@ -186,7 +204,7 @@ def generate_pdf(session: dict) -> bytes:
         [
             _lv("DURATION", symptoms.get("duration","—"), s),
             _lv("SEVERITY",
-                f"{sev}/10 — {_severity_label(sev)}", s,
+                _severity_label(sev), s,
                 val_color=_severity_color(sev)),
         ],
         [
@@ -323,6 +341,7 @@ def generate_pdf(session: dict) -> bytes:
                     "interviewer":  "INTERVIEWER AGENT",
                     "diagnostician":"DIAGNOSTIC AGENT",
                     "critic":       "CRITIC AGENT",
+                    "safety":       "SAFETY AGENT",
                 }.get(agent, "AGENT")
                 story.append(Paragraph(agent_label, s["chat_label"]))
                 story.append(Paragraph(text[:600]+("…" if len(text)>600 else ""), s["chat_ai"]))

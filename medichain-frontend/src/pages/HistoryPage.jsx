@@ -8,6 +8,7 @@ export default function HistoryPage({ api, onNew }) {
   const [loading, setLoading] = useState(true);
   const [sel, setSel] = useState(null);
   const [detail, setDetail] = useState(null);
+  const [detailMessages, setDetailMessages] = useState([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -23,11 +24,17 @@ export default function HistoryPage({ api, onNew }) {
     if (sel === id) {
       setSel(null);
       setDetail(null);
+      setDetailMessages([]);
       return;
     }
     setSel(id);
     try {
-      setDetail(await api.session(id));
+      const [session, messages] = await Promise.all([
+        api.session(id),
+        api.sessionMessages(id).catch(() => []),
+      ]);
+      setDetail(session);
+      setDetailMessages(Array.isArray(messages) ? messages : []);
     } catch {}
   }
 
@@ -92,6 +99,39 @@ export default function HistoryPage({ api, onNew }) {
                         <p style={{ fontFamily: "var(--body)", fontSize: 14, color: "var(--ink3)", lineHeight: 1.84 }}>
                           {detail.diagnosis?.slice(0, 450)}{detail.diagnosis?.length > 450 ? "\n…" : ""}
                         </p>
+                        <div style={{ marginTop: 14, borderTop: "1px dashed rgba(22,15,6,0.16)", paddingTop: 12 }}>
+                          <p style={{ fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.12em", color: "var(--ink5)", marginBottom: 9 }}>
+                            MESSAGE TIMELINE
+                          </p>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 280, overflow: "auto", paddingRight: 2 }}>
+                            {(detailMessages.length
+                              ? detailMessages
+                              : (detail.messages || []).map((m, i) => ({
+                                  id: `legacy-${i}`,
+                                  role: m.role === "ai" ? "agent" : m.role,
+                                  agent_type: m.agent,
+                                  content: m.text,
+                                  created_at: "",
+                                }))
+                            ).map(m => (
+                              <div key={m.id} style={{ background: "var(--paper)", border: "1px solid rgba(22,15,6,0.12)", borderRadius: 6, padding: "8px 10px" }}>
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 4 }}>
+                                  <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)", letterSpacing: "0.1em" }}>
+                                    {m.role === "agent" ? (m.agent_type || "agent") : m.role}
+                                  </span>
+                                  {!!m.created_at && (
+                                    <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)" }}>
+                                      {fmtD(m.created_at)}
+                                    </span>
+                                  )}
+                                </div>
+                                <p style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--ink3)", lineHeight: 1.65 }}>
+                                  {m.content}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>

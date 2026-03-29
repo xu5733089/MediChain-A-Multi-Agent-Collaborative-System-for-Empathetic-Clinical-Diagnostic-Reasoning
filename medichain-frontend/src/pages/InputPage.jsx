@@ -12,8 +12,14 @@ export default function InputPage({ onSubmit, onEval, selectedPatient, onClearPa
   useEffect(() => { if (selectedPatient) setForm(f => ({ ...f, notes: selectedPatient.conditions || "" })); }, [selectedPatient]);
   const bodyParts = ["General", "Head / Face", "Neck", "Chest", "Abdomen", "Back", "Arm / Shoulder", "Leg / Hip", "Skin", "Multiple Areas"];
   const durations = ["< 24 hours", "1–3 days", "4–7 days", "1–2 weeks", "2–4 weeks", "> 1 month", "Chronic (> 3 months)"];
+  const severityOptions = [
+    { value: 2, label: "Mild", description: "Discomfort is present, but it does not significantly interfere with daily activities." },
+    { value: 5, label: "Moderate", description: "Discomfort is noticeable and already affects some daily activities." },
+    { value: 9, label: "Severe", description: "Symptoms are intense, severely disrupt normal life, or feel difficult to tolerate." },
+  ];
   const valid = form.description.trim().length > 15;
   const s = SEV(form.severity);
+  const activeSeverity = severityOptions.find(o => o.value === form.severity) || severityOptions[1];
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--paper)", paddingTop: 72, paddingBottom: 56, position: "relative", zIndex: 1, overflow: "hidden" }}>
@@ -122,13 +128,36 @@ export default function InputPage({ onSubmit, onEval, selectedPatient, onClearPa
                 <p style={{ fontFamily: "var(--serif)", fontSize: 18, fontWeight: 600, color: "var(--ink)" }}>Severity</p>
               </div>
               <div style={{ textAlign: "center", margin: "8px 0 16px", padding: "18px 12px", background: "var(--paper3)", borderRadius: 4, border: "1px solid rgba(22,15,6,0.07)" }}>
-                <span style={{ fontFamily: "var(--serif)", fontSize: 72, fontWeight: 400, color: s.c, lineHeight: 1, display: "block", transition: "color 0.3s", animation: form.severity >= 8 ? "pulse 1.5s ease-in-out infinite" : "none" }}>{form.severity}</span>
-                <span style={{ fontFamily: "var(--body)", fontSize: 18, color: "var(--ink4)", fontStyle: "italic" }}>/10</span>
+                <span style={{ fontFamily: "var(--serif)", fontSize: 58, fontWeight: 400, color: s.c, lineHeight: 1, display: "block", transition: "color 0.3s", animation: form.severity >= 8 ? "pulse 1.5s ease-in-out infinite" : "none" }}>{activeSeverity.label}</span>
+                <p style={{ marginTop: 10, fontFamily: "var(--body)", fontSize: 14, lineHeight: 1.6, color: "var(--ink4)" }}>{activeSeverity.description}</p>
                 <div style={{ marginTop: 10 }}><SevBadge n={form.severity} /></div>
               </div>
-              <input type="range" min={1} max={10} value={form.severity} onChange={e => setForm({ ...form, severity: Number(e.target.value) })} />
-              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5 }}>
-                {["1", "3", "5", "7", "10"].map(n => <span key={n} style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)" }}>{n}</span>)}
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {severityOptions.map(opt => {
+                  const active = form.severity === opt.value;
+                  return (
+                    <button
+                      key={opt.label}
+                      type="button"
+                      onClick={() => setForm({ ...form, severity: opt.value })}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        borderRadius: 8,
+                        border: active ? `1.5px solid ${s.c}` : "1px solid rgba(22,15,6,0.12)",
+                        padding: "10px 12px",
+                        background: active ? s.bg : "var(--paper2)",
+                        transition: "all 0.2s ease",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                        <span style={{ fontFamily: "var(--serif)", fontSize: 18, color: "var(--ink)" }}>{opt.label}</span>
+                        {active && <Badge variant="sage" className="text-[10px]">Selected</Badge>}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

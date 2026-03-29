@@ -14,6 +14,13 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
   const [phase, setPhase] = useState("interviewing");
   const [sid, setSid] = useState(null);
   const [panel, setPanel] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [uploadMeta, setUploadMeta] = useState(null);
+  const [uploadPreview, setUploadPreview] = useState("");
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [pendingAttachments, setPendingAttachments] = useState([]);
+  const fileInputRef = useRef(null);
   const msgEnd = useRef(null);
   const logEnd = useRef(null);
 
@@ -28,6 +35,12 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
     try {
       const d = await api.start(symptoms);
       setSid(d.session_id);
+      try {
+        const files = await api.sessionUploads(d.session_id);
+        setUploadedFiles(Array.isArray(files) ? files : []);
+      } catch {
+        setUploadedFiles([]);
+      }
       setMsgs([{ role: "ai", agent: "interviewer", text: d.reply, time: new Date() }]);
       addLog("interviewer", "Session opened. Structured history-taking active.");
     } catch (e) {
@@ -41,11 +54,21 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
   async function send() {
     if (!input.trim() || loading || phase !== "interviewing" || !sid) return;
     const txt = input.trim();
+    const attachments = [...pendingAttachments];
     setInput("");
-    setMsgs(p => [...p, { role: "user", text: txt, time: new Date() }]);
+    setPendingAttachments([]);
+    setMsgs(p => [
+      ...p,
+      ...attachments.map(a => ({ role: "user", text: `📎 ${a}`, time: new Date() })),
+      { role: "user", text: txt, time: new Date() },
+    ]);
     setLoading(true);
     try {
-      const d = await api.chat({ session_id: sid, user_message: txt });
+      const d = await api.chat({ session_id: sid, user_message: txt, attachments });
+      // Clear one-shot upload chip after content has been sent into the chat turn.
+      setUploadMeta(null);
+      setUploadPreview("");
+      setUploadError("");
       setMsgs(p => [...p, { role: "ai", agent: "interviewer", text: d.reply, time: new Date() }]);
       addLog("interviewer", d.trigger_diagnose ? "Sufficient history collected. Initiating multi-agent pipeline." : "Continuing structured intake.");
       if (d.trigger_diagnose) {
@@ -60,12 +83,55 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
         addLog("critic", dd.review);
         setPhase("done");
         const safeRefs = Array.isArray(dd.refs) ? dd.refs : Array.isArray(dd.references) ? dd.references : [];
-        setTimeout(() => onComplete({ symptoms, date: new Date(), sessionId: sid, transcript: msgs.concat([{ role: "user", text: txt }]), diagnosis: dd.diagnosis || dd.result || JSON.stringify(dd), review: dd.review || dd.critique || "", refs: safeRefs }), 1500);
+        const fullSession = await api.session(sid);
+        const transcript = Array.isArray(fullSession?.messages)
+          ? fullSession.messages.filter(m => m.role === "user" || m.role === "ai")
+          : [];
+        setTimeout(() => onComplete({ symptoms, date: new Date(), sessionId: sid, transcript, diagnosis: dd.diagnosis || dd.result || JSON.stringify(dd), review: dd.review || dd.critique || "", refs: safeRefs }), 1500);
       }
     } catch (e) {
       addLog("interviewer", `Error: ${e.message}`);
     }
     setLoading(false);
+  }
+
+  async function onUploadFile(e) {
+    const f = e.target.files?.[0];
+    if (!f || !sid || uploading) return;
+
+    const lowerName = f.name.toLowerCase();
+    if (!(lowerName.endsWith(".pdf") || lowerName.endsWith(".txt"))) {
+      setUploadError("Only PDF and TXT files are supported.");
+      e.target.value = "";
+      return;
+    }
+
+    setUploadError("");
+    setUploading(true);
+    try {
+      const res = await api.uploadSessionFile(sid, f);
+      const up = res?.upload || null;
+      setUploadMeta(up);
+      setUploadPreview(up?.extracted_text_preview || "");
+      const attachmentSummary = `Uploaded file: ${up?.file_name || f.name} (${(up?.file_type || (f.name.toLowerCase().endsWith(".pdf") ? "pdf" : "txt")).toUpperCase()})`;
+      setPendingAttachments(p => [...p, attachmentSummary]);
+      try {
+        const files = await api.sessionUploads(sid);
+        setUploadedFiles(Array.isArray(files) ? files : []);
+      } catch {}
+      addLog("interviewer", `Uploaded ${up?.file_name || f.name}; extracted ${up?.extracted_text_length || 0} characters.`);
+    } catch (err) {
+      setUploadError(err.message || "Upload failed");
+      addLog("interviewer", `Upload failed: ${err.message || "unknown error"}`);
+    }
+    setUploading(false);
+    e.target.value = "";
+  }
+
+  function clearUploadedFileView() {
+    setUploadMeta(null);
+    setUploadPreview("");
+    setUploadError("");
   }
 
   const phaseConf = {
@@ -132,16 +198,87 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
           </div>
 
           {phase === "interviewing" && (
-            <div style={{ padding: "12px 18px", borderTop: "1px solid rgba(22,15,6,0.09)", display: "flex", gap: 10, background: "var(--paper2)", flexShrink: 0 }}>
-              <Input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()} placeholder="Type your response…" disabled={loading} style={{ flex: 1, fontSize: 15, fontFamily: "var(--body)" }} />
-              <Button
-                onClick={send}
-                disabled={!input.trim() || loading}
-                className="h-11 px-7 text-sm shrink-0"
-                style={{ paddingLeft: 26, paddingRight: 26, minWidth: 112 }}
-              >
-                Send →
-              </Button>
+            <div style={{ padding: "10px 18px 12px", borderTop: "1px solid rgba(22,15,6,0.09)", background: "var(--paper2)", flexShrink: 0 }}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.txt,application/pdf,text/plain"
+                style={{ display: "none" }}
+                onChange={onUploadFile}
+              />
+
+              {(uploadedFiles.length > 0 || uploadMeta || uploadError) && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 9 }}>
+                  {uploadedFiles.length > 0 && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", letterSpacing: "0.08em" }}>
+                        CONTEXT FILES ({uploadedFiles.length})
+                      </span>
+                      <span style={{ fontFamily: "var(--body)", fontSize: 12, color: "var(--ink4)" }}>
+                        {uploadedFiles.slice(0, 3).map(f => f.file_name).join(" · ")}
+                        {uploadedFiles.length > 3 ? ` · +${uploadedFiles.length - 3} more` : ""}
+                      </span>
+                    </div>
+                  )}
+
+                  {!!uploadMeta && (
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: 8, width: "fit-content", maxWidth: "100%", background: "var(--paper)", border: "1px solid rgba(22,15,6,0.14)", borderRadius: 999, padding: "6px 10px" }}>
+                      <span style={{ fontSize: 12, lineHeight: 1 }}>📄</span>
+                      <span style={{ fontFamily: "var(--body)", fontSize: 12, color: "var(--ink3)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 380 }}>
+                        {uploadMeta.file_name} · {uploadMeta.file_type.toUpperCase()} · {uploadMeta.extracted_text_length} chars
+                      </span>
+                      <button
+                        type="button"
+                        onClick={clearUploadedFileView}
+                        style={{ border: "none", background: "transparent", color: "var(--ink5)", cursor: "pointer", fontSize: 13, lineHeight: 1, padding: 0 }}
+                        title="Dismiss"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
+
+                  {pendingAttachments.length > 0 && (
+                    <p style={{ fontFamily: "var(--body)", fontSize: 12, color: "var(--ink5)", lineHeight: 1.5, maxWidth: 760 }}>
+                      {pendingAttachments.length} file(s) queued for next send.
+                    </p>
+                  )}
+
+                  {!!uploadError && (
+                    <p style={{ fontFamily: "var(--body)", fontSize: 12, color: "var(--rose)" }}>
+                      Upload error: {uploadError}
+                    </p>
+                  )}
+
+                  {!!uploadMeta && !!uploadPreview && (
+                    <p style={{ fontFamily: "var(--body)", fontSize: 12, color: "var(--ink5)", lineHeight: 1.5, maxWidth: 760 }}>
+                      {uploadPreview.slice(0, 160)}{uploadPreview.length > 160 ? "…" : ""}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 10 }}>
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  variant="outline"
+                  className="h-11 w-11 px-0 text-base shrink-0"
+                  disabled={!sid || uploading}
+                  title="Attach PDF/TXT"
+                  style={{ borderRadius: 999 }}
+                >
+                  {uploading ? "…" : "📎"}
+                </Button>
+                <Input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()} placeholder="Type your response…" disabled={loading} style={{ flex: 1, fontSize: 15, fontFamily: "var(--body)", borderRadius: 999 }} />
+                <Button
+                  onClick={send}
+                  disabled={!input.trim() || loading}
+                  className="h-11 px-7 text-sm shrink-0"
+                  style={{ paddingLeft: 26, paddingRight: 26, minWidth: 112, borderRadius: 999 }}
+                >
+                  Send →
+                </Button>
+              </div>
             </div>
           )}
         </div>
