@@ -5,7 +5,8 @@ import { Button } from "../components/ui/button";
 
 export default function AuthPage({ api, onLogin, onSkip }) {
   const [mode, setMode] = useState("login");
-  const [form, setForm] = useState({ username: "", email: "", password: "", confirm: "", full_name: "" });
+  const [entryRole, setEntryRole] = useState("patient");
+  const [form, setForm] = useState({ username: "", email: "", password: "", confirm: "", full_name: "", role: "patient" });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [apiErr, setApiErr] = useState("");
@@ -35,6 +36,21 @@ export default function AuthPage({ api, onLogin, onSkip }) {
       const data = mode === "login"
         ? await api.loginJson({ username: form.username, password: form.password })
         : await api.register(form);
+
+      if (mode === "login") {
+        const actualRole = data?.user?.role;
+        if (entryRole === "provider" && actualRole !== "provider") {
+          setApiErr("This account is not a provider account.");
+          setLoading(false);
+          return;
+        }
+        if (entryRole === "patient" && actualRole !== "patient") {
+          setApiErr("This account is not a patient account.");
+          setLoading(false);
+          return;
+        }
+      }
+
       setOk(mode === "login" ? "Welcome back." : "Account created.");
       setTimeout(() => onLogin(data.token || data.access_token, data.user), 700);
     } catch (e) {
@@ -71,10 +87,39 @@ export default function AuthPage({ api, onLogin, onSkip }) {
             ))}
           </div>
 
+          {mode === "login" && (
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", letterSpacing: "0.12em", marginBottom: 8 }}>
+                ENTRY
+              </p>
+              <div className="mode-pill" style={{ width: "100%" }}>
+                <button className={`mode-opt${entryRole === "patient" ? " on" : ""}`} onClick={() => { setEntryRole("patient"); setApiErr(""); }}>
+                  Patient Login
+                </button>
+                <button className={`mode-opt${entryRole === "provider" ? " on" : ""}`} onClick={() => { setEntryRole("provider"); setApiErr(""); }}>
+                  Provider Login
+                </button>
+              </div>
+            </div>
+          )}
+
           {ok && <Banner type="success" style={{ marginBottom: 16, animation: "slide-r 0.35s ease both" }}><span style={{ color: "var(--sage)" }}>{ok}</span></Banner>}
           {apiErr && <Banner type="error" style={{ marginBottom: 16, animation: "slide-r 0.35s ease both" }}><span style={{ color: "var(--rose)" }}>{apiErr}</span></Banner>}
 
           {mode === "register" && <FormField label="Full Name" value={form.full_name} onChange={f("full_name")} placeholder="Dr. Jane Smith" />}
+          {mode === "register" && (
+            <div style={{ marginBottom: 16 }}>
+              <label className="ink-label">Account Role</label>
+              <div className="mode-pill" style={{ width: "100%" }}>
+                <button className={`mode-opt${form.role === "patient" ? " on" : ""}`} onClick={() => f("role")("patient")}>
+                  Patient
+                </button>
+                <button className={`mode-opt${form.role === "provider" ? " on" : ""}`} onClick={() => f("role")("provider")}>
+                  Provider
+                </button>
+              </div>
+            </div>
+          )}
           <FormField label="Username" value={form.username} onChange={f("username")} placeholder="your_username" error={errors.username} />
           {mode === "register" && <FormField label="Email Address" type="email" value={form.email} onChange={f("email")} placeholder="you@hospital.com" error={errors.email} />}
           <FormField label="Password" type="password" value={form.password} onChange={f("password")} placeholder="••••••••" error={errors.password} />

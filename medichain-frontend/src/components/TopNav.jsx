@@ -5,12 +5,15 @@ import { Button } from "./ui/button";
 export default function TopNav({ user, onLogout, onNav, page, dark, toggle }) {
   const [menu, setMenu] = useState(false);
   const initials = (user?.full_name?.split(" ").map(n => n[0]).join("").slice(0, 2) || user?.username?.slice(0, 2) || "?").toUpperCase();
-  const navItems = [{ id: "input", l: "Consult" }, { id: "patients", l: "Patients" }, { id: "history", l: "History" }, { id: "eval", l: "MedQA" }];
+  const isProvider = user?.role === "provider";
+  const navItems = isProvider
+    ? [{ id: "provider", l: "Dashboard" }, { id: "history", l: "History" }]
+    : [{ id: "input", l: "Consult" }, { id: "patients", l: "Patients" }, { id: "history", l: "History" }, { id: "eval", l: "MedQA" }];
 
   return (
     <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "var(--nav-bg)", backdropFilter: "blur(28px)", WebkitBackdropFilter: "blur(28px)", height: 56, borderBottom: "1px solid rgba(22,15,6,0.09)" }}>
-      <div style={{ maxWidth: 1160, margin: "0 auto", padding: "0 28px", height: "100%", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <button onClick={() => onNav("input")} style={{ display: "flex", alignItems: "center", gap: 11, background: "none", border: "none", cursor: "pointer" }}>
+      <div style={{padding: "0 28px", height: "100%", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <button onClick={() => onNav(isProvider ? "provider" : "input")} style={{ display: "flex", alignItems: "center", gap: 11, background: "none", border: "none", cursor: "pointer" }}>
           <div style={{ width: 34, height: 34, borderRadius: 9, background: "linear-gradient(135deg,var(--rose),var(--roseB))", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 3px 12px rgba(184,56,48,0.38)", color: "var(--paper)" }}>
             <Caduceus size={22} />
           </div>

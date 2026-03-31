@@ -47,6 +47,7 @@ export function makeApi(token) {
     chat: b => post("/api/session/chat", b),
     diagnose: b => post("/api/session/diagnose", b),
     sessions: () => get("/api/sessions"),
+    providerSessions: () => get("/api/provider/sessions"),
     session: id => get(`/api/session/${id}`),
     sessionMessages: id => get(`/api/sessions/${id}/messages`),
     sessionUploads: id => get(`/api/sessions/${id}/uploads`),

@@ -19,6 +19,7 @@ from pydantic import BaseModel
 load_dotenv()
 
 from agents import call_interviewer, call_diagnostician, call_critic
+from safety import classify_safety
 from rag    import get_collection_size, search
 from export import generate_pdf
 from eval   import run_single_llm, run_multi_agent, SAMPLE_QUESTIONS
@@ -165,6 +166,36 @@ def sessions_list(user_id=None):
     return [{"id":d["id"],"status":d["status"],"created_at":d["created_at"],
              "patient_id":d["patient_id"],
              "description":json.loads(d["symptoms"]).get("description","")[:60]} for d in map(dict,rows)]
+
+
+def provider_sessions_list():
+    with get_db() as c:
+        rows = c.execute(
+            """SELECT s.id, s.status, s.created_at, s.patient_id, s.symptoms, s.severity_level,
+                      u.username AS patient_username
+               FROM sessions s
+               LEFT JOIN users u ON s.user_id = u.id
+               ORDER BY s.created_at DESC"""
+        ).fetchall()
+
+    out = []
+    for row in rows:
+        d = dict(row)
+        symptoms = json.loads(d.get("symptoms") or "{}")
+        out.append({
+            "id": d["id"],
+            "status": d.get("status"),
+            "created_at": d.get("created_at"),
+            "patient_id": d.get("patient_id"),
+            "patient_username": d.get("patient_username"),
+            "description": symptoms.get("description", "")[:120],
+            "severity_level": d.get("severity_level") or symptoms.get("severity_level") or severity_to_level(symptoms.get("severity")),
+        })
+    return out
+
+
+def _is_provider(user):
+    return bool(user and user.get("role") == "provider")
 
 # ── Request Models ────────────────────────────────────────
 class RegisterInput(BaseModel):
@@ -340,8 +371,32 @@ def start_session(symptoms: SymptomInput, user=Depends(get_current_user)):
              json.dumps(payload), json.dumps(messages), json.dumps(history), severity_level, now, now))
         c.commit()
 
+    safety = classify_safety(symptoms.description)
+    safety_content = json.dumps(
+        {
+            "final_risk": safety.get("final_risk", safety.get("risk_level", "low")),
+            "rule_risk": safety.get("rule_risk", "low"),
+            "llm_risk": safety.get("llm_risk", "low"),
+            "message": safety.get("message", ""),
+            "warning": safety.get("warning", ""),
+        },
+        ensure_ascii=False,
+    )
+
+    session_message_create(sid, role="agent", content=safety_content, agent_type="safety", user_id=uid)
     session_message_create(sid, role="agent", content=reply, agent_type="interviewer", user_id=uid)
-    return {"session_id":sid,"reply":reply,"status":"interviewing"}
+    return {
+        "session_id":sid,
+        "reply":reply,
+        "status":"interviewing",
+        "safety": {
+            "final_risk": safety.get("final_risk", safety.get("risk_level", "low")),
+            "message": safety.get("message", ""),
+            "warning": safety.get("warning", ""),
+            "rule_risk": safety.get("rule_risk", "low"),
+            "llm_risk": safety.get("llm_risk", "low"),
+        },
+    }
 
 
 @app.post("/api/sessions")
@@ -368,6 +423,26 @@ def chat(body: ChatMessage, user=Depends(get_current_user)):
     history.append({"role":"user","content":body.user_message})
     messages.append({"role":"user","text":body.user_message})
     session_message_create(body.session_id, role="user", content=body.user_message, user_id=user["id"] if user else None)
+
+    safety = classify_safety(body.user_message)
+    safety_content = json.dumps(
+        {
+            "final_risk": safety.get("final_risk", safety.get("risk_level", "low")),
+            "rule_risk": safety.get("rule_risk", "low"),
+            "llm_risk": safety.get("llm_risk", "low"),
+            "message": safety.get("message", ""),
+            "warning": safety.get("warning", ""),
+        },
+        ensure_ascii=False,
+    )
+    session_message_create(
+        body.session_id,
+        role="agent",
+        content=safety_content,
+        agent_type="safety",
+        user_id=user["id"] if user else None,
+    )
+
     reply = call_interviewer(normalize_history_for_interviewer(history))
     ready = "[READY_FOR_DIAGNOSIS]" in reply
     clean = reply.replace("[READY_FOR_DIAGNOSIS]","").strip()
@@ -377,7 +452,18 @@ def chat(body: ChatMessage, user=Depends(get_current_user)):
     trigger = turns>=2 or ready
     session_update(body.session_id,history=history,messages=messages,
         turns=turns,status="analyzing" if trigger else "interviewing")
-    return {"reply":clean,"status":"analyzing" if trigger else "interviewing","trigger_diagnose":trigger}
+    return {
+        "reply":clean,
+        "status":"analyzing" if trigger else "interviewing",
+        "trigger_diagnose":trigger,
+        "safety": {
+            "final_risk": safety.get("final_risk", safety.get("risk_level", "low")),
+            "message": safety.get("message", ""),
+            "warning": safety.get("warning", ""),
+            "rule_risk": safety.get("rule_risk", "low"),
+            "llm_risk": safety.get("llm_risk", "low"),
+        },
+    }
 
 @app.post("/api/session/diagnose")
 def diagnose(body: DiagnoseRequest, user=Depends(get_current_user)):
@@ -406,13 +492,22 @@ def diagnose(body: DiagnoseRequest, user=Depends(get_current_user)):
 def get_session(session_id: str, user=Depends(get_current_user)):
     sess = session_get(session_id)
     if not sess: raise HTTPException(404,"Session not found")
-    if sess.get("user_id") and (not user or sess["user_id"] != user["id"]):
+    if sess.get("user_id") and (not user or (not _is_provider(user) and sess["user_id"] != user["id"])):
         raise HTTPException(403, "Forbidden")
     return sess
 
 @app.get("/api/sessions")
 def list_sessions(user=Depends(require_user)):
+    if _is_provider(user):
+        return sessions_list()
     return sessions_list(user["id"])
+
+
+@app.get("/api/provider/sessions")
+def provider_sessions(user=Depends(require_user)):
+    if not _is_provider(user):
+        raise HTTPException(403, "Provider access required")
+    return provider_sessions_list()
 
 
 @app.post("/api/sessions/{session_id}/messages")
@@ -420,7 +515,7 @@ def store_session_message(session_id: str, body: MessageInput, user=Depends(requ
     sess = session_get(session_id)
     if not sess:
         raise HTTPException(404, "Session not found")
-    if sess.get("user_id") and sess["user_id"] != user["id"]:
+    if sess.get("user_id") and (not _is_provider(user) and sess["user_id"] != user["id"]):
         raise HTTPException(403, "Forbidden")
 
     session_message_create(
@@ -448,7 +543,7 @@ def get_session_messages(session_id: str, user=Depends(require_user)):
     sess = session_get(session_id)
     if not sess:
         raise HTTPException(404, "Session not found")
-    if sess.get("user_id") and sess["user_id"] != user["id"]:
+    if sess.get("user_id") and (not _is_provider(user) and sess["user_id"] != user["id"]):
         raise HTTPException(403, "Forbidden")
     return session_messages_raw(session_id)
 
@@ -458,7 +553,7 @@ def get_session_uploads(session_id: str, user=Depends(get_current_user)):
     sess = session_get(session_id)
     if not sess:
         raise HTTPException(404, "Session not found")
-    if sess.get("user_id") and (not user or sess["user_id"] != user["id"]):
+    if sess.get("user_id") and (not user or (not _is_provider(user) and sess["user_id"] != user["id"])):
         raise HTTPException(403, "Forbidden")
     return session_uploads_list(session_id)
 

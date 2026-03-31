@@ -4,6 +4,7 @@ import { AgentBadge, SevBadge, TypingDots } from "../components/ui";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import { Alert } from "../components/ui/alert";
 import { fmtT } from "../core/utils";
 
 export default function ChatPage({ api, symptoms, onComplete, onBack }) {
@@ -20,6 +21,7 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
   const [uploadPreview, setUploadPreview] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [pendingAttachments, setPendingAttachments] = useState([]);
+  const [safetyAlert, setSafetyAlert] = useState(null);
   const fileInputRef = useRef(null);
   const msgEnd = useRef(null);
   const logEnd = useRef(null);
@@ -35,6 +37,15 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
     try {
       const d = await api.start(symptoms);
       setSid(d.session_id);
+      const safety = d?.safety || null;
+      if ((safety?.final_risk || safety?.risk_level) === "high") {
+        setSafetyAlert({
+          final_risk: "high",
+          message: safety?.warning || safety?.message || "This may be a serious condition. Seek urgent medical care.",
+        });
+      } else {
+        setSafetyAlert(null);
+      }
       try {
         const files = await api.sessionUploads(d.session_id);
         setUploadedFiles(Array.isArray(files) ? files : []);
@@ -65,6 +76,13 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
     setLoading(true);
     try {
       const d = await api.chat({ session_id: sid, user_message: txt, attachments });
+      const safety = d?.safety || null;
+      if ((safety?.final_risk || safety?.risk_level) === "high") {
+        setSafetyAlert({
+          final_risk: "high",
+          message: safety?.warning || safety?.message || "This may be a serious condition. Seek urgent medical care.",
+        });
+      }
       // Clear one-shot upload chip after content has been sent into the chat turn.
       setUploadMeta(null);
       setUploadPreview("");
@@ -160,6 +178,40 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
             <span style={{ fontFamily: "var(--body)", fontSize: 14, fontStyle: "italic", color: "var(--ink2)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{symptoms.description}</span>
             <SevBadge n={symptoms.severity} />
           </div>
+
+          {safetyAlert?.final_risk === "high" && (
+            <div style={{ padding: "10px 18px 0", background: "var(--paper2)", flexShrink: 0 }}>
+              <Alert
+                variant="error"
+                style={{ marginBottom: 8, borderWidth: 2, fontFamily: "var(--body)", fontSize: 13 }}
+              >
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                  <div>
+                    <strong style={{ marginRight: 8 }}>Safety Warning:</strong>
+                    {safetyAlert.message}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSafetyAlert(null)}
+                    aria-label="Dismiss safety warning"
+                    title="Dismiss"
+                    style={{
+                      border: "none",
+                      background: "transparent",
+                      color: "var(--rose)",
+                      cursor: "pointer",
+                      fontSize: 18,
+                      lineHeight: 1,
+                      padding: 0,
+                      marginTop: -1,
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              </Alert>
+            </div>
+          )}
 
           <div style={{ flex: 1, overflowY: "auto", padding: "22px 22px" }}>
             {msgs.map((m, i) => (

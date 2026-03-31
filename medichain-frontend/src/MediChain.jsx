@@ -14,6 +14,7 @@ import FlowPage from "./pages/FlowPage";
 import HistoryPage from "./pages/HistoryPage";
 import PatientsPage from "./pages/PatientsPage";
 import EvalPage from "./pages/EvalPage";
+import ProviderDashboard from "./pages/ProviderDashboard";
 import { makeApi } from "./core/api";
 import { useAuth } from "./core/auth";
 import { ThemeProvider, useTheme } from "./theme/ThemeContext";
@@ -33,6 +34,7 @@ function AppInner() {
   const [selPat, setSelPat] = useState(null);
   const api = makeApi(auth.token);
   const page = location.pathname.replace(/^\//, "") || "input";
+  const isProvider = auth.user?.role === "provider";
 
   if (!auth.ready) return (
     <div style={{ minHeight:"100vh", background:"var(--paper)", display:"flex", alignItems:"center", justifyContent:"center", position:"relative", zIndex:1 }}>
@@ -49,17 +51,27 @@ function AppInner() {
   );
 
   const go = (nextPage) => navigate(`/${nextPage}`);
+  const goHome = () => go(isProvider ? "provider" : "input");
   const goNew = () => { setSymp(null); setResult(null); go("input"); };
   return (
     <>
       <TopNav user={auth.user} onLogout={() => { auth.logout(); go("input"); }} onNav={go} page={page} dark={dark} toggle={toggle}/>
       <Routes>
-        <Route path="/" element={<Navigate to="/input" replace />} />
-        <Route path="/auth" element={<AuthPage api={api} onLogin={(t, u) => { auth.login(t, u); go("input"); }} onSkip={() => go("input")}/>} />
-        <Route path="/input" element={<InputPage api={api} onSubmit={f => { setSymp(f); go("chat"); }} onEval={() => go("eval")} selectedPatient={selPat} onClearPatient={() => setSelPat(null)}/>} />
+        <Route path="/" element={<Navigate to={isProvider ? "/provider" : "/input"} replace />} />
+        <Route path="/auth" element={<AuthPage api={api} onLogin={(t, u) => { auth.login(t, u); navigate(u?.role === "provider" ? "/provider" : "/input"); }} onSkip={() => go("input")}/>} />
+        <Route path="/provider" element={auth.user
+          ? (isProvider ? <ProviderDashboard api={api} /> : <Navigate to="/input" replace />)
+          : <AuthPage api={api} onLogin={(t, u) => { auth.login(t, u); navigate(u?.role === "provider" ? "/provider" : "/input"); }} onSkip={() => go("input")}/>
+        } />
+        <Route path="/input" element={isProvider
+          ? <Navigate to="/provider" replace />
+          : <InputPage api={api} onSubmit={f => { setSymp(f); go("chat"); }} onEval={() => go("eval")} selectedPatient={selPat} onClearPatient={() => setSelPat(null)}/>
+        } />
         <Route path="/patients" element={auth.user
-          ? <PatientsPage api={api} onStartConsult={p => { setSelPat(p); go("input"); }}/>
-          : <AuthPage api={api} onLogin={(t, u) => { auth.login(t, u); go("patients"); }} onSkip={() => go("input")}/>
+          ? (isProvider
+            ? <Navigate to="/provider" replace />
+            : <PatientsPage api={api} onStartConsult={p => { setSelPat(p); go("input"); }}/>)
+          : <AuthPage api={api} onLogin={(t, u) => { auth.login(t, u); navigate(u?.role === "provider" ? "/provider" : "/patients"); }} onSkip={() => go("input")}/>
         } />
         <Route path="/chat" element={symptoms
           ? <ChatPage api={api} symptoms={symptoms} onBack={() => go("input")} onComplete={r => { setResult(r); go("result"); }}/>
@@ -73,9 +85,9 @@ function AppInner() {
           ? <FlowPage result={result} onBack={() => go("result")}/>
           : <Navigate to="/input" replace />
         } />
-        <Route path="/history" element={<HistoryPage api={api} onNew={goNew}/>} />
+        <Route path="/history" element={<HistoryPage api={api} onNew={isProvider ? goHome : goNew}/>} />
         <Route path="/eval" element={<EvalPage api={api}/>} />
-        <Route path="*" element={<Navigate to="/input" replace />} />
+        <Route path="*" element={<Navigate to={isProvider ? "/provider" : "/input"} replace />} />
       </Routes>
     </>
   );
