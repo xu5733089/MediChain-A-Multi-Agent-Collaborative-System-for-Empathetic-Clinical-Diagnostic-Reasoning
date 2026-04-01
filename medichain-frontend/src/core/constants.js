@@ -1,8 +1,19 @@
-export const SEV = n => n <= 3 ? { l: "Mild", c: "var(--sage)", bg: "var(--sagePale)" }
-  : n <= 5 ? { l: "Moderate", c: "var(--amber)", bg: "var(--amberPale)" }
-    : n <= 7 ? { l: "Elevated", c: "#b06840", bg: "rgba(176,104,64,0.12)" }
-      : n <= 9 ? { l: "Severe", c: "var(--rose)", bg: "var(--rosePale)" }
-        : { l: "Critical", c: "var(--rose)", bg: "var(--rosePale)" };
+export const SEV = value => {
+  const v = typeof value === "string" ? value.trim().toLowerCase() : value;
+
+  if (v === "mild") return { l: "Mild", c: "var(--sage)", bg: "var(--sagePale)" };
+  if (v === "severe") return { l: "Severe", c: "var(--rose)", bg: "var(--rosePale)" };
+  if (v === "moderate") return { l: "Moderate", c: "var(--amber)", bg: "var(--amberPale)" };
+
+  const n = Number(v);
+  if (Number.isFinite(n)) {
+    if (n <= 3) return { l: "Mild", c: "var(--sage)", bg: "var(--sagePale)" };
+    if (n <= 6) return { l: "Moderate", c: "var(--amber)", bg: "var(--amberPale)" };
+    return { l: "Severe", c: "var(--rose)", bg: "var(--rosePale)" };
+  }
+
+  return { l: "Moderate", c: "var(--amber)", bg: "var(--amberPale)" };
+};
 
 export const AGENTS = {
   interviewer: { icon: "🩺", label: "Interviewer", c: "var(--sage)", bg: "var(--sagePale)", b: "var(--sage)" },

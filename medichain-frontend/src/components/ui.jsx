@@ -30,7 +30,7 @@ export function SevBadge({ n }) {
   const s = SEV(n);
   return (
     <Badge className="gap-1.5 rounded-[20px] px-3.5 py-1 text-xs font-medium tracking-[0.1em]" style={{ background: s.bg, color: s.c }}>
-      {s.l} · {n}/10
+      {s.l}
     </Badge>
   );
 }

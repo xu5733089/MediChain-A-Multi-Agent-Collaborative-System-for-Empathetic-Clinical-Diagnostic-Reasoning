@@ -8,6 +8,7 @@ import { SEV } from "../core/constants";
 export default function ResultsPage({ api, result, onNew, onHistory, onFlow }) {
   const [tab, setTab] = useState("diagnosis");
   const symptoms = result.symptoms || {};
+  const severityValue = symptoms.severity_level || symptoms.severity || "moderate";
   const refs = Array.isArray(result.refs) ? result.refs : [];
   const diagnosis = result.diagnosis || "";
   const review = result.review || "";
@@ -36,7 +37,7 @@ export default function ResultsPage({ api, result, onNew, onHistory, onFlow }) {
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <Badge>{symptoms.bodyPart || "General"}</Badge>
                 <Badge>{symptoms.duration || "—"}</Badge>
-                <SevBadge n={symptoms.severity || 5} />
+                <SevBadge n={severityValue} />
               </div>
             </div>
             <div style={{ display: "flex", gap: 9, flexWrap: "wrap", alignItems: "center" }}>
@@ -58,7 +59,7 @@ export default function ResultsPage({ api, result, onNew, onHistory, onFlow }) {
             { l: "Complaint", v: (symptoms.description || "").slice(0, 44) + "…" },
             { l: "Location", v: symptoms.bodyPart || "—" },
             { l: "Duration", v: symptoms.duration || "—" },
-            { l: "Severity", v: `${symptoms.severity || 0}/10`, c: SEV(symptoms.severity || 5).c },
+            { l: "Severity", v: SEV(severityValue).l, c: SEV(severityValue).c },
           ].map(({ l, v, c }, i) => (
             <div key={l} style={{ padding: "14px 20px", borderRight: i < 3 ? "1px solid rgba(22,15,6,0.09)" : undefined }}>
               <p className="ink-label" style={{ marginBottom: 4 }}>{l}</p>

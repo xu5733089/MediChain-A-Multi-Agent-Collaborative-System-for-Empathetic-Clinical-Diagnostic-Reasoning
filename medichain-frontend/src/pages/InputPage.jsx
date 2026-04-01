@@ -9,7 +9,7 @@ import { Textarea } from "../components/ui/textarea";
 import { SEV } from "../core/constants";
 
 export default function InputPage({ api, onSubmit, onEval, selectedPatient, onClearPatient }) {
-  const [form, setForm] = useState({ description: "", bodyPart: "General", duration: "1–3 days", severity: 5, notes: selectedPatient?.conditions || "" });
+  const [form, setForm] = useState({ description: "", bodyPart: "General", duration: "1–3 days", severity: "moderate", notes: selectedPatient?.conditions || "" });
   const [preContext, setPreContext] = useState([]);
   const [preItems, setPreItems] = useState([]);
   useEffect(() => { if (selectedPatient) setForm(f => ({ ...f, notes: selectedPatient.conditions || "" })); }, [selectedPatient]);
@@ -21,9 +21,9 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
   const bodyParts = ["General", "Head / Face", "Neck", "Chest", "Abdomen", "Back", "Arm / Shoulder", "Leg / Hip", "Skin", "Multiple Areas"];
   const durations = ["< 24 hours", "1–3 days", "4–7 days", "1–2 weeks", "2–4 weeks", "> 1 month", "Chronic (> 3 months)"];
   const severityOptions = [
-    { value: 2, label: "Mild", description: "Discomfort is present, but it does not significantly interfere with daily activities." },
-    { value: 5, label: "Moderate", description: "Discomfort is noticeable and already affects some daily activities." },
-    { value: 9, label: "Severe", description: "Symptoms are intense, severely disrupt normal life, or feel difficult to tolerate." },
+    { value: "mild", label: "Mild", description: "Discomfort is present, but it does not significantly interfere with daily activities." },
+    { value: "moderate", label: "Moderate", description: "Discomfort is noticeable and already affects some daily activities." },
+    { value: "severe", label: "Severe", description: "Symptoms are intense, severely disrupt normal life, or feel difficult to tolerate." },
   ];
   const valid = form.description.trim().length > 15;
   const s = SEV(form.severity);
@@ -152,7 +152,7 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
                 <p style={{ fontFamily: "var(--serif)", fontSize: 18, fontWeight: 600, color: "var(--ink)" }}>Severity</p>
               </div>
               <div style={{ textAlign: "center", margin: "8px 0 16px", padding: "18px 12px", background: "var(--paper3)", borderRadius: 4, border: "1px solid rgba(22,15,6,0.07)" }}>
-                <span style={{ fontFamily: "var(--serif)", fontSize: 58, fontWeight: 400, color: s.c, lineHeight: 1, display: "block", transition: "color 0.3s", animation: form.severity >= 8 ? "pulse 1.5s ease-in-out infinite" : "none" }}>{activeSeverity.label}</span>
+                <span style={{ fontFamily: "var(--serif)", fontSize: 58, fontWeight: 400, color: s.c, lineHeight: 1, display: "block", transition: "color 0.3s", animation: form.severity === "severe" ? "pulse 1.5s ease-in-out infinite" : "none" }}>{activeSeverity.label}</span>
                 <p style={{ marginTop: 10, fontFamily: "var(--body)", fontSize: 14, lineHeight: 1.6, color: "var(--ink4)" }}>{activeSeverity.description}</p>
                 <div style={{ marginTop: 10 }}><SevBadge n={form.severity} /></div>
               </div>

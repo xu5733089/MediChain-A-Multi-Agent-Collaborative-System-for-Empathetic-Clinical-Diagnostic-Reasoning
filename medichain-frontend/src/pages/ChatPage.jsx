@@ -278,7 +278,7 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
           <div style={{ padding: "9px 18px", borderBottom: "1px solid rgba(22,15,6,0.07)", background: "var(--sagePale)", flexShrink: 0, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             <Badge variant="sage" className="text-[9px]">Active case</Badge>
             <span style={{ fontFamily: "var(--body)", fontSize: 14, fontStyle: "italic", color: "var(--ink2)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{symptoms.description}</span>
-            <SevBadge n={symptoms.severity} />
+            <SevBadge n={symptoms.severity_level || symptoms.severity || "moderate"} />
           </div>
 
           {safetyAlert?.final_risk === "high" && (
