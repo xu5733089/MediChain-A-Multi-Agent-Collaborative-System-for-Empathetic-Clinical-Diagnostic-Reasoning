@@ -61,7 +61,7 @@ export default function ProviderDashboard({ api }) {
               {loading ? "Loading..." : `${rows.length} sessions`}
             </p>
           </div>
-          <Button onClick={load} variant="outline" className="h-9 px-5 text-sm">
+          <Button onClick={load} variant="outline" size="sm">
             Refresh
           </Button>
         </div>

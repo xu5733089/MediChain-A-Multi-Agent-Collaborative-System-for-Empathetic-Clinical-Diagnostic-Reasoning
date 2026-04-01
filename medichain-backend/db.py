@@ -133,7 +133,7 @@ def init_db():
                 id TEXT PRIMARY KEY,
                 session_id TEXT NOT NULL,
                 file_name TEXT NOT NULL,
-                file_type TEXT NOT NULL CHECK(file_type IN ('pdf','txt')),
+                file_type TEXT NOT NULL CHECK(file_type IN ('pdf','txt','image','audio','video')),
                 file_path TEXT NOT NULL,
                 extracted_text TEXT NOT NULL DEFAULT '',
                 uploaded_at TEXT NOT NULL,
@@ -141,6 +141,26 @@ def init_db():
             )"""
         )
         c.execute("CREATE INDEX IF NOT EXISTS idx_uploads_session_uploaded ON uploads(session_id, uploaded_at)")
+
+        # Migration: recreate uploads table if it lacks 'audio'/'video' in the file_type constraint.
+        row = c.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='uploads'").fetchone()
+        if row and ("'audio'" not in row["sql"] or "'video'" not in row["sql"]):
+            c.execute("ALTER TABLE uploads RENAME TO uploads_old")
+            c.execute(
+                """CREATE TABLE uploads (
+                    id TEXT PRIMARY KEY,
+                    session_id TEXT NOT NULL,
+                    file_name TEXT NOT NULL,
+                    file_type TEXT NOT NULL CHECK(file_type IN ('pdf','txt','image','audio','video')),
+                    file_path TEXT NOT NULL,
+                    extracted_text TEXT NOT NULL DEFAULT '',
+                    uploaded_at TEXT NOT NULL,
+                    FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+                )"""
+            )
+            c.execute("INSERT INTO uploads SELECT * FROM uploads_old")
+            c.execute("DROP TABLE uploads_old")
+            c.execute("CREATE INDEX IF NOT EXISTS idx_uploads_session_uploaded ON uploads(session_id, uploaded_at)")
 
         c.execute(
             """CREATE TABLE IF NOT EXISTS eval_runs (

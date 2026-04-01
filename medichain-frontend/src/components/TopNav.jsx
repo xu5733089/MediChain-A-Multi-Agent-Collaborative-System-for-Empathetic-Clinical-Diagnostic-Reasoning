@@ -31,38 +31,49 @@ export default function TopNav({ user, onLogout, onNav, page, dark, toggle }) {
           </div>
         )}
 
-        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-          <Button onClick={toggle} variant="outline" className="h-9 px-5 text-[13px]" style={{ paddingLeft: 20, paddingRight: 20 }}>{dark ? "☀ Light" : "◐ Dark"}</Button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <Button onClick={toggle} variant="outline" size="sm">
+            {dark ? "☀ Light" : "◐ Dark"}
+          </Button>
           {user ? (
             <div style={{ position: "relative" }}>
-              <button onClick={() => setMenu(v => !v)} style={{ display: "flex", alignItems: "center", gap: 9, background: "var(--paper3)", border: "1.5px solid rgba(22,15,6,0.13)", borderRadius: 28, padding: "5px 14px 5px 6px", cursor: "pointer", transition: "all 0.18s" }}>
-                <div style={{ width: 28, height: 28, borderRadius: "50%", background: "linear-gradient(135deg,var(--rose),var(--roseB))", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 10, fontWeight: 700, fontFamily: "var(--mono)" }}>{initials}</div>
-                <span style={{ fontFamily: "var(--body)", fontSize: 14, color: "var(--ink2)", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.full_name || user.username}</span>
-                <span style={{ fontSize: 9, color: "var(--ink4)" }}>{menu ? "▲" : "▼"}</span>
+              <button
+                onClick={() => setMenu(v => !v)}
+                style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--paper3)", border: "1.5px solid rgba(22,15,6,0.13)", borderRadius: 30, padding: "5px 16px 5px 6px", cursor: "pointer", transition: "all 0.18s" }}
+              >
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: isProvider ? "linear-gradient(135deg,var(--navy),#2050a8)" : "linear-gradient(135deg,var(--rose),var(--roseB))", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: "var(--mono)" }}>{initials}</div>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+                  <span style={{ fontFamily: "var(--body)", fontSize: 14, color: "var(--ink2)", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.2 }}>{user.full_name || user.username}</span>
+                  <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: isProvider ? "var(--navy)" : "var(--rose)", letterSpacing: "0.1em", lineHeight: 1 }}>{isProvider ? "PROVIDER" : "PATIENT"}</span>
+                </div>
+                <span style={{ fontSize: 9, color: "var(--ink4)", marginLeft: 2 }}>{menu ? "▲" : "▼"}</span>
               </button>
               {menu && (
-                <div className="card scale-in" style={{ position: "absolute", right: 0, top: 48, width: 234, boxShadow: "var(--shadow-xl)", zIndex: 200, overflow: "hidden" }}>
+                <div className="card scale-in" style={{ position: "absolute", right: 0, top: 52, width: 240, boxShadow: "var(--shadow-xl)", zIndex: 200, overflow: "hidden" }}>
                   <div style={{ padding: "14px 18px", borderBottom: "1px solid rgba(22,15,6,0.08)", background: "var(--paper3)" }}>
                     <p style={{ fontFamily: "var(--serif)", fontSize: 15, fontStyle: "italic", color: "var(--ink)" }}>{user.full_name || user.username}</p>
                     <p style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", marginTop: 2 }}>{user.email}</p>
+                    <div style={{ display: "inline-block", marginTop: 6, background: isProvider ? "var(--navyPale)" : "rgba(184,56,48,0.08)", borderRadius: 4, padding: "2px 8px" }}>
+                      <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: isProvider ? "var(--navy)" : "var(--rose)", letterSpacing: "0.1em" }}>{isProvider ? "HEALTHCARE PROVIDER" : "PATIENT"}</span>
+                    </div>
                   </div>
                   {navItems.map(({ id, l }) => (
                     <button
                       key={id}
                       onClick={() => { onNav(id); setMenu(false); }}
-                      style={{ display: "block", width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: "1px solid rgba(22,15,6,0.06)", padding: "11px 18px", color: "var(--ink2)", fontSize: 14, fontFamily: "var(--body)", cursor: "pointer", transition: "background 0.14s" }}
+                      style={{ display: "block", width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: "1px solid rgba(22,15,6,0.06)", padding: "12px 18px", color: "var(--ink2)", fontSize: 14, fontFamily: "var(--body)", cursor: "pointer", transition: "background 0.14s" }}
                       onMouseEnter={e => e.target.style.background = "var(--paper3)"}
                       onMouseLeave={e => e.target.style.background = "none"}
                     >
                       {l}
                     </button>
                   ))}
-                  <button onClick={() => { onLogout(); setMenu(false); }} style={{ display: "block", width: "100%", textAlign: "left", background: "none", border: "none", padding: "11px 18px", color: "var(--rose)", fontSize: 14, fontFamily: "var(--body)", cursor: "pointer" }}>Sign out</button>
+                  <button onClick={() => { onLogout(); setMenu(false); }} style={{ display: "block", width: "100%", textAlign: "left", background: "none", border: "none", padding: "12px 18px", color: "var(--rose)", fontSize: 14, fontFamily: "var(--body)", cursor: "pointer" }}>Sign out</button>
                 </div>
               )}
             </div>
           ) : (
-            <Button onClick={() => onNav("auth")} className="h-9 px-5 text-sm">Sign in</Button>
+            <Button onClick={() => onNav("auth")} size="sm">Sign in →</Button>
           )}
         </div>
       </div>

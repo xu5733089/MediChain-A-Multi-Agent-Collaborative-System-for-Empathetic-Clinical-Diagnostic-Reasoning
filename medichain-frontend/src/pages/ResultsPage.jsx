@@ -41,12 +41,12 @@ export default function ResultsPage({ api, result, onNew, onHistory, onFlow }) {
             </div>
             <div style={{ display: "flex", gap: 9, flexWrap: "wrap", alignItems: "center" }}>
               {result.sessionId && <>
-                <Button onClick={() => window.open(api.exportUrl(result.sessionId, "pdf"), "_blank")} className="h-9 px-5 text-sm">📄 PDF</Button>
-                <Button onClick={() => window.open(api.exportUrl(result.sessionId, "json"), "_blank")} variant="outline" className="h-9 px-4 text-sm">JSON</Button>
+                <Button onClick={() => window.open(api.exportUrl(result.sessionId, "pdf"), "_blank")} size="sm">📄 PDF</Button>
+                <Button onClick={() => window.open(api.exportUrl(result.sessionId, "json"), "_blank")} variant="outline" size="sm">JSON</Button>
               </>}
-              <Button onClick={onFlow} variant="outline" className="h-9 px-4 text-sm">Flow →</Button>
-              <Button onClick={onHistory} variant="outline" className="h-9 px-4 text-sm">History</Button>
-              <Button onClick={onNew} variant="secondary" className="h-9 px-5 text-sm">+ New</Button>
+              <Button onClick={onFlow} variant="outline" size="sm">Flow →</Button>
+              <Button onClick={onHistory} variant="outline" size="sm">History</Button>
+              <Button onClick={onNew} variant="secondary" size="sm">+ New</Button>
             </div>
           </div>
           <div className="gold-rule" />

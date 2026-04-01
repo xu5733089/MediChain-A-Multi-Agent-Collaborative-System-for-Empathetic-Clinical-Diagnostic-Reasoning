@@ -96,7 +96,7 @@ export default function PatientsPage({ api, onStartConsult }) {
             </h2>
             <p style={{ fontFamily: "var(--body)", fontSize: 15, color: "var(--ink4)", marginTop: 10 }}>{patients.length} profiles in registry</p>
           </div>
-          <Button onClick={() => { setShowForm(true); setEditP(null); setForm(blank); }} className="h-11 px-[26px] text-[15px]">+ New profile</Button>
+          <Button onClick={() => { setShowForm(true); setEditP(null); setForm(blank); }} size="lg">+ New profile</Button>
         </div>
         <div className="gold-rule" style={{ marginBottom: 24 }} />
 
@@ -110,7 +110,7 @@ export default function PatientsPage({ api, onStartConsult }) {
                   <p style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", letterSpacing: "0.16em", marginBottom: 5 }}>{editP ? "EDIT PROFILE" : "NEW PROFILE"}</p>
                   <h3 style={{ fontFamily: "var(--serif)", fontSize: 24, fontWeight: 400, fontStyle: "italic", color: "var(--ink)" }}>{editP ? "Update information" : "Create patient profile"}</h3>
                 </div>
-                <Button onClick={() => setShowForm(false)} variant="outline" className="h-[34px] w-[34px] shrink-0 rounded-full p-0 text-[18px]">×</Button>
+                <Button onClick={() => setShowForm(false)} variant="ghost" size="icon-sm">×</Button>
               </div>
               <InkDivider style={{ margin: "0 0 18px" }} />
               <FormField label="Full Name *" value={form.name} onChange={ff("name")} placeholder="Patient full name" />
@@ -137,8 +137,8 @@ export default function PatientsPage({ api, onStartConsult }) {
               <FormField label="Chronic Conditions" value={form.conditions} onChange={ff("conditions")} placeholder="Type 2 Diabetes, Hypertension…" />
               <FormField label="Clinical Notes" value={form.notes} onChange={ff("notes")} placeholder="Additional clinical notes…" />
               <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
-                <Button onClick={() => setShowForm(false)} variant="outline" className="h-11 flex-1">Cancel</Button>
-                <Button onClick={save} disabled={!form.name.trim() || saving} className="h-11 flex-[2] text-[15px]">
+                <Button onClick={() => setShowForm(false)} variant="outline" size="lg" className="flex-1">Cancel</Button>
+                <Button onClick={save} disabled={!form.name.trim() || saving} size="lg" className="flex-[2]">
                   {saving ? "Saving…" : editP ? "Save changes" : "Create profile"}
                 </Button>
               </div>
@@ -176,9 +176,9 @@ export default function PatientsPage({ api, onStartConsult }) {
                       {p.conditions && <p style={{ fontFamily: "var(--body)", fontSize: 12.5, color: "var(--ink4)", fontStyle: "italic", lineHeight: 1.5 }}>{p.conditions.slice(0, 72)}{p.conditions.length > 72 ? "…" : ""}</p>}
                     </div>
                     <div style={{ borderTop: "1px solid rgba(22,15,6,0.08)", padding: "9px 16px", display: "flex", gap: 7 }}>
-                      <Button onClick={() => onStartConsult(p)} className="h-[34px] flex-1 px-2 text-[13px]">+ Consult</Button>
-                      <Button onClick={() => startEdit(p)} variant="outline" className="h-[34px] px-[13px] text-[13px]">Edit</Button>
-                      <Button onClick={() => del(p.id)} variant="outline" className="h-[34px] border-[var(--rose)]/30 bg-[var(--roseDim)] px-[13px] text-[13px] text-[var(--rose)] hover:bg-[var(--rosePale)]">Del</Button>
+                      <Button onClick={() => onStartConsult(p)} size="xs" className="flex-1">+ Consult</Button>
+                      <Button onClick={() => startEdit(p)} variant="outline" size="xs">Edit</Button>
+                      <Button onClick={() => del(p.id)} variant="danger" size="xs">Del</Button>
                     </div>
                     {selP?.id === p.id && pSess.length > 0 && (
                       <div className="scale-in" style={{ borderTop: "1px solid rgba(22,15,6,0.08)", padding: "12px 18px", background: "var(--paper3)" }}>

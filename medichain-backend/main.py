@@ -36,7 +36,38 @@ app.add_middleware(CORSMiddleware,
 
 init_db()
 UPLOAD_ROOT = Path(__file__).parent / "uploads"
-ALLOWED_UPLOAD_TYPES = {".pdf": "pdf", ".txt": "txt"}
+ALLOWED_UPLOAD_TYPES = {
+    # Documents
+    ".pdf": "pdf",
+    ".txt": "txt",
+    # Images
+    ".jpg": "image",
+    ".jpeg": "image",
+    ".png": "image",
+    ".gif": "image",
+    ".bmp": "image",
+    ".webp": "image",
+    # Audio
+    ".mp3": "audio",
+    ".wav": "audio",
+    ".m4a": "audio",
+    ".ogg": "audio",
+    ".flac": "audio",
+    # Video
+    ".mp4": "video",
+    ".mov": "video",
+    ".avi": "video",
+    ".mkv": "video",
+    ".webm": "video",
+}
+IMAGE_MEDIA_TYPES = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".gif": "image/gif",
+    ".bmp": "image/bmp",
+    ".webp": "image/webp",
+}
 MAX_UPLOAD_CONTEXT_CHARS = 6000
 
 def _now():
@@ -147,6 +178,138 @@ def _extract_text_from_pdf(path: Path) -> str:
         chunks.append(page.extract_text() or "")
     return "\n".join(chunks).strip()
 
+
+def _analyze_medical_image(path: Path) -> str:
+    import base64
+    import anthropic as _anthropic
+
+    ext = path.suffix.lower()
+    media_type = IMAGE_MEDIA_TYPES.get(ext, "image/jpeg")
+    image_data = base64.standard_b64encode(path.read_bytes()).decode("utf-8")
+
+    _client = _anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    response = _client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=1024,
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": media_type,
+                            "data": image_data,
+                        },
+                    },
+                    {
+                        "type": "text",
+                        "text": (
+                            "You are a medical imaging specialist. Analyze this medical image and provide a structured clinical report covering:\n"
+                            "1. **Image Type**: Identify the modality (X-ray, MRI, CT, ultrasound, dermatology photo, fundus, etc.)\n"
+                            "2. **Key Findings**: Describe the main visible structures and their appearance\n"
+                            "3. **Abnormalities**: Note any abnormal findings, lesions, or areas of concern with their location and characteristics\n"
+                            "4. **Clinical Significance**: Explain the potential clinical relevance of the findings\n"
+                            "5. **Limitations**: State any limitations in this analysis (e.g. image quality, lack of clinical context)\n\n"
+                            "Be objective and thorough. If this does not appear to be a medical image, describe what you see and note that it may not be a medical image."
+                        ),
+                    },
+                ],
+            }
+        ],
+    )
+    return response.content[0].text
+
+
+def _transcribe_audio(path: Path) -> str:
+    """Transcribe an audio file using SpeechRecognition + Google Speech API."""
+    try:
+        import speech_recognition as sr
+    except ImportError:
+        return f"Audio file: {path.name}. (Install SpeechRecognition to enable transcription.)"
+
+    r = sr.Recognizer()
+    try:
+        with sr.AudioFile(str(path)) as source:
+            audio_data = r.record(source)
+        text = r.recognize_google(audio_data)
+        return f"Audio transcription of '{path.name}':\n\n{text}"
+    except sr.UnknownValueError:
+        return f"Audio file '{path.name}' uploaded but speech could not be understood (too quiet or unclear)."
+    except sr.RequestError as e:
+        return f"Audio file '{path.name}' uploaded. Transcription service unavailable: {e}"
+    except Exception as e:
+        return (
+            f"Audio file '{path.name}' uploaded. "
+            f"Transcription failed (format may require ffmpeg): {e}. "
+            "Consider converting to WAV format for best results."
+        )
+
+
+def _analyze_video(path: Path) -> str:
+    """Extract key frames from a video and analyse each with Claude Vision."""
+    try:
+        import cv2  # type: ignore
+    except ImportError:
+        return f"Video file: {path.name}. (Install opencv-python-headless to enable frame analysis.)"
+
+    cap = cv2.VideoCapture(str(path))
+    if not cap.isOpened():
+        return f"Video file '{path.name}' could not be opened for analysis."
+
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    fps = cap.get(cv2.CAP_PROP_FPS) or 25
+    duration = total_frames / fps
+
+    import base64
+    import anthropic as _anthropic
+    _client = _anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+    frame_analyses = []
+    for i, pos in enumerate([0.1, 0.5, 0.9]):
+        frame_num = max(0, min(int(total_frames * pos), total_frames - 1))
+        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
+        ret, frame = cap.read()
+        if not ret:
+            continue
+        # Resize to cap payload
+        h, w = frame.shape[:2]
+        if max(h, w) > 1024:
+            scale = 1024 / max(h, w)
+            frame = cv2.resize(frame, (int(w * scale), int(h * scale)))
+        _, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 82])
+        b64 = base64.standard_b64encode(buf.tobytes()).decode("utf-8")
+        try:
+            resp = _client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=400,
+                messages=[{
+                    "role": "user",
+                    "content": [
+                        {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": b64}},
+                        {"type": "text", "text": (
+                            f"This is frame {i+1}/3 of a medical video at {pos*100:.0f}% of its "
+                            f"{duration:.1f}s duration. Describe what you see from a medical perspective in 2-3 sentences."
+                        )},
+                    ],
+                }],
+            )
+            frame_analyses.append(f"Frame {i+1} ({pos*100:.0f}%): {resp.content[0].text}")
+        except Exception as e:
+            frame_analyses.append(f"Frame {i+1}: analysis failed ({e})")
+
+    cap.release()
+
+    if not frame_analyses:
+        return f"Video '{path.name}': no frames could be extracted for analysis."
+
+    return (
+        f"**Video analysis** — {path.name} ({duration:.1f}s at {fps:.0f}fps)\n\n"
+        + "\n\n".join(frame_analyses)
+    )
+
+
 def session_update(sid, **kwargs):
     sets, vals = [], []
     for k, v in kwargs.items():
@@ -212,6 +375,7 @@ class SymptomInput(BaseModel):
     severity: Union[int, str] = "moderate"
     notes: str = ""
     patient_id: Optional[str] = None
+    pre_context: list[str] = []  # Analyses from pre-consultation media uploads
 
 class ChatMessage(BaseModel):
     session_id: str
@@ -346,6 +510,55 @@ def patient_sessions(patient_id: str, user=Depends(require_user)):
     return [{"id":d["id"],"status":d["status"],"created_at":d["created_at"],
              "description":json.loads(d["symptoms"]).get("description","")[:60]} for d in map(dict,rows)]
 
+# ── Stateless file analysis (no session required) ─────────
+@app.post("/api/analyze/file")
+async def analyze_file(file: UploadFile = File(...), user=Depends(get_current_user)):
+    """Analyse a file and return the result without persisting to any session.
+    Used for pre-consultation uploads on the intake form."""
+    import tempfile
+
+    original_name = _safe_filename(file.filename or "upload")
+    ext = Path(original_name).suffix.lower()
+    if ext not in ALLOWED_UPLOAD_TYPES:
+        raise HTTPException(
+            400,
+            "Unsupported file type. Supported: PDF, TXT, images (JPG/PNG/…), "
+            "audio (MP3/WAV/M4A/OGG/FLAC), video (MP4/MOV/AVI/MKV/WEBM).",
+        )
+    file_type = ALLOWED_UPLOAD_TYPES[ext]
+    payload = await file.read()
+
+    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+        tmp.write(payload)
+        tmp_path = Path(tmp.name)
+
+    try:
+        if file_type == "txt":
+            analysis = _extract_text_from_txt(tmp_path)
+        elif file_type == "pdf":
+            analysis = _extract_text_from_pdf(tmp_path)
+        elif file_type == "image":
+            analysis = _analyze_medical_image(tmp_path)
+        elif file_type == "audio":
+            analysis = _transcribe_audio(tmp_path)
+        elif file_type == "video":
+            analysis = _analyze_video(tmp_path)
+        else:
+            analysis = ""
+    except Exception as e:
+        raise HTTPException(400, f"Failed to process file: {e}")
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+    return {
+        "ok": True,
+        "file_name": original_name,
+        "file_type": file_type,
+        "analysis": analysis,
+        "analysis_preview": analysis[:400],
+    }
+
+
 # ── Session Routes ────────────────────────────────────────
 @app.post("/api/session/start")
 def start_session(symptoms: SymptomInput, user=Depends(get_current_user)):
@@ -355,9 +568,20 @@ def start_session(symptoms: SymptomInput, user=Depends(get_current_user)):
     payload = symptoms.model_dump()
     payload["severity"] = severity_score
     payload["severity_level"] = severity_level
-    case = (f"Patient presents with:\n- Chief complaint: {symptoms.description}\n"
-            f"- Body area: {symptoms.bodyPart}\n- Duration: {symptoms.duration}\n"
-            f"- Severity: {severity_level}\n- History: {symptoms.notes or 'None'}\n\nBegin empathetic interview.")
+    pre_ctx_block = ""
+    if symptoms.pre_context:
+        ctx_items = [c.strip() for c in symptoms.pre_context if c.strip()]
+        if ctx_items:
+            pre_ctx_block = (
+                "\n\nPRE-CONSULTATION MEDIA CONTEXT\n" + "=" * 40 + "\n"
+                + "\n\n---\n\n".join(ctx_items)
+            )
+    case = (
+        f"Patient presents with:\n- Chief complaint: {symptoms.description}\n"
+        f"- Body area: {symptoms.bodyPart}\n- Duration: {symptoms.duration}\n"
+        f"- Severity: {severity_level}\n- History: {symptoms.notes or 'None'}"
+        f"{pre_ctx_block}\n\nBegin empathetic interview."
+    )
     history = [{"role":"user","content":case}]
     reply = call_interviewer(history)
     history.append({"role":"assistant","content":reply})
@@ -443,13 +667,21 @@ def chat(body: ChatMessage, user=Depends(get_current_user)):
         user_id=user["id"] if user else None,
     )
 
+    MAX_TURNS = 12  # Safety ceiling — prevent runaway sessions
     reply = call_interviewer(normalize_history_for_interviewer(history))
     ready = "[READY_FOR_DIAGNOSIS]" in reply
     clean = reply.replace("[READY_FOR_DIAGNOSIS]","").strip()
+
+    # If we hit the turn ceiling and Claude hasn't wrapped up yet, append a
+    # natural closing sentence so the patient isn't left hanging.
+    force_trigger = turns >= MAX_TURNS
+    if force_trigger and not ready:
+        clean = clean + "\n\nThank you for sharing all of that. I now have enough information to proceed with a thorough analysis."
+
     history.append({"role":"assistant","content":clean})
     messages.append({"role":"ai","agent":"interviewer","text":clean})
     session_message_create(body.session_id, role="agent", content=clean, agent_type="interviewer", user_id=user["id"] if user else None)
-    trigger = turns>=2 or ready
+    trigger = ready or force_trigger
     session_update(body.session_id,history=history,messages=messages,
         turns=turns,status="analyzing" if trigger else "interviewing")
     return {
@@ -472,15 +704,49 @@ def diagnose(body: DiagnoseRequest, user=Depends(get_current_user)):
     if sess.get("user_id") and (not user or sess["user_id"] != user["id"]):
         raise HTTPException(403, "Forbidden")
     s = sess["symptoms"]
-    lines = [
-        f"{'PATIENT' if m['role']=='user' else 'SYSTEM' if m['role']=='system' else 'INTERVIEWER'}: {m['text']}"
-        for m in sess["messages"]
-    ]
-    case_text = (f"PATIENT CASE\n{'='*40}\nChief complaint: {s['description']}\n"
-                 f"Body area: {s['bodyPart']}\nDuration: {s['duration']}\n"
-                 f"Severity: {s.get('severity_level', severity_to_level(s.get('severity')))}\nHistory: {s['notes'] or 'None'}\n\n"
-                 f"TRANSCRIPT\n{'='*40}\n"+"\n\n".join(lines))
-    rag_query = f"{s['description']} {s['bodyPart']} {s['duration']}"
+
+    # Separate image analyses from regular conversation messages
+    image_analyses = []
+    lines = []
+    for m in sess["messages"]:
+        role = m["role"]
+        text = m.get("text", "")
+        if role == "system" and text.startswith("Uploaded file:") and "image" in text.lower():
+            # Extract the AI analysis portion (everything after the metadata line)
+            analysis_body = text.split("\n\n", 1)[1] if "\n\n" in text else text
+            image_analyses.append(analysis_body)
+        elif role == "user":
+            lines.append(f"PATIENT: {text}")
+        elif role == "system":
+            lines.append(f"CONTEXT: {text}")
+        else:
+            lines.append(f"INTERVIEWER: {text}")
+
+    image_section = ""
+    if image_analyses:
+        image_section = (
+            f"\nMEDICAL IMAGE ANALYSIS\n{'='*40}\n"
+            + "\n\n---\n\n".join(image_analyses)
+            + "\n"
+        )
+
+    case_text = (
+        f"PATIENT CASE\n{'='*40}\n"
+        f"Chief complaint: {s['description']}\n"
+        f"Body area: {s['bodyPart']}\nDuration: {s['duration']}\n"
+        f"Severity: {s.get('severity_level', severity_to_level(s.get('severity')))}\n"
+        f"History: {s['notes'] or 'None'}\n"
+        f"{image_section}"
+        f"\nTRANSCRIPT\n{'='*40}\n"
+        + "\n\n".join(lines)
+    )
+
+    # Enrich RAG query with image findings if available
+    image_query_suffix = " ".join(
+        a[:200] for a in image_analyses
+    ) if image_analyses else ""
+    rag_query = f"{s['description']} {s['bodyPart']} {s['duration']} {image_query_suffix}".strip()
+
     diagnosis, refs = call_diagnostician(case_text, rag_query)
     review = call_critic(case_text, diagnosis)
     session_message_create(body.session_id, role="agent", content=diagnosis, agent_type="diagnostician", user_id=user["id"] if user else None)
@@ -569,7 +835,7 @@ async def upload_session_file(session_id: str, file: UploadFile = File(...), use
     original_name = _safe_filename(file.filename or "upload")
     ext = Path(original_name).suffix.lower()
     if ext not in ALLOWED_UPLOAD_TYPES:
-        raise HTTPException(400, "Only .pdf and .txt files are supported")
+        raise HTTPException(400, "Only .pdf, .txt, and image files (.jpg, .jpeg, .png, .gif, .bmp, .webp) are supported")
 
     file_type = ALLOWED_UPLOAD_TYPES[ext]
     upload_id = str(uuid.uuid4())
@@ -584,10 +850,12 @@ async def upload_session_file(session_id: str, file: UploadFile = File(...), use
     try:
         if file_type == "txt":
             extracted_text = _extract_text_from_txt(stored_path)
+        elif file_type == "image":
+            extracted_text = _analyze_medical_image(stored_path)
         else:
             extracted_text = _extract_text_from_pdf(stored_path)
     except Exception as e:
-        raise HTTPException(400, f"Failed to extract text from file: {e}")
+        raise HTTPException(400, f"Failed to process file: {e}")
 
     uploaded_at = _now()
     with get_db() as c:
@@ -611,14 +879,15 @@ async def upload_session_file(session_id: str, file: UploadFile = File(...), use
     if len(context_text) > MAX_UPLOAD_CONTEXT_CHARS:
         context_text = context_text[:MAX_UPLOAD_CONTEXT_CHARS] + "\n...[truncated]"
 
+    if file_type == "image":
+        context_label = f"Uploaded medical image: {original_name}. AI analysis of this image:\n\n"
+    else:
+        context_label = f"Uploaded {file_type.upper()} file: {original_name}. Use the following extracted text as additional clinical context:\n\n"
+
     history = sess.get("history", [])
     history.append({
         "role": "system",
-        "content": (
-            f"Uploaded {file_type.upper()} file: {original_name}. "
-            "Use the following extracted text as additional clinical context:\n\n"
-            f"{context_text}"
-        ),
+        "content": context_label + context_text,
     })
 
     legacy_messages = sess.get("messages", [])
@@ -632,7 +901,7 @@ async def upload_session_file(session_id: str, file: UploadFile = File(...), use
         session_id=session_id,
         role="system",
         content=(
-            f"Uploaded file: {original_name} ({file_type}), extracted {len(extracted_text)} chars.\n\n"
+            f"Uploaded file: {original_name} ({file_type}), analysis length {len(extracted_text)} chars.\n\n"
             f"{context_text}"
         ),
         user_id=user["id"] if user else None,

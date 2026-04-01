@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { AmbientBlobs, ECGLine, IllustFlower, IllustLeaf, ParticleField } from "../components/illustrations";
 import { AgentBadge, SevBadge, TypingDots } from "../components/ui";
 import { Badge } from "../components/ui/badge";
@@ -19,10 +19,77 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
   const [uploadError, setUploadError] = useState("");
   const [uploadMeta, setUploadMeta] = useState(null);
   const [uploadPreview, setUploadPreview] = useState("");
+  const [uploadImageUrl, setUploadImageUrl] = useState(null);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [pendingAttachments, setPendingAttachments] = useState([]);
   const [safetyAlert, setSafetyAlert] = useState(null);
+  const [micRecording, setMicRecording] = useState(false);
   const fileInputRef = useRef(null);
+  // Single ref object — avoids stale-closure issues across restarts
+  const micSR = useRef({ active: false, text: "", rec: null });
+
+  const micSupported = useMemo(() =>
+    typeof window !== "undefined" && !!(window.SpeechRecognition || window.webkitSpeechRecognition),
+  []);
+
+  function launchMic() {
+    const s = micSR.current;
+    if (!s.active) return;
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const rec = new SR();
+    rec.lang = "en-US";
+    rec.continuous = true;
+    rec.interimResults = false;
+
+    rec.onresult = e => {
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) s.text += e.results[i][0].transcript + " ";
+      }
+    };
+
+    rec.onerror = e => {
+      // "aborted" fires when stop() is called — ignore it, onend handles finalization
+      if (e.error === "aborted" || e.error === "no-speech" || e.error === "audio-capture") return;
+      s.rec = null;
+      if (s.active) setTimeout(launchMic, 250);
+      else setMicRecording(false);
+    };
+
+    rec.onend = () => {
+      s.rec = null;
+      if (s.active) {
+        // Delay prevents rapid-restart rejection by Chrome
+        setTimeout(launchMic, 150);
+      } else {
+        setMicRecording(false);
+        if (s.text.trim()) setInput(prev => (prev ? prev + " " : "") + s.text.trim());
+        s.text = "";
+      }
+    };
+
+    try { rec.start(); s.rec = rec; }
+    catch (_) { if (s.active) setTimeout(launchMic, 300); }
+  }
+
+  function startMic() {
+    micSR.current = { active: true, text: "", rec: null };
+    setMicRecording(true);
+    launchMic();
+  }
+
+  function stopMic() {
+    const s = micSR.current;
+    s.active = false;
+    if (s.rec) {
+      s.rec.stop(); // onend handles finalization
+    } else {
+      setMicRecording(false);
+      if (s.text.trim()) setInput(prev => (prev ? prev + " " : "") + s.text.trim());
+      s.text = "";
+    }
+  }
+
+  useEffect(() => () => { micSR.current.active = false; micSR.current.rec?.abort(); }, []);
   const msgEnd = useRef(null);
   const logEnd = useRef(null);
 
@@ -87,6 +154,10 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
       setUploadMeta(null);
       setUploadPreview("");
       setUploadError("");
+      if (uploadImageUrl) {
+        URL.revokeObjectURL(uploadImageUrl);
+        setUploadImageUrl(null);
+      }
       setMsgs(p => [...p, { role: "ai", agent: "interviewer", text: d.reply, time: new Date() }]);
       addLog("interviewer", d.trigger_diagnose ? "Sufficient history collected. Initiating multi-agent pipeline." : "Continuing structured intake.");
       if (d.trigger_diagnose) {
@@ -113,15 +184,33 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
     setLoading(false);
   }
 
+  const IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"];
+  const AUDIO_EXTS = [".mp3", ".wav", ".m4a", ".ogg", ".flac"];
+  const VIDEO_EXTS = [".mp4", ".mov", ".avi", ".mkv", ".webm"];
+
   async function onUploadFile(e) {
     const f = e.target.files?.[0];
     if (!f || !sid || uploading) return;
 
     const lowerName = f.name.toLowerCase();
-    if (!(lowerName.endsWith(".pdf") || lowerName.endsWith(".txt"))) {
-      setUploadError("Only PDF and TXT files are supported.");
+    const isImage = IMAGE_EXTS.some(ext => lowerName.endsWith(ext));
+    const isAudio = AUDIO_EXTS.some(ext => lowerName.endsWith(ext));
+    const isVideo = VIDEO_EXTS.some(ext => lowerName.endsWith(ext));
+    const isPdf = lowerName.endsWith(".pdf");
+    const isTxt = lowerName.endsWith(".txt");
+
+    if (!isImage && !isAudio && !isVideo && !isPdf && !isTxt) {
+      setUploadError("Supported: PDF, TXT, images (JPG/PNG…), audio (MP3/WAV…), video (MP4/MOV…).");
       e.target.value = "";
       return;
+    }
+
+    // Show local image/video preview immediately before upload completes
+    if (isImage || isVideo) {
+      const objectUrl = URL.createObjectURL(f);
+      setUploadImageUrl(objectUrl);
+    } else {
+      setUploadImageUrl(null);
     }
 
     setUploadError("");
@@ -131,15 +220,24 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
       const up = res?.upload || null;
       setUploadMeta(up);
       setUploadPreview(up?.extracted_text_preview || "");
-      const attachmentSummary = `Uploaded file: ${up?.file_name || f.name} (${(up?.file_type || (f.name.toLowerCase().endsWith(".pdf") ? "pdf" : "txt")).toUpperCase()})`;
+      const typeLabel = isImage ? "IMAGE" : isAudio ? "AUDIO" : isVideo ? "VIDEO" : (up?.file_type || (isPdf ? "pdf" : "txt")).toUpperCase();
+      const attachmentSummary = `Uploaded file: ${up?.file_name || f.name} (${typeLabel})`;
       setPendingAttachments(p => [...p, attachmentSummary]);
       try {
         const files = await api.sessionUploads(sid);
         setUploadedFiles(Array.isArray(files) ? files : []);
       } catch {}
-      addLog("interviewer", `Uploaded ${up?.file_name || f.name}; extracted ${up?.extracted_text_length || 0} characters.`);
+      const logSuffix = isImage
+        ? `medical image analysed (${up?.extracted_text_length || 0} chars of AI analysis).`
+        : isAudio
+        ? `audio transcribed (${up?.extracted_text_length || 0} chars).`
+        : isVideo
+        ? `video frames analysed (${up?.extracted_text_length || 0} chars).`
+        : `extracted ${up?.extracted_text_length || 0} characters.`;
+      addLog("interviewer", `Uploaded ${up?.file_name || f.name}; ${logSuffix}`);
     } catch (err) {
       setUploadError(err.message || "Upload failed");
+      setUploadImageUrl(null);
       addLog("interviewer", `Upload failed: ${err.message || "unknown error"}`);
     }
     setUploading(false);
@@ -150,6 +248,10 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
     setUploadMeta(null);
     setUploadPreview("");
     setUploadError("");
+    if (uploadImageUrl) {
+      URL.revokeObjectURL(uploadImageUrl);
+      setUploadImageUrl(null);
+    }
   }
 
   const phaseConf = {
@@ -162,12 +264,12 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
     <div style={{ height: "100vh", background: "var(--paper)", display: "flex", flexDirection: "column", overflow: "hidden", paddingTop: 56, position: "relative", zIndex: 1 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", height: 44, borderBottom: "1px solid rgba(22,15,6,0.09)", background: "var(--paper2)", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Button onClick={onBack} variant="outline" className="h-8 px-4 text-[13px]">← Back</Button>
+          <Button onClick={onBack} variant="outline" size="xs">← Back</Button>
           {sid && <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)", letterSpacing: "0.12em" }}>Session {sid.slice(0, 8).toUpperCase()}</span>}
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <Badge className="rounded-[20px] px-3 py-[3px] text-[13px] italic" style={{ fontFamily: "var(--body)", color: phaseConf.c, background: phaseConf.bg, borderColor: `${phaseConf.c}40` }}>{phaseConf.label}</Badge>
-          <Button onClick={() => setPanel(v => !v)} variant="outline" className="h-8 px-4 text-[13px]">{panel ? "Hide" : "Show"} reasoning</Button>
+          <Button onClick={() => setPanel(v => !v)} variant="outline" size="xs">{panel ? "Hide" : "Show"} reasoning</Button>
         </div>
       </div>
 
@@ -254,7 +356,7 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf,.txt,application/pdf,text/plain"
+                accept=".pdf,.txt,.jpg,.jpeg,.png,.gif,.bmp,.webp,.mp3,.wav,.m4a,.ogg,.flac,.mp4,.mov,.avi,.mkv,.webm,application/pdf,text/plain,image/*,audio/*,video/*"
                 style={{ display: "none" }}
                 onChange={onUploadFile}
               />
@@ -274,19 +376,46 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
                   )}
 
                   {!!uploadMeta && (
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: 8, width: "fit-content", maxWidth: "100%", background: "var(--paper)", border: "1px solid rgba(22,15,6,0.14)", borderRadius: 999, padding: "6px 10px" }}>
-                      <span style={{ fontSize: 12, lineHeight: 1 }}>📄</span>
-                      <span style={{ fontFamily: "var(--body)", fontSize: 12, color: "var(--ink3)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 380 }}>
-                        {uploadMeta.file_name} · {uploadMeta.file_type.toUpperCase()} · {uploadMeta.extracted_text_length} chars
-                      </span>
-                      <button
-                        type="button"
-                        onClick={clearUploadedFileView}
-                        style={{ border: "none", background: "transparent", color: "var(--ink5)", cursor: "pointer", fontSize: 13, lineHeight: 1, padding: 0 }}
-                        title="Dismiss"
-                      >
-                        ×
-                      </button>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: 8, width: "fit-content", maxWidth: "100%", background: "var(--paper)", border: "1px solid rgba(22,15,6,0.14)", borderRadius: 999, padding: "6px 10px" }}>
+                        <span style={{ fontSize: 12, lineHeight: 1 }}>
+                          {uploadMeta.file_type === "image" ? "🩻" : uploadMeta.file_type === "audio" ? "🎵" : uploadMeta.file_type === "video" ? "🎬" : "📄"}
+                        </span>
+                        <span style={{ fontFamily: "var(--body)", fontSize: 12, color: "var(--ink3)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 380 }}>
+                          {uploadMeta.file_name} · {uploadMeta.file_type.toUpperCase()} · {uploadMeta.extracted_text_length} chars
+                        </span>
+                        <button
+                          type="button"
+                          onClick={clearUploadedFileView}
+                          style={{ border: "none", background: "transparent", color: "var(--ink5)", cursor: "pointer", fontSize: 13, lineHeight: 1, padding: 0 }}
+                          title="Dismiss"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      {(uploadMeta.file_type === "image" || uploadMeta.file_type === "video") && uploadImageUrl && (
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                          {uploadMeta.file_type === "video" ? (
+                            <video
+                              src={uploadImageUrl}
+                              controls
+                              style={{ maxHeight: 120, maxWidth: 220, borderRadius: 6, border: "1px solid rgba(22,15,6,0.14)", background: "#000" }}
+                            />
+                          ) : (
+                          <img
+                            src={uploadImageUrl}
+                            alt="Uploaded medical image"
+                            style={{ maxHeight: 120, maxWidth: 180, borderRadius: 6, border: "1px solid rgba(22,15,6,0.14)", objectFit: "contain", background: "#f8f8f8" }}
+                          />
+                          )}
+                          {!!uploadPreview && (
+                            <p style={{ fontFamily: "var(--body)", fontSize: 12, color: "var(--ink5)", lineHeight: 1.6, maxWidth: 560, margin: 0 }}>
+                              <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink4)", display: "block", marginBottom: 2 }}>AI ANALYSIS PREVIEW</span>
+                              {uploadPreview.slice(0, 200)}{uploadPreview.length > 200 ? "…" : ""}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -302,7 +431,7 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
                     </p>
                   )}
 
-                  {!!uploadMeta && !!uploadPreview && (
+                  {!!uploadMeta && !["image", "video"].includes(uploadMeta.file_type) && !!uploadPreview && (
                     <p style={{ fontFamily: "var(--body)", fontSize: 12, color: "var(--ink5)", lineHeight: 1.5, maxWidth: 760 }}>
                       {uploadPreview.slice(0, 160)}{uploadPreview.length > 160 ? "…" : ""}
                     </p>
@@ -314,19 +443,34 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
                 <Button
                   onClick={() => fileInputRef.current?.click()}
                   variant="outline"
-                  className="h-11 w-11 px-0 text-base shrink-0"
+                  size="icon"
                   disabled={!sid || uploading}
-                  title="Attach PDF/TXT"
+                  title="Attach file (image, audio, video, PDF, TXT)"
+                  className="shrink-0"
                   style={{ borderRadius: 999 }}
                 >
                   {uploading ? "…" : "📎"}
                 </Button>
-                <Input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()} placeholder="Type your response…" disabled={loading} style={{ flex: 1, fontSize: 15, fontFamily: "var(--body)", borderRadius: 999 }} />
+                {micSupported && (
+                  <Button
+                    onClick={micRecording ? stopMic : startMic}
+                    variant={micRecording ? "danger" : "outline"}
+                    size="icon"
+                    disabled={!sid || loading}
+                    title={micRecording ? "Stop recording" : "Record speech"}
+                    className="shrink-0"
+                    style={{ borderRadius: 999 }}
+                  >
+                    {micRecording ? "⏹" : "🎙"}
+                  </Button>
+                )}
+                <Input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()} placeholder={micRecording ? "Listening…" : "Type your response…"} disabled={loading} style={{ flex: 1, fontSize: 15, fontFamily: "var(--body)", borderRadius: 999 }} />
                 <Button
                   onClick={send}
                   disabled={!input.trim() || loading}
-                  className="h-11 px-7 text-sm shrink-0"
-                  style={{ paddingLeft: 26, paddingRight: 26, minWidth: 112, borderRadius: 999 }}
+                  size="lg"
+                  className="shrink-0"
+                  style={{ minWidth: 112, borderRadius: 999 }}
                 >
                   Send →
                 </Button>

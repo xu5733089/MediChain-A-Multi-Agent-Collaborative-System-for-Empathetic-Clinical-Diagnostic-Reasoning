@@ -54,8 +54,8 @@ export default function HistoryPage({ api, onNew }) {
             </p>
           </div>
           <div style={{ display: "flex", gap: 10 }}>
-            <Button onClick={load} variant="outline" className="h-9 px-5 text-sm">↻ Refresh</Button>
-            <Button onClick={onNew} className="h-9 px-6 text-sm">+ New consult</Button>
+            <Button onClick={load} variant="outline" size="sm">↻ Refresh</Button>
+            <Button onClick={onNew} size="sm">+ New consult</Button>
           </div>
         </div>
         <div className="gold-rule" />
@@ -92,8 +92,8 @@ export default function HistoryPage({ api, onNew }) {
                       <div className="scale-in" style={{ background: "var(--paper3)", border: "1.5px solid var(--rose)40", borderTop: "none", borderRadius: "0 0 6px 6px", padding: "18px 24px" }}>
                         {detail.status === "done" && (
                           <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-                            <Button onClick={() => window.open(api.exportUrl(s.id, "pdf"), "_blank")} className="h-8 px-4 text-[13px]">📄 PDF</Button>
-                            <Button onClick={() => window.open(api.exportUrl(s.id, "json"), "_blank")} variant="outline" className="h-8 px-3 text-[13px]">JSON</Button>
+                            <Button onClick={() => window.open(api.exportUrl(s.id, "pdf"), "_blank")} size="xs">📄 PDF</Button>
+                            <Button onClick={() => window.open(api.exportUrl(s.id, "json"), "_blank")} variant="outline" size="xs">JSON</Button>
                           </div>
                         )}
                         <p style={{ fontFamily: "var(--body)", fontSize: 14, color: "var(--ink3)", lineHeight: 1.84 }}>

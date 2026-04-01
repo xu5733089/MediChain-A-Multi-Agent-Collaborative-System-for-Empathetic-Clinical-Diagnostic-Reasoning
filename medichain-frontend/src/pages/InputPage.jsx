@@ -1,15 +1,23 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AmbientBlobs, ECGLine, IllustBranch, IllustFlower, IllustLeaf, IllustWreath, ParticleField } from "../components/illustrations";
 import { Banner, SevBadge } from "../components/ui";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
+import MediaUploadZone from "../components/MediaUploadZone";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Textarea } from "../components/ui/textarea";
 import { SEV } from "../core/constants";
 
-export default function InputPage({ onSubmit, onEval, selectedPatient, onClearPatient }) {
+export default function InputPage({ api, onSubmit, onEval, selectedPatient, onClearPatient }) {
   const [form, setForm] = useState({ description: "", bodyPart: "General", duration: "1–3 days", severity: 5, notes: selectedPatient?.conditions || "" });
+  const [preContext, setPreContext] = useState([]);
+  const [preItems, setPreItems] = useState([]);
   useEffect(() => { if (selectedPatient) setForm(f => ({ ...f, notes: selectedPatient.conditions || "" })); }, [selectedPatient]);
+
+  const onMediaUpdate = useCallback((analyses, items) => {
+    setPreContext(analyses);
+    setPreItems(items);
+  }, []);
   const bodyParts = ["General", "Head / Face", "Neck", "Chest", "Abdomen", "Back", "Arm / Shoulder", "Leg / Hip", "Skin", "Multiple Areas"];
   const durations = ["< 24 hours", "1–3 days", "4–7 days", "1–2 weeks", "2–4 weeks", "> 1 month", "Chronic (> 3 months)"];
   const severityOptions = [
@@ -47,7 +55,7 @@ export default function InputPage({ onSubmit, onEval, selectedPatient, onClearPa
                   <div className="live-dot" />
                   <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--sage)", letterSpacing: "0.14em" }}>3 AGENTS ONLINE</span>
                 </div>
-                <Button onClick={onEval} variant="outline" className="h-8 px-[18px] text-[13px]">📊 MedQA Eval →</Button>
+                <Button onClick={onEval} variant="outline" size="xs">📊 MedQA Eval →</Button>
               </div>
             </div>
             <div className="fade-up s2" style={{ flexShrink: 0, animation: "drift 16s ease-in-out infinite" }}>
@@ -67,7 +75,7 @@ export default function InputPage({ onSubmit, onEval, selectedPatient, onClearPa
                 <p style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--sage)", letterSpacing: "0.12em" }}>Profile linked</p>
               </div>
             </div>
-            <Button onClick={onClearPatient} variant="outline" className="h-8 px-3.5 text-[13px]">Unlink</Button>
+            <Button onClick={onClearPatient} variant="outline" size="xs">Unlink</Button>
           </div>
         )}
 
@@ -96,7 +104,23 @@ export default function InputPage({ onSubmit, onEval, selectedPatient, onClearPa
               </div>
             </div>
 
+            {/* ── Medical media upload ── */}
             <div className="card fade-up s2" style={{ padding: "22px 30px" }}>
+              <div className="shine" />
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,var(--navyPale),var(--plumPale,#f0e8f4))", border: "1px solid rgba(22,50,104,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🩻</div>
+                <div>
+                  <p style={{ fontFamily: "var(--serif)", fontSize: 20, fontWeight: 600, color: "var(--ink)" }}>Medical media</p>
+                  <p style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)", letterSpacing: "0.1em" }}>OPTIONAL · IMAGES · AUDIO · VIDEO</p>
+                </div>
+                {preItems.length > 0 && (
+                  <Badge variant="sage" className="ml-auto text-[10px]">{preItems.length} attached</Badge>
+                )}
+              </div>
+              <MediaUploadZone api={api} onUpdate={onMediaUpdate} />
+            </div>
+
+            <div className="card fade-up s3" style={{ padding: "22px 30px" }}>
               <div className="shine" />
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,var(--amberPale),var(--goldPale))", border: "1px solid var(--amber)30", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>📋</div>
@@ -175,9 +199,9 @@ export default function InputPage({ onSubmit, onEval, selectedPatient, onClearPa
             </Banner>
 
             <Button
-              onClick={() => valid && onSubmit({ ...form, patient_id: selectedPatient?.id || null })}
-              disabled={!valid}
-              className="fade-up s4 h-[54px] w-full text-base"
+              onClick={() => valid && onSubmit({ ...form, patient_id: selectedPatient?.id || null, pre_context: preContext })}
+              disabled={!valid || preItems.some(it => it.analysing)}
+              size="xl" className="fade-up s4 w-full"
             >
               Begin consultation →
             </Button>

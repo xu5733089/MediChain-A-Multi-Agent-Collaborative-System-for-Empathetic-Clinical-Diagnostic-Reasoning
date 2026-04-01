@@ -57,6 +57,11 @@ export function makeApi(token) {
       fd.append("file", file);
       return postForm(`/api/sessions/${id}/upload`, fd);
     },
+    analyzeFile: (file) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      return postForm("/api/analyze/file", fd);
+    },
     questions: () => get("/api/eval/questions"),
     evalRun: b => post("/api/eval/run", b),
     evalHist: () => get("/api/eval/history"),

@@ -68,7 +68,7 @@ export default function EvalPage({ api }) {
             </h2>
             <p style={{ fontFamily: "var(--body)", fontSize: 16, color: "var(--ink3)", marginTop: 10 }}>Multi-agent vs single-LLM on clinical reasoning tasks</p>
           </div>
-          <Button onClick={runAll} disabled={!!running} className="h-11 px-7 text-[15px]">
+          <Button onClick={runAll} disabled={!!running} size="lg">
             {running ? "Running…" : "▶ Run all questions"}
           </Button>
         </div>
@@ -113,7 +113,7 @@ export default function EvalPage({ api }) {
                   </div>
                   <Button onClick={e => { e.stopPropagation(); runQ(q.id); }} disabled={isR || !!running}
                     variant={r ? "outline" : "default"}
-                    className="h-9 shrink-0 whitespace-nowrap px-[18px] text-[13px]">
+                    size="sm" className="shrink-0">
                     {isR ? "Running…" : r ? "↻ Re-run" : "▶ Run"}
                   </Button>
                 </div>

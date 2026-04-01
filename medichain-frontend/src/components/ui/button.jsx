@@ -4,20 +4,37 @@ import { cva } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rose)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--paper)] disabled:pointer-events-none disabled:opacity-50",
+  // Base: shared across all variants and sizes
+  "inline-flex items-center justify-center gap-1.5 whitespace-nowrap font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rose)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--paper)] disabled:pointer-events-none disabled:opacity-40 active:scale-[0.97]",
   {
     variants: {
       variant: {
-        default: "bg-[var(--rose)] text-white hover:bg-[var(--roseB)]",
-        outline: "border border-[rgba(22,15,6,0.2)] bg-transparent text-[var(--ink2)] hover:border-[var(--rose)] hover:text-[var(--rose)] hover:bg-[var(--roseDim)]",
-        secondary: "bg-[var(--ink)] text-[var(--paper)] hover:opacity-90",
-        ghost: "hover:bg-[var(--paper3)] text-[var(--ink2)]",
+        // Primary action — rose fill
+        default:   "bg-[var(--rose)] text-white shadow-sm hover:bg-[var(--roseB)]",
+        // Subtle bordered — for secondary actions
+        outline:   "border border-[rgba(22,15,6,0.18)] bg-transparent text-[var(--ink2)] hover:border-[var(--rose)] hover:text-[var(--rose)] hover:bg-[var(--roseDim)]",
+        // Dark fill — for contrast actions like "New"
+        secondary: "bg-[var(--ink)] text-[var(--paper)] shadow-sm hover:opacity-85",
+        // No background — for subtle inline actions
+        ghost:     "text-[var(--ink2)] hover:bg-[var(--paper3)] hover:text-[var(--ink)]",
+        // Destructive — rose-tinted, clearly signals danger
+        danger:    "border border-[var(--rose)]/30 bg-[var(--roseDim)] text-[var(--rose)] hover:bg-[var(--rosePale)] hover:border-[var(--rose)]/50",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-8 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-10 w-10",
+        // Compact inline — card action buttons, detail-panel buttons
+        xs:        "h-8 px-3 text-[13px] rounded-md",
+        // Small — toolbar buttons, secondary page actions
+        sm:        "h-9 px-4 text-sm rounded-[9px]",
+        // Standard — default for most buttons
+        default:   "h-10 px-5 text-sm rounded-[10px]",
+        // Large — prominent actions, modal submit buttons
+        lg:        "h-11 px-7 text-[15px] rounded-[11px]",
+        // Extra large — primary page CTA
+        xl:        "h-[52px] px-8 text-base rounded-[12px]",
+        // Square icon button (standard)
+        icon:      "h-10 w-10 rounded-lg p-0 text-base",
+        // Square icon button (small — close buttons, etc.)
+        "icon-sm": "h-8 w-8 rounded-md p-0 text-lg leading-none",
       },
     },
     defaultVariants: {
