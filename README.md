@@ -9,22 +9,22 @@
 ## 📖 Project Overview / 项目简介
 
 **English:**
-MediChain is a multi-agent AI medical diagnostic system that simulates collaborative clinical reasoning through three specialized AI agents. It performs empathetic patient history-taking, evidence-grounded differential diagnosis using Retrieval-Augmented Generation (RAG) from real PubMed literature, and senior consultant-level safety review — all powered by Anthropic Claude.
+MediChain is a multi-agent AI medical diagnostic system that simulates collaborative clinical reasoning through three specialized AI agents. It performs empathetic patient history-taking, evidence-grounded differential diagnosis using Retrieval-Augmented Generation (RAG) from real PubMed literature, and senior consultant-level safety review — all powered by Anthropic Claude. The system supports multimodal input including medical images, audio, video, and documents, with a dual patient/provider authentication flow.
 
 **中文：**
-MediChain 是一个多智能体 AI 医疗诊断系统，通过三个专业 AI 智能体模拟协作临床推理流程。系统基于真实 PubMed 文献的检索增强生成（RAG）技术，完成富有同理心的患者问诊、循证鉴别诊断以及高级顾问级安全审查，全程由 Anthropic Claude 驱动。
+MediChain 是一个多智能体 AI 医疗诊断系统，通过三个专业 AI 智能体模拟协作临床推理流程。系统基于真实 PubMed 文献的检索增强生成（RAG）技术，完成富有同理心的患者问诊、循证鉴别诊断以及高级顾问级安全审查，全程由 Anthropic Claude 驱动。系统支持医学图像、音频、视频和文档等多模态输入，并提供患者/医疗提供者双向认证流程。
 
 ---
 
 ## 🤖 Agent Pipeline / 智能体流程
 
 ```
-Patient Input
+Patient Input (Text + Multimodal Media)
      ↓
-🩺 Interviewer Agent      — SOCRATES-based empathetic history-taking
+🩺 Interviewer Agent      — SOCRATES-based empathetic history-taking (5–8 exchanges)
      ↓              ↘
 🔬 Diagnostician Agent  ←  📚 RAG (ChromaDB + PubMed, 180+ articles)
-     ↓
+     ↓                      + Medical image/audio/video analysis
 ⚖️  Critic Agent          — Safety review, evidence quality check
      ↓
 📄 Diagnostic Report      — PDF / JSON export
@@ -33,7 +33,7 @@ Patient Input
 | Agent | Role | Color |
 |-------|------|-------|
 | 🩺 Interviewer | Empathetic SOCRATES-based history taking | Cyan |
-| 🔬 Diagnostician | Differential diagnosis grounded in RAG literature | Purple |
+| 🔬 Diagnostician | Differential diagnosis grounded in RAG literature + media analysis | Purple |
 | ⚖️ Critic | Safety flags, evidence gaps, final recommendation | Orange |
 
 ---
@@ -42,10 +42,16 @@ Patient Input
 
 - **Multi-Agent Reasoning** — 3 specialized agents working sequentially
 - **RAG Medical Literature** — 180+ PubMed articles indexed in ChromaDB
-- **Reasoning Flow Visualization** — Interactive pipeline trace (PROJ-13)
-- **MedQA Evaluation Dashboard** — Multi-Agent vs Single-LLM benchmark on USMLE-style questions (PROJ-14)
+- **Multimodal Input** — Upload medical images (X-ray, photos), audio recordings, video, PDF, and TXT files before or during consultation
+- **Voice Recording** — Browser-native Web Speech API mic recording with continuous transcription
+- **Medical Image Analysis** — Claude Vision API for per-image clinical interpretation
+- **Audio Transcription** — Google Speech Recognition for audio file transcription
+- **Video Analysis** — OpenCV frame extraction with per-frame Claude Vision analysis
+- **Dual Auth Roles** — Separate Patient and Provider login flows with role-based dashboards
+- **Reasoning Flow Visualization** — Interactive pipeline trace
+- **MedQA Evaluation Dashboard** — Multi-Agent vs Single-LLM benchmark on USMLE-style questions
 - **PDF / JSON Export** — Professional diagnostic report generation
-- **SQLite Persistence** — Sessions survive backend restarts
+- **SQLite Persistence** — Sessions, messages, and uploads survive backend restarts
 - **Session History** — Browse and re-export all past sessions
 
 ---
@@ -56,16 +62,34 @@ Patient Input
 medichain/
 ├── medichain-frontend/          # React + Vite frontend
 │   ├── src/
-│   │   ├── MediChain.jsx        # Main application (all pages)
-│   │   └── main.jsx
+│   │   ├── pages/
+│   │   │   ├── InputPage.jsx        # Symptom intake + pre-consultation media upload
+│   │   │   ├── ChatPage.jsx         # Live consultation with multimodal upload + mic
+│   │   │   ├── ResultsPage.jsx      # Diagnostic report viewer
+│   │   │   ├── HistoryPage.jsx      # Session history
+│   │   │   ├── AuthPage.jsx         # Dual patient/provider auth flow
+│   │   │   ├── PatientsPage.jsx     # Provider patient management
+│   │   │   ├── ProviderDashboard.jsx
+│   │   │   └── EvalPage.jsx         # MedQA evaluation dashboard
+│   │   ├── components/
+│   │   │   ├── MediaUploadZone.jsx  # Drag-drop upload + mic recording component
+│   │   │   ├── TopNav.jsx
+│   │   │   ├── ui/                  # Button, Badge, Input, Select, Textarea, Alert
+│   │   │   └── illustrations.jsx
+│   │   ├── core/
+│   │   │   ├── api.js               # API client
+│   │   │   ├── constants.js
+│   │   │   └── utils.js
+│   │   └── MediChain.jsx            # Root app + routing
 │   ├── index.html
 │   ├── vite.config.js
 │   └── package.json
 │
 ├── medichain-backend/           # FastAPI Python backend
-│   ├── main.py                  # API routes + SQLite session management
+│   ├── main.py                  # API routes + file analysis endpoints
 │   ├── agents.py                # Three AI agent functions
 │   ├── rag.py                   # ChromaDB vector search
+│   ├── db.py                    # SQLite schema + migrations
 │   ├── ingest.py                # PubMed data ingestion
 │   ├── export.py                # PDF report generation (ReportLab)
 │   ├── eval.py                  # MedQA evaluation module
@@ -110,7 +134,6 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # 5. Create .env file / 创建环境变量文件
-# Copy .env.example to .env and fill in your API key
 cp .env.example .env
 # Edit .env and set: ANTHROPIC_API_KEY=sk-ant-...
 
@@ -164,24 +187,30 @@ Open in browser / 浏览器访问: `http://localhost:5173`
 
 ## 🖥️ Usage Guide / 使用指南
 
-### Main Consultation / 主要诊断流程
+### Registration & Login / 注册与登录
 
 1. Open `http://localhost:5173`
-2. Fill in your symptoms, body area, duration and severity
-3. Click **Begin AI Consultation**
-4. Chat with the Interviewer Agent (2+ exchanges)
-5. Diagnosis is automatically triggered — watch the Agent Reasoning Panel
-6. View results across 4 tabs: Diagnosis / Critic Review / RAG Refs / Transcript
-7. Export as **PDF** or **JSON**
-8. Click **🔀 Flow View** to see the reasoning pipeline visualization
+2. Click **Sign in** and select your role: **Patient** or **Provider**
+3. Register a new account or log in with existing credentials
+4. Providers see a dashboard with all patient sessions; Patients see their own history
+
+### Main Consultation / 主要诊断流程
+
+1. On the intake page, describe your symptoms (minimum 15 characters)
+2. Optionally upload medical files (images, audio, video, PDF, TXT) or record voice via the **Medical media** panel — files are analyzed before the consultation begins
+3. Set body location, duration, and severity (Mild / Moderate / Severe)
+4. Click **Begin consultation →**
+5. Chat with the Interviewer Agent (5–8 dynamic exchanges); you can also upload files and record voice during the chat
+6. Diagnosis is automatically triggered — watch the Agent Reasoning Panel
+7. View results across 4 tabs: Diagnosis / Critic Review / RAG Refs / Transcript
+8. Export as **PDF** or **JSON**
 
 ### MedQA Evaluation / 医学问答评估
 
-1. Click **📊 MedQA Evaluation Dashboard** on the home page
+1. Click **📊 MedQA Eval →** on the intake page
 2. Click **▶ Run** on any USMLE-style question
 3. Compare Single LLM vs Multi-Agent accuracy
 4. Click **▶ Run All Questions** for full benchmark
-5. View category breakdown and history
 
 ---
 
@@ -191,13 +220,22 @@ Open in browser / 浏览器访问: `http://localhost:5173`
 |--------|----------|-------------|
 | GET | `/` | Health check + RAG DB size |
 | GET | `/api/rag/status` | RAG database status |
+| POST | `/api/auth/register` | Register new user |
+| POST | `/api/auth/login/json` | Login (returns JWT token) |
+| POST | `/api/analyze/file` | Stateless file analysis (image/audio/video/pdf/txt) |
 | POST | `/api/session/start` | Start new diagnostic session |
 | POST | `/api/session/chat` | Continue interview |
 | POST | `/api/session/diagnose` | Trigger diagnosis + RAG |
 | GET | `/api/session/{id}` | Get session data |
-| GET | `/api/sessions` | List all sessions |
+| GET | `/api/sessions` | List user sessions |
+| GET | `/api/sessions/{id}/messages` | Get session messages |
+| GET | `/api/sessions/{id}/uploads` | Get session uploads |
+| POST | `/api/sessions/{id}/upload` | Upload file to session |
 | GET | `/api/session/{id}/export/pdf` | Export PDF report |
 | GET | `/api/session/{id}/export/json` | Export JSON data |
+| GET | `/api/patients` | List patients (provider) |
+| POST | `/api/patients` | Create patient record |
+| GET | `/api/provider/sessions` | All sessions (provider) |
 | GET | `/api/eval/questions` | Get MedQA questions |
 | POST | `/api/eval/run` | Run evaluation |
 | GET | `/api/eval/history` | Evaluation history + stats |
@@ -210,11 +248,15 @@ Full API docs: `http://localhost:8000/docs`
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | React 18 + Vite 7 |
+| Frontend | React 19 + Vite + Tailwind CSS + shadcn/ui |
 | Backend | FastAPI + Uvicorn |
-| AI | Anthropic Claude (claude-sonnet-4-20250514) |
+| AI | Anthropic Claude (claude-sonnet-4-5) |
+| Vision | Claude Vision API (medical image & video frame analysis) |
+| Speech | Web Speech API (browser mic) + SpeechRecognition (audio files) |
+| Video | OpenCV (frame extraction) |
 | RAG | ChromaDB + sentence-transformers (all-MiniLM-L6-v2) |
-| Database | SQLite (sessions) |
+| Database | SQLite (users, sessions, messages, uploads) |
+| Auth | JWT (python-jose) |
 | PDF Export | ReportLab |
 | Literature | PubMed / NCBI Entrez API |
 
