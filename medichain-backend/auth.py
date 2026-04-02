@@ -3,16 +3,15 @@ auth.py — MediChain 用户认证模块
 JWT Token + 密码哈希
 """
 import os
-import sqlite3
 import uuid
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import Optional
 
 import bcrypt
 from jose import JWTError, jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from db import get_db, init_db, now_iso, VALID_USER_ROLES
 
 SECRET_KEY  = os.environ.get("SECRET_KEY", "medichain-secret-key-change-in-production")
 ALGORITHM   = "HS256"
@@ -21,41 +20,8 @@ ACCESS_TOKEN_EXPIRE_HOURS = 24 * 7  # 7 days
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
-DB_FILE = Path(__file__).parent / "medichain.db"
-
-def get_db():
-    c = sqlite3.connect(str(DB_FILE))
-    c.row_factory = sqlite3.Row
-    return c
-
 def init_auth_db():
-    with get_db() as c:
-        c.execute("""CREATE TABLE IF NOT EXISTS users (
-            id          TEXT PRIMARY KEY,
-            username    TEXT UNIQUE NOT NULL,
-            email       TEXT UNIQUE NOT NULL,
-            password    TEXT NOT NULL,
-            full_name   TEXT,
-            role        TEXT NOT NULL DEFAULT 'patient',
-            created_at  TEXT NOT NULL,
-            updated_at  TEXT NOT NULL
-        )""")
-        c.execute("""CREATE TABLE IF NOT EXISTS patients (
-            id          TEXT PRIMARY KEY,
-            user_id     TEXT NOT NULL,
-            name        TEXT NOT NULL,
-            dob         TEXT,
-            gender      TEXT,
-            blood_type  TEXT,
-            allergies   TEXT,
-            medications TEXT,
-            conditions  TEXT,
-            notes       TEXT,
-            created_at  TEXT NOT NULL,
-            updated_at  TEXT NOT NULL,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )""")
-        c.commit()
+    init_db()
 
 # ── Password ──────────────────────────────────────────────
 def hash_password(password: str) -> str:
@@ -79,20 +45,29 @@ def decode_token(token: str) -> Optional[dict]:
         return None
 
 # ── User DB ───────────────────────────────────────────────
-def _now(): return datetime.utcnow().isoformat()
+def _now():
+    return now_iso()
 
-def user_create(username: str, email: str, password: str, full_name: str = "") -> dict:
+
+def _normalize_role(role: str) -> str:
+    r = (role or "patient").strip().lower()
+    if r not in VALID_USER_ROLES:
+        raise HTTPException(400, "Role must be 'patient' or 'provider'")
+    return r
+
+def user_create(username: str, email: str, password: str, full_name: str = "", role: str = "patient") -> dict:
     uid = str(uuid.uuid4())
     now = _now()
+    safe_role = _normalize_role(role)
     with get_db() as c:
         try:
             c.execute(
-                "INSERT INTO users(id,username,email,password,full_name,role,created_at,updated_at) VALUES(?,?,?,?,?,'patient',?,?)",
+                "INSERT INTO users(id,username,email,password,full_name,role,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)",
                 (uid, username.lower().strip(), email.lower().strip(),
-                 hash_password(password), full_name, now, now)
+                 hash_password(password), full_name, safe_role, now, now)
             )
             c.commit()
-        except sqlite3.IntegrityError as e:
+        except Exception as e:
             if "username" in str(e):
                 raise HTTPException(400, "Username already taken")
             if "email" in str(e):

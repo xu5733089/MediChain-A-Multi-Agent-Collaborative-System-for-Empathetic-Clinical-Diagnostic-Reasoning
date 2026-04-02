@@ -5,7 +5,7 @@ import os
 import anthropic
 from rag import search, format_references_for_prompt
 
-client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 MODEL = "claude-sonnet-4-20250514"
 
 # ── 智能体 System Prompts ──────────────────────────────────
@@ -18,16 +18,27 @@ Rules:
 - Be warm, empathetic, and reassuring — acknowledge patient concerns before proceeding
 - Ask exactly ONE focused follow-up question per response
 - Use plain, accessible language — avoid medical jargon
-- After gathering sufficient information (2-3 exchanges), naturally conclude by summarizing
-  what you've learned and output [READY_FOR_DIAGNOSIS] on a new line at the very end
+- Adapt your questions dynamically to the patient's actual answers — do not follow a rigid script
+- Explore each SOCRATES dimension as relevant: site, onset, character, radiation, associations,
+  time course, exacerbating/relieving factors, severity, and any relevant medical history
+- If the patient has uploaded a medical image (you will see it as [ADDITIONAL CONTEXT] with AI image analysis),
+  acknowledge the image and ask relevant follow-up questions based on its findings
+- After gathering comprehensive information across the relevant SOCRATES dimensions
+  (typically 5-8 exchanges, depending on case complexity), naturally conclude by:
+  1. Briefly summarising the key points you have gathered
+  2. Telling the patient you now have enough information to proceed with analysis
+  3. Outputting [READY_FOR_DIAGNOSIS] on a new line at the very end of your response
 - NEVER diagnose — only gather information
-- Keep responses to 3-5 sentences maximum"""
+- Keep each response to 3-5 sentences maximum"""
 
 DIAGNOSTICIAN_PROMPT = """You are an experienced diagnostic physician AI.
-You will receive a patient case and relevant medical literature retrieved from PubMed (via RAG).
+You will receive a patient case and relevant medical QA knowledge retrieved from a local MedQuAD-style RAG index.
 
-IMPORTANT: You MUST cite the provided literature in your differential diagnoses where relevant.
-Format citations as [Author et al., Year] inline.
+IMPORTANT RULES:
+- Use only the retrieved knowledge as evidence. Do not fabricate citations.
+- If evidence is insufficient or conflicting, explicitly say so.
+- Cite evidence inline using the provided citation key format:
+    [Source | Focus | QID]
 
 Always respond in this exact format:
 
@@ -35,17 +46,17 @@ Always respond in this exact format:
 
 1. **[Condition Name]** — Confidence: HIGH
    Supporting features: [feature 1], [feature 2]
-   Evidence: [cite relevant literature if available]
+    Evidence: [cite relevant retrieved QA evidence if available]
    Reasoning: [1-2 sentence clinical reasoning]
 
 2. **[Condition Name]** — Confidence: MEDIUM
    Supporting features: [feature 1], [feature 2]
-   Evidence: [cite relevant literature if available]
+    Evidence: [cite relevant retrieved QA evidence if available]
    Reasoning: [1-2 sentence clinical reasoning]
 
 3. **[Condition Name]** — Confidence: LOW
    Supporting features: [feature 1]
-   Evidence: [cite relevant literature if available]
+    Evidence: [cite relevant retrieved QA evidence if available]
    Reasoning: [1-2 sentence clinical reasoning]
 
 ## Recommended Investigations
@@ -53,7 +64,7 @@ Always respond in this exact format:
 - [Investigation 2]
 
 ## Medical Literature References
-[List all RAG sources you cited above with full details]
+[List all cited RAG sources using Source / Focus / QID / URL]
 
 ## Clinical Summary
 [2-3 sentences summarizing diagnostic reasoning]"""
@@ -139,7 +150,7 @@ def call_diagnostician(case_text: str, rag_query: str) -> tuple[str, list[dict]]
 {rag_context}
 
 Based on the patient case and the medical literature above, provide your differential diagnosis.
-Cite relevant literature using [Author et al., Year] format."""
+Use only relevant retrieved evidence and cite using [Source | Focus | QID]."""
 
     response = client.messages.create(
         model=MODEL,
