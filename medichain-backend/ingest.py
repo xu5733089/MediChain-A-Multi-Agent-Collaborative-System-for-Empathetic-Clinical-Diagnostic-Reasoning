@@ -1,5 +1,5 @@
 """
-ingest.py — 从 PubMed 抓取医学文献并写入 ChromaDB
+ingest.py — 从 PubMed 抓取医学文献并写入 Qdrant
 用法：
     python ingest.py                    # 使用默认搜索词
     python ingest.py --terms "asthma"   # 自定义搜索词
@@ -128,8 +128,8 @@ def fetch_article_details(pmids: list[str]) -> list[dict]:
 
 def run_ingestion(terms: list[str], per_term: int = 15) -> None:
     print("\n🔬 MediChain RAG Ingestion Pipeline")
-    print(f"   Model:      all-MiniLM-L6-v2 (local)")
-    print(f"   Database:   ./chroma_db")
+    print(f"   Model:      BioLORD-2023 (medical domain)")
+    print(f"   Database:   ./qdrant_db (Qdrant embedded)")
     print(f"   Terms:      {len(terms)}")
     print(f"   Per term:   {per_term} articles")
     print(f"   Initial DB size: {get_collection_size()} docs\n")
@@ -170,7 +170,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.status:
-        print(f"📚 ChromaDB contains {get_collection_size()} documents")
+        print(f"📚 Qdrant contains {get_collection_size()} documents")
         sys.exit(0)
 
     terms = args.terms if args.terms else DEFAULT_TERMS

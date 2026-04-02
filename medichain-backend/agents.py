@@ -96,13 +96,40 @@ def call_interviewer(messages: list[dict]) -> str:
     return response.content[0].text
 
 
+def _rewrite_query_for_rag(case_text: str) -> str:
+    """
+    用 LLM 将患者口语描述重写为医学专业检索词，
+    弥合患者用语与医学文献之间的语义鸿沟。
+    """
+    try:
+        response = client.messages.create(
+            model=MODEL,
+            max_tokens=120,
+            messages=[{
+                "role": "user",
+                "content": (
+                    "You are a medical search query optimizer. "
+                    "Extract 5-8 precise medical search terms from the patient case below. "
+                    "Use professional medical terminology (e.g. 'myocardial infarction' not 'heart attack'). "
+                    "Include relevant symptoms, suspected conditions, and anatomical terms. "
+                    "Output ONLY the terms, comma-separated, nothing else.\n\n"
+                    f"Patient case:\n{case_text}"
+                ),
+            }],
+        )
+        return response.content[0].text.strip()
+    except Exception:
+        return case_text  # fallback: 使用原始文本
+
+
 def call_diagnostician(case_text: str, rag_query: str) -> tuple[str, list[dict]]:
     """
     调用 Diagnostician Agent（附 RAG 检索）
     返回: (诊断文本, 引用文献列表)
     """
-    # RAG 检索
-    refs = search(rag_query, n_results=5)
+    # Query Rewrite: 将患者描述转为医学术语再检索
+    medical_query = _rewrite_query_for_rag(rag_query)
+    refs = search(medical_query, n_results=5)
     rag_context = format_references_for_prompt(refs)
 
     prompt = f"""PATIENT CASE
