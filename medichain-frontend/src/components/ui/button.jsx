@@ -22,15 +22,15 @@ const buttonVariants = cva(
       },
       size: {
         // Compact inline — card action buttons, detail-panel buttons
-        xs:        "h-8 px-3 text-[13px] rounded-md",
+        xs:        "h-8 px-[var(--btn-px-xs)] text-[13px] rounded-md",
         // Small — toolbar buttons, secondary page actions
-        sm:        "h-9 px-4 text-sm rounded-[9px]",
+        sm:        "h-9 px-[var(--btn-px-sm)] text-sm rounded-[9px]",
         // Standard — default for most buttons
-        default:   "h-10 px-5 text-sm rounded-[10px]",
+        default:   "h-10 px-[var(--btn-px-md)] text-sm rounded-[10px]",
         // Large — prominent actions, modal submit buttons
-        lg:        "h-11 px-7 text-[15px] rounded-[11px]",
+        lg:        "h-11 px-[var(--btn-px-lg)] text-[15px] rounded-[11px]",
         // Extra large — primary page CTA
-        xl:        "h-[52px] px-8 text-base rounded-[12px]",
+        xl:        "h-[52px] px-[var(--btn-px-xl)] text-base rounded-[12px]",
         // Square icon button (standard)
         icon:      "h-10 w-10 rounded-lg p-0 text-base",
         // Square icon button (small — close buttons, etc.)

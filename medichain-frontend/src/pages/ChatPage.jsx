@@ -268,7 +268,7 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
           {sid && <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)", letterSpacing: "0.12em" }}>Session {sid.slice(0, 8).toUpperCase()}</span>}
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <Badge className="rounded-[20px] px-3 py-[3px] text-[13px] italic" style={{ fontFamily: "var(--body)", color: phaseConf.c, background: phaseConf.bg, borderColor: `${phaseConf.c}40` }}>{phaseConf.label}</Badge>
+          <Badge className="chat-phase-badge rounded-[20px] text-[13px] italic" style={{ fontFamily: "var(--body)", color: phaseConf.c, background: phaseConf.bg, borderColor: `${phaseConf.c}40` }}>{phaseConf.label}</Badge>
           <Button onClick={() => setPanel(v => !v)} variant="outline" size="xs">{panel ? "Hide" : "Show"} reasoning</Button>
         </div>
       </div>

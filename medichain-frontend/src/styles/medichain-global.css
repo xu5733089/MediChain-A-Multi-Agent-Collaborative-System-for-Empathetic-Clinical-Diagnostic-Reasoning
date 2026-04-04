@@ -38,6 +38,15 @@
   --shadow-lg:  0 12px 52px rgba(22,15,6,0.16), 0 4px 14px rgba(22,15,6,0.10);
   --shadow-xl:  0 28px 80px rgba(22,15,6,0.22), 0 8px 24px rgba(22,15,6,0.12);
   --nav-bg:     rgba(250,244,232,0.94);
+  --btn-px-xs:  1.2rem;
+  --btn-px-sm:  1.5rem;
+  --btn-px-md:  2rem;
+  --btn-px-lg:  2.5rem;
+  --btn-px-xl:  3rem;
+  --badge-px:   0.8rem;
+  --badge-py:   0.22rem;
+  --chat-phase-badge-px: 1.05rem;
+  --chat-phase-badge-py: 0.3rem;
   --serif:  'Playfair Display', Georgia, serif;
   --body:   'Crimson Pro', Georgia, serif;
   --mono:   'JetBrains Mono', monospace;
@@ -230,6 +239,11 @@ body {
 .tab-btn:hover { color: var(--ink2); }
 .tab-btn.on { color: var(--rose); border-bottom-color: var(--rose); }
 
+.chat-phase-badge {
+  padding-inline: var(--chat-phase-badge-px) !important;
+  padding-block: var(--chat-phase-badge-py) !important;
+}
+
 /* ─── Mode pill ─── */
 .mode-pill { display: flex; border: 1.5px solid rgba(22,15,6,0.16); border-radius: 30px; overflow: hidden; background: var(--paper3); }
 .mode-opt  {
@@ -346,3 +360,28 @@ input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.22); box-shad
 /* ─── Hover lift ─── */
 .lift { transition: transform 0.25s cubic-bezier(0.22,1,0.36,1), box-shadow 0.25s; }
 .lift:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+
+/* ─── Button padding override ─── */
+button {
+  padding-left: var(--btn-px-md) !important;
+  padding-right: var(--btn-px-md) !important;
+}
+
+/* Match h-8 (xs size) */
+button[class*="h-8"] {
+  padding-left: var(--btn-px-xs) !important;
+  padding-right: var(--btn-px-xs) !important;
+}
+
+/* Match h-9 (sm size) */
+button[class*="h-9"] {
+  padding-left: var(--btn-px-sm) !important;
+  padding-right: var(--btn-px-sm) !important;
+}
+
+/* Match h-10/h-11 (default/lg) */
+button[class*="h-10"],
+button[class*="h-11"] {
+  padding-left: var(--btn-px-md) !important;
+  padding-right: var(--btn-px-md) !important;
+}
