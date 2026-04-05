@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { AmbientBlobs, ECGLine, IllustFlower, IllustLeaf, ParticleField } from "../components/illustrations";
 import { AgentBadge, SevBadge, TypingDots } from "../components/ui";
 import { Badge } from "../components/ui/badge";
@@ -8,6 +9,7 @@ import { Alert } from "../components/ui/alert";
 import { fmtT } from "../core/utils";
 
 export default function ChatPage({ api, symptoms, onComplete, onBack }) {
+  const { t } = useTranslation();
   const [msgs, setMsgs] = useState([]);
   const [logs, setLogs] = useState([]);
   const [input, setInput] = useState("");
@@ -176,7 +178,7 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
         const transcript = Array.isArray(fullSession?.messages)
           ? fullSession.messages.filter(m => m.role === "user" || m.role === "ai")
           : [];
-        setTimeout(() => onComplete({ symptoms, date: new Date(), sessionId: sid, transcript, diagnosis: dd.diagnosis || dd.result || JSON.stringify(dd), review: dd.review || dd.critique || "", refs: safeRefs }), 1500);
+        setTimeout(() => onComplete({ symptoms, date: new Date(), sessionId: sid, transcript, diagnosis: dd.diagnosis || dd.result || JSON.stringify(dd), review: dd.review || dd.critique || "", refs: safeRefs, cot: dd.cot || null }), 1500);
       }
     } catch (e) {
       addLog("interviewer", `Error: ${e.message}`);
@@ -255,28 +257,28 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
   }
 
   const phaseConf = {
-    interviewing: { label: "Taking history…", c: "var(--sage)", bg: "var(--sagePale)" },
-    analyzing: { label: "Analysing…", c: "var(--amber)", bg: "var(--amberPale)" },
-    done: { label: "Complete ✓", c: "var(--navy)", bg: "var(--navyPale)" },
+    interviewing: { label: t("chat.taking_history"), c: "var(--sage)", bg: "var(--sagePale)" },
+    analyzing: { label: t("chat.analysing"), c: "var(--amber)", bg: "var(--amberPale)" },
+    done: { label: t("chat.complete"), c: "var(--navy)", bg: "var(--navyPale)" },
   }[phase];
 
   return (
     <div style={{ height: "100vh", background: "var(--paper)", display: "flex", flexDirection: "column", overflow: "hidden", paddingTop: 56, position: "relative", zIndex: 1 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", height: 44, borderBottom: "1px solid rgba(22,15,6,0.09)", background: "var(--paper2)", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Button onClick={onBack} variant="outline" size="xs">← Back</Button>
-          {sid && <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)", letterSpacing: "0.12em" }}>Session {sid.slice(0, 8).toUpperCase()}</span>}
+          <Button onClick={onBack} variant="outline" size="xs">{t("common.back")}</Button>
+          {sid && <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)", letterSpacing: "0.12em" }}>{t("chat.session", { id: sid.slice(0, 8).toUpperCase() })}</span>}
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <Badge className="chat-phase-badge rounded-[20px] text-[13px] italic" style={{ fontFamily: "var(--body)", color: phaseConf.c, background: phaseConf.bg, borderColor: `${phaseConf.c}40` }}>{phaseConf.label}</Badge>
-          <Button onClick={() => setPanel(v => !v)} variant="outline" size="xs">{panel ? "Hide" : "Show"} reasoning</Button>
+          <Badge className="rounded-[20px] px-3 py-[3px] text-[13px] italic" style={{ fontFamily: "var(--body)", color: phaseConf.c, background: phaseConf.bg, borderColor: `${phaseConf.c}40` }}>{phaseConf.label}</Badge>
+          <Button onClick={() => setPanel(v => !v)} variant="outline" size="xs">{panel ? t("chat.hide_reasoning") : t("chat.show_reasoning")}</Button>
         </div>
       </div>
 
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
         <div style={{ flex: panel ? "0 0 54%" : 1, display: "flex", flexDirection: "column", borderRight: panel ? "1px solid rgba(22,15,6,0.09)" : "none" }}>
           <div style={{ padding: "9px 18px", borderBottom: "1px solid rgba(22,15,6,0.07)", background: "var(--sagePale)", flexShrink: 0, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            <Badge variant="sage" className="text-[9px]">Active case</Badge>
+            <Badge variant="sage" className="text-[9px]">{t("chat.active_case")}</Badge>
             <span style={{ fontFamily: "var(--body)", fontSize: 14, fontStyle: "italic", color: "var(--ink2)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{symptoms.description}</span>
             <SevBadge n={symptoms.severity_level || symptoms.severity || "moderate"} />
           </div>
@@ -338,14 +340,14 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
                 <ParticleField count={8} style={{ opacity: 0.4 }} />
                 <IllustFlower size={60} style={{ position: "absolute", top: -10, right: -10, animation: "float3 4s infinite", pointerEvents: "none" }} color="var(--amber)" opacity={0.3} />
                 <div style={{ fontSize: 38, marginBottom: 10, animation: "pulse 1.5s ease-in-out infinite" }}>🔬</div>
-                <p style={{ fontFamily: "var(--serif)", fontSize: 19, fontStyle: "italic", color: "var(--amber)", marginBottom: 4, position: "relative", zIndex: 1 }}>Multi-agent analysis in progress…</p>
-                <p style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--ink4)", position: "relative", zIndex: 1 }}>Querying medical QA evidence · Generating diagnosis · Peer review</p>
+                <p style={{ fontFamily: "var(--serif)", fontSize: 19, fontStyle: "italic", color: "var(--amber)", marginBottom: 4, position: "relative", zIndex: 1 }}>{t("chat.pipeline_progress")}</p>
+                <p style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--ink4)", position: "relative", zIndex: 1 }}>{t("chat.pipeline_desc")}</p>
                 <ECGLine style={{ marginTop: 14, opacity: 0.5 }} color="var(--amber)" />
               </div>
             )}
             {phase === "done" && (
               <div className="scale-in" style={{ margin: "18px 0", padding: "18px 22px", background: "var(--sagePale)", border: "1.5px solid var(--sage)40", borderRadius: 6, textAlign: "center" }}>
-                <p style={{ fontFamily: "var(--serif)", fontSize: 19, fontStyle: "italic", color: "var(--sage)" }}>✓ Analysis complete — loading your report…</p>
+                <p style={{ fontFamily: "var(--serif)", fontSize: 19, fontStyle: "italic", color: "var(--sage)" }}>{t("chat.analysis_done")}</p>
               </div>
             )}
             <div ref={msgEnd} />
@@ -366,7 +368,7 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
                   {uploadedFiles.length > 0 && (
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                       <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", letterSpacing: "0.08em" }}>
-                        CONTEXT FILES ({uploadedFiles.length})
+                        {t("chat.context_files", { count: uploadedFiles.length })}
                       </span>
                       <span style={{ fontFamily: "var(--body)", fontSize: 12, color: "var(--ink4)" }}>
                         {uploadedFiles.slice(0, 3).map(f => f.file_name).join(" · ")}
@@ -410,7 +412,7 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
                           )}
                           {!!uploadPreview && (
                             <p style={{ fontFamily: "var(--body)", fontSize: 12, color: "var(--ink5)", lineHeight: 1.6, maxWidth: 560, margin: 0 }}>
-                              <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink4)", display: "block", marginBottom: 2 }}>AI ANALYSIS PREVIEW</span>
+                              <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink4)", display: "block", marginBottom: 2 }}>{t("chat.analysis_preview")}</span>
                               {uploadPreview.slice(0, 200)}{uploadPreview.length > 200 ? "…" : ""}
                             </p>
                           )}
@@ -421,7 +423,7 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
 
                   {pendingAttachments.length > 0 && (
                     <p style={{ fontFamily: "var(--body)", fontSize: 12, color: "var(--ink5)", lineHeight: 1.5, maxWidth: 760 }}>
-                      {pendingAttachments.length} file(s) queued for next send.
+                      {t("chat.queued", { count: pendingAttachments.length })}
                     </p>
                   )}
 
@@ -445,7 +447,7 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
                   variant="outline"
                   size="icon"
                   disabled={!sid || uploading}
-                  title="Attach file (image, audio, video, PDF, TXT)"
+                  title={t("chat.attach_file")}
                   className="shrink-0"
                   style={{ borderRadius: 999 }}
                 >
@@ -457,14 +459,14 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
                     variant={micRecording ? "danger" : "outline"}
                     size="icon"
                     disabled={!sid || loading}
-                    title={micRecording ? "Stop recording" : "Record speech"}
+                    title={micRecording ? t("chat.stop_recording") : t("chat.record_speech")}
                     className="shrink-0"
                     style={{ borderRadius: 999 }}
                   >
                     {micRecording ? "⏹" : "🎙"}
                   </Button>
                 )}
-                <Input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()} placeholder={micRecording ? "Listening…" : "Type your response…"} disabled={loading} style={{ flex: 1, fontSize: 15, fontFamily: "var(--body)", borderRadius: 999 }} />
+                <Input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()} placeholder={micRecording ? t("chat.listening") : t("chat.placeholder")} disabled={loading} style={{ flex: 1, fontSize: 15, fontFamily: "var(--body)", borderRadius: 999 }} />
                 <Button
                   onClick={send}
                   disabled={!input.trim() || loading}
@@ -472,7 +474,7 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
                   className="shrink-0"
                   style={{ minWidth: 112, borderRadius: 999 }}
                 >
-                  Send →
+                  {t("chat.send")}
                 </Button>
               </div>
             </div>
@@ -483,11 +485,11 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
           <div style={{ flex: "0 0 46%", display: "flex", flexDirection: "column", background: "var(--paper2)", position: "relative", overflow: "hidden" }}>
             <IllustLeaf w={70} h={105} style={{ position: "absolute", bottom: -10, right: -5, opacity: 0.1, pointerEvents: "none", animation: "float1 9s infinite" }} color="var(--sage)" />
             <div style={{ padding: "11px 20px", borderBottom: "1px solid rgba(22,15,6,0.09)", flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <p style={{ fontFamily: "var(--serif)", fontSize: 15, fontStyle: "italic", color: "var(--ink2)" }}>Agent reasoning log</p>
-              <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)" }}>{logs.length} entries</span>
+              <p style={{ fontFamily: "var(--serif)", fontSize: 15, fontStyle: "italic", color: "var(--ink2)" }}>{t("chat.reasoning_log")}</p>
+              <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)" }}>{t("chat.log_entries", { count: logs.length })}</span>
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: "14px 20px" }}>
-              {logs.length === 0 && <p style={{ fontFamily: "var(--body)", fontSize: 14, fontStyle: "italic", color: "var(--ink5)", paddingTop: 40, textAlign: "center" }}>Awaiting agent activity…</p>}
+              {logs.length === 0 && <p style={{ fontFamily: "var(--body)", fontSize: 14, fontStyle: "italic", color: "var(--ink5)", paddingTop: 40, textAlign: "center" }}>{t("chat.log_empty")}</p>}
               {logs.map((log, i) => (
                 <div key={log.id} className="slide-r" style={{ marginBottom: 18, paddingBottom: 14, borderBottom: i < logs.length - 1 ? "1px dashed rgba(22,15,6,0.09)" : "none" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>

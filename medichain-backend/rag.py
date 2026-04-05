@@ -122,7 +122,7 @@ def search(query: str, n_results: int = 5) -> list[dict]:
         results["distances"][0],
     ):
         score = round(1 - dist, 4)  # cosine distance → similarity
-        if score < 0.25:            # 过滤低相关性文献
+        if score < 0.15:            # 降低阈值以提高召回率
             continue
         output.append(
             {
@@ -140,6 +140,54 @@ def search(query: str, n_results: int = 5) -> list[dict]:
             }
         )
     return output
+
+
+def multi_search(queries: list[str], n_results: int = 5) -> list[dict]:
+    """
+    多查询融合检索：对多个 query 分别检索，去重后按分数排序返回。
+    用于提高召回率（不同视角的 query 命中不同文档）。
+    """
+    col = _get_collection()
+    if col.count() == 0:
+        return []
+
+    fetch = min(n_results * 2, col.count())
+    seen: dict[str, dict] = {}  # doc text → result (keep highest score)
+
+    for query in queries:
+        if not query.strip():
+            continue
+        results = col.query(
+            query_texts=[query],
+            n_results=fetch,
+            include=["documents", "metadatas", "distances"],
+        )
+        for doc, meta, dist in zip(
+            results["documents"][0],
+            results["metadatas"][0],
+            results["distances"][0],
+        ):
+            score = round(1 - dist, 4)
+            if score < 0.15:
+                continue
+            key = meta.get("qid") or doc[:80]
+            if key not in seen or seen[key]["score"] < score:
+                seen[key] = {
+                    "title":   meta.get("title", "Untitled"),
+                    "authors": meta.get("authors", ""),
+                    "year":    meta.get("year", ""),
+                    "source":  meta.get("source", ""),
+                    "url":     meta.get("url", ""),
+                    "qid":     meta.get("qid", ""),
+                    "focus":   meta.get("focus", ""),
+                    "qtype":   meta.get("qtype", ""),
+                    "document_id": meta.get("document_id", ""),
+                    "excerpt": doc[:300] + ("…" if len(doc) > 300 else ""),
+                    "score":   score,
+                }
+
+    ranked = sorted(seen.values(), key=lambda x: x["score"], reverse=True)
+    return ranked[:n_results]
 
 
 def format_references_for_prompt(refs: list[dict]) -> str:

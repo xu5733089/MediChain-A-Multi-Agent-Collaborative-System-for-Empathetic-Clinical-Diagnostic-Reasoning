@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AmbientBlobs, ECGLine, IllustFlower, ParticleField } from "../components/illustrations";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 
 export default function EvalPage({ api }) {
+  const { t } = useTranslation();
   const [questions, setQuestions] = useState([]);
   const [history, setHistory] = useState({ records: [], stats: { total: 0, single_accuracy: 0, multi_accuracy: 0, improvement: 0 } });
   const [running, setRunning] = useState(null);
@@ -62,14 +64,14 @@ export default function EvalPage({ api }) {
       <div style={{ maxWidth: 1060, margin: "0 auto", padding: "28px 28px 0", position: "relative", zIndex: 1 }}>
         <div className="fade-up" style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 28, flexWrap: "wrap", gap: 18 }}>
           <div>
-            <div className="eyebrow">PROJ-14 · USMLE Accuracy Benchmark</div>
+            <div className="eyebrow">{t("eval.eyebrow")}</div>
             <h2 style={{ fontFamily: "var(--serif)", fontSize: 56, fontWeight: 400, color: "var(--ink)", letterSpacing: -1.2, lineHeight: 0.9 }}>
-              MedQA<br /><span className="grad-heading">Evaluation</span>
+              {t("eval.title").split(" ")[0]}<br /><span className="grad-heading">{t("eval.title").split(" ").slice(1).join(" ")}</span>
             </h2>
-            <p style={{ fontFamily: "var(--body)", fontSize: 16, color: "var(--ink3)", marginTop: 10 }}>Multi-agent vs single-LLM on clinical reasoning tasks</p>
+            <p style={{ fontFamily: "var(--body)", fontSize: 16, color: "var(--ink3)", marginTop: 10 }}>{t("eval.subtitle")}</p>
           </div>
           <Button onClick={runAll} disabled={!!running} size="lg">
-            {running ? "Running…" : "▶ Run all questions"}
+            {running ? t("eval.running") : t("eval.run_all")}
           </Button>
         </div>
         <div className="gold-rule" />
@@ -77,10 +79,10 @@ export default function EvalPage({ api }) {
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 18 }}>
           {[
-            { l: "Total Runs", v: st.total, c: "var(--ink2)", bar: "var(--ink4)", pct: null },
-            { l: "Single LLM", v: st.single_accuracy, c: "var(--navy)", bar: "var(--navyB)", pct: st.total > 0 ? st.single_accuracy : null },
-            { l: "Multi-Agent", v: st.multi_accuracy, c: "var(--rose)", bar: "var(--roseB)", pct: st.total > 0 ? st.multi_accuracy : null },
-            { l: "Improvement", v: (st.improvement >= 0 ? "+" : "") + st.improvement, c: st.improvement >= 0 ? "var(--sage)" : "var(--rose)", bar: st.improvement >= 0 ? "var(--sageB)" : "var(--roseB)", pct: null },
+            { l: t("eval.stat_total"), v: st.total, c: "var(--ink2)", bar: "var(--ink4)", pct: null },
+            { l: t("eval.stat_single"), v: st.single_accuracy, c: "var(--navy)", bar: "var(--navyB)", pct: st.total > 0 ? st.single_accuracy : null },
+            { l: t("eval.stat_multi"), v: st.multi_accuracy, c: "var(--rose)", bar: "var(--roseB)", pct: st.total > 0 ? st.multi_accuracy : null },
+            { l: t("eval.stat_improvement"), v: (st.improvement >= 0 ? "+" : "") + st.improvement, c: st.improvement >= 0 ? "var(--sage)" : "var(--rose)", bar: st.improvement >= 0 ? "var(--sageB)" : "var(--roseB)", pct: null },
           ].map(({ l, v, c, bar, pct }, i) => (
             <div key={l} className="stat-card fade-up" style={{ animationDelay: `${i * 0.08}s` }}>
               <div className="accent-bar" style={{ background: `linear-gradient(90deg,${bar},transparent)` }} />
@@ -105,8 +107,8 @@ export default function EvalPage({ api }) {
                     <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap", alignItems: "center" }}>
                       <Badge variant={catClass[q.category] || "default"} className="text-[9px]">{q.category}</Badge>
                       {r && <>
-                        <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: r.single_correct ? "var(--sage)" : "var(--rose)" }}>Single: {r.single?.answer} {r.single_correct ? "✓" : "✗"}</span>
-                        <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: r.multi_correct ? "var(--sage)" : "var(--rose)" }}>Multi: {r.multi?.answer} {r.multi_correct ? "✓" : "✗"}</span>
+                        <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: r.single_correct ? "var(--sage)" : "var(--rose)" }}>{t("eval.label_single")}: {r.single?.answer} {r.single_correct ? "✓" : "✗"}</span>
+                        <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: r.multi_correct ? "var(--sage)" : "var(--rose)" }}>{t("eval.label_multi")}: {r.multi?.answer} {r.multi_correct ? "✓" : "✗"}</span>
                       </>}
                     </div>
                     <p style={{ fontFamily: "var(--body)", fontSize: 15, color: "var(--ink)", lineHeight: 1.66 }}>{q.question}</p>
@@ -114,7 +116,7 @@ export default function EvalPage({ api }) {
                   <Button onClick={e => { e.stopPropagation(); runQ(q.id); }} disabled={isR || !!running}
                     variant={r ? "outline" : "default"}
                     size="sm" className="shrink-0">
-                    {isR ? "Running…" : r ? "↻ Re-run" : "▶ Run"}
+                    {isR ? t("eval.running") : r ? t("eval.rerun") : t("eval.run")}
                   </Button>
                 </div>
                 {selQ === q.id && (
@@ -133,7 +135,7 @@ export default function EvalPage({ api }) {
                     </div>
                     {r && (
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                        {[{ l: "Single LLM", c: "var(--navy)", bg: "var(--navyPale)", d: r.single, ok: r.single_correct }, { l: "Multi-agent", c: "var(--rose)", bg: "var(--rosePale)", d: r.multi, ok: r.multi_correct }].map(({ l, c, bg, d, ok }) => (
+                        {[{ l: t("eval.label_single"), c: "var(--navy)", bg: "var(--navyPale)", d: r.single, ok: r.single_correct }, { l: t("eval.label_multi"), c: "var(--rose)", bg: "var(--rosePale)", d: r.multi, ok: r.multi_correct }].map(({ l, c, bg, d, ok }) => (
                           <div key={l} style={{ background: bg, border: `1.5px solid ${c}30`, borderRadius: 4, padding: "14px 16px" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                               <span style={{ fontFamily: "var(--body)", fontSize: 13, fontStyle: "italic", color: c }}>{l}</span>

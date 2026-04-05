@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AmbientBlobs, ECGLine, IllustFlower, IllustLeaf } from "../components/illustrations";
 import { Button } from "../components/ui/button";
 import { fmtD } from "../core/utils";
 
 export default function HistoryPage({ api, onNew }) {
+  const { t } = useTranslation();
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sel, setSel] = useState(null);
@@ -45,30 +47,30 @@ export default function HistoryPage({ api, onNew }) {
       <div style={{ maxWidth: 910, margin: "0 auto", padding: "28px 28px 0", position: "relative", zIndex: 1 }}>
         <div className="fade-up" style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 28, flexWrap: "wrap", gap: 18 }}>
           <div>
-            <div className="eyebrow">Consultation Records</div>
+            <div className="eyebrow">{t("history.eyebrow")}</div>
             <h2 style={{ fontFamily: "var(--serif)", fontSize: 56, fontWeight: 400, color: "var(--ink)", letterSpacing: -1.2, lineHeight: 0.9 }}>
-              Session<br /><span className="grad-heading">History</span>
+              {t("history.title").split(" ")[0]}<br /><span className="grad-heading">{t("history.title").split(" ").slice(1).join(" ")}</span>
             </h2>
             <p style={{ fontFamily: "var(--body)", fontSize: 15, color: "var(--ink4)", marginTop: 10 }}>
-              {loading ? "Loading…" : `${sessions.length} consultations on record`}
+              {loading ? t("history.loading") : t("history.count", { count: sessions.length })}
             </p>
           </div>
           <div style={{ display: "flex", gap: 10 }}>
-            <Button onClick={load} variant="outline" size="sm">↻ Refresh</Button>
-            <Button onClick={onNew} size="sm">+ New consult</Button>
+            <Button onClick={load} variant="outline" size="sm">{t("history.refresh")}</Button>
+            <Button onClick={onNew} size="sm">{t("history.new")}</Button>
           </div>
         </div>
         <div className="gold-rule" />
         <ECGLine style={{ opacity: 0.32, marginBottom: 22 }} />
 
         {loading
-          ? <div style={{ textAlign: "center", padding: 80, fontFamily: "var(--body)", fontStyle: "italic", color: "var(--ink4)", fontSize: 17 }}>Loading records…</div>
+          ? <div style={{ textAlign: "center", padding: 80, fontFamily: "var(--body)", fontStyle: "italic", color: "var(--ink4)", fontSize: 17 }}>{t("history.loading")}</div>
           : sessions.length === 0
             ? (
               <div style={{ textAlign: "center", padding: "80px 40px", border: "1.5px dashed rgba(22,15,6,0.18)", borderRadius: 6 }}>
                 <IllustFlower size={90} opacity={0.28} color="var(--rose)" style={{ margin: "0 auto 18px" }} />
-                <p style={{ fontFamily: "var(--serif)", fontSize: 26, fontStyle: "italic", color: "var(--ink3)", marginBottom: 8 }}>No records yet</p>
-                <p style={{ fontFamily: "var(--body)", fontSize: 16, color: "var(--ink4)" }}>Start a consultation to build your history.</p>
+                <p style={{ fontFamily: "var(--serif)", fontSize: 26, fontStyle: "italic", color: "var(--ink3)", marginBottom: 8 }}>{t("history.empty")}</p>
+                <p style={{ fontFamily: "var(--body)", fontSize: 16, color: "var(--ink4)" }}>{t("history.empty_sub")}</p>
               </div>
             )
             : (
@@ -101,7 +103,7 @@ export default function HistoryPage({ api, onNew }) {
                         </p>
                         <div style={{ marginTop: 14, borderTop: "1px dashed rgba(22,15,6,0.16)", paddingTop: 12 }}>
                           <p style={{ fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.12em", color: "var(--ink5)", marginBottom: 9 }}>
-                            MESSAGE TIMELINE
+                            {t("history.timeline")}
                           </p>
                           <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 280, overflow: "auto", paddingRight: 2 }}>
                             {(detailMessages.length

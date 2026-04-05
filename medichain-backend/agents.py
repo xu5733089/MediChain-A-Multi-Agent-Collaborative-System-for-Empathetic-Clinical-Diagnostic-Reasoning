@@ -3,7 +3,7 @@ agents.py — 三智能体协作逻辑（集成 RAG）
 """
 import os
 import anthropic
-from rag import search, format_references_for_prompt
+from rag import search, multi_search, format_references_for_prompt
 
 client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 MODEL = "claude-sonnet-4-20250514"
@@ -107,13 +107,29 @@ def call_interviewer(messages: list[dict]) -> str:
     return response.content[0].text
 
 
+def _build_rag_queries(rag_query: str) -> list[str]:
+    """
+    从 rag_query 生成多个检索视角，提高召回率。
+    rag_query 通常是 "{description} {bodyPart} {duration}" 的拼接。
+    """
+    parts = [p.strip() for p in rag_query.split() if p.strip()]
+    # 主查询
+    queries = [rag_query]
+    # 只用前半段（症状描述）
+    if len(parts) > 4:
+        queries.append(" ".join(parts[:len(parts)//2]))
+    # 加上诊断导向的问句
+    queries.append(f"What is {rag_query}?")
+    queries.append(f"treatment and diagnosis of {rag_query}")
+    return queries
+
+
 def call_diagnostician(case_text: str, rag_query: str) -> tuple[str, list[dict]]:
     """
     调用 Diagnostician Agent（附 RAG 检索）
     返回: (诊断文本, 引用文献列表)
     """
-    # RAG 检索
-    refs = search(rag_query, n_results=5)
+    refs = multi_search(_build_rag_queries(rag_query), n_results=6)
     rag_context = format_references_for_prompt(refs)
 
     prompt = f"""PATIENT CASE
@@ -132,6 +148,42 @@ Use only relevant retrieved evidence and cite using [Source | Focus | QID]."""
         messages=[{"role": "user", "content": prompt}],
     )
     return response.content[0].text, refs
+
+
+def call_diagnostician_cot(case_text: str, rag_query: str) -> tuple[str, str, list[dict]]:
+    """
+    调用 Diagnostician Agent，启用 Extended Thinking (CoT)
+    返回: (诊断文本, 思维链文本, 引用文献列表)
+    """
+    refs = multi_search(_build_rag_queries(rag_query), n_results=6)
+    rag_context = format_references_for_prompt(refs)
+
+    prompt = f"""PATIENT CASE
+{'='*50}
+{case_text}
+
+{rag_context}
+
+Based on the patient case and the medical literature above, provide your differential diagnosis.
+Use only relevant retrieved evidence and cite using [Source | Focus | QID]."""
+
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=16000,
+        thinking={"type": "enabled", "budget_tokens": 8000},
+        system=DIAGNOSTICIAN_PROMPT,
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    thinking = ""
+    diagnosis = ""
+    for block in response.content:
+        if block.type == "thinking":
+            thinking = block.thinking
+        elif block.type == "text":
+            diagnosis = block.text
+
+    return diagnosis, thinking, refs
 
 
 def call_critic(case_text: str, diagnosis: str) -> str:
@@ -153,3 +205,37 @@ Provide your senior consultant review focusing on evidence quality, safety, and 
         messages=[{"role": "user", "content": prompt}],
     )
     return response.content[0].text
+
+
+def call_critic_cot(case_text: str, diagnosis: str) -> tuple[str, str]:
+    """
+    调用 Critic Agent，启用 Extended Thinking (CoT)
+    返回: (审查文本, 思维链文本)
+    """
+    prompt = f"""Please review this diagnostic assessment:
+
+{diagnosis}
+
+---
+Original patient case:
+{case_text}
+
+Provide your senior consultant review focusing on evidence quality, safety, and clinical gaps."""
+
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=10000,
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        system=CRITIC_PROMPT,
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    thinking = ""
+    review = ""
+    for block in response.content:
+        if block.type == "thinking":
+            thinking = block.thinking
+        elif block.type == "text":
+            review = block.text
+
+    return review, thinking

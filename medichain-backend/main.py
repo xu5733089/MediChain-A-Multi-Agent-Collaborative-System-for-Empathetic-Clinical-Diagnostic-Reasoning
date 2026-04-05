@@ -18,7 +18,7 @@ from pydantic import BaseModel
 
 load_dotenv()
 
-from agents import call_interviewer, call_diagnostician, call_critic
+from agents import call_interviewer, call_diagnostician, call_critic, call_diagnostician_cot, call_critic_cot
 from safety import classify_safety
 from rag    import get_collection_size, search
 from export import generate_pdf
@@ -81,6 +81,12 @@ def session_get(sid):
     d = dict(row)
     for k in ("symptoms","history","refs"):
         d[k] = json.loads(d[k])
+    # cot is stored as JSON string or None
+    if d.get("cot") and isinstance(d["cot"], str):
+        try:
+            d["cot"] = json.loads(d["cot"])
+        except Exception:
+            pass  # leave as raw string
     d["messages"] = session_messages_legacy(sid)
     return d
 
@@ -179,13 +185,52 @@ def _extract_text_from_pdf(path: Path) -> str:
     return "\n".join(chunks).strip()
 
 
+_MAX_IMAGE_BYTES = 3 * 1024 * 1024  # 3 MB raw → ~4 MB base64, safely under Claude's 5 MB base64 limit
+
+
+def _compress_image_bytes(raw: bytes, orig_ext: str) -> tuple[bytes, str]:
+    """Resize + re-encode image with Pillow until raw bytes fit within _MAX_IMAGE_BYTES."""
+    import io
+    from PIL import Image
+
+    img = Image.open(io.BytesIO(raw)).convert("RGB")
+    w0, h0 = img.size
+    quality = 85
+    scale = 1.0
+    last: bytes = raw
+
+    while True:
+        w = max(1, int(w0 * scale))
+        h = max(1, int(h0 * scale))
+        frame = img.resize((w, h), Image.LANCZOS) if scale < 1.0 else img
+        buf = io.BytesIO()
+        frame.save(buf, format="JPEG", quality=quality, optimize=True)
+        data = buf.getvalue()
+        last = data
+        if len(data) <= _MAX_IMAGE_BYTES:
+            return data, "image/jpeg"
+        # Reduce quality first, then shrink dimensions
+        if quality > 40:
+            quality -= 15
+        else:
+            scale *= 0.7
+        if scale < 0.05:
+            break  # last attempt — send even if still slightly large
+
+    return last, "image/jpeg"
+
+
 def _analyze_medical_image(path: Path) -> str:
     import base64
     import anthropic as _anthropic
 
     ext = path.suffix.lower()
-    media_type = IMAGE_MEDIA_TYPES.get(ext, "image/jpeg")
-    image_data = base64.standard_b64encode(path.read_bytes()).decode("utf-8")
+    raw = path.read_bytes()
+    if len(raw) > _MAX_IMAGE_BYTES:
+        raw, media_type = _compress_image_bytes(raw, ext)
+    else:
+        media_type = IMAGE_MEDIA_TYPES.get(ext, "image/jpeg")
+    image_data = base64.standard_b64encode(raw).decode("utf-8")
 
     _client = _anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
     response = _client.messages.create(
@@ -747,12 +792,21 @@ def diagnose(body: DiagnoseRequest, user=Depends(get_current_user)):
     ) if image_analyses else ""
     rag_query = f"{s['description']} {s['bodyPart']} {s['duration']} {image_query_suffix}".strip()
 
-    diagnosis, refs = call_diagnostician(case_text, rag_query)
-    review = call_critic(case_text, diagnosis)
+    # Use extended thinking (CoT) — fall back to standard call if not supported
+    try:
+        diagnosis, diag_cot, refs = call_diagnostician_cot(case_text, rag_query)
+        review, critic_cot = call_critic_cot(case_text, diagnosis)
+        cot = {"diagnostician": diag_cot, "critic": critic_cot}
+    except Exception:
+        diagnosis, refs = call_diagnostician(case_text, rag_query)
+        review = call_critic(case_text, diagnosis)
+        cot = None
+
     session_message_create(body.session_id, role="agent", content=diagnosis, agent_type="diagnostician", user_id=user["id"] if user else None)
     session_message_create(body.session_id, role="agent", content=review, agent_type="critic", user_id=user["id"] if user else None)
-    session_update(body.session_id,diagnosis=diagnosis,review=review,refs=refs,status="done")
-    return {"status":"done","diagnosis":diagnosis,"review":review,"refs":refs}
+    session_update(body.session_id, diagnosis=diagnosis, review=review, refs=refs, status="done",
+                   cot=json.dumps(cot) if cot else None)
+    return {"status": "done", "diagnosis": diagnosis, "review": review, "refs": refs, "cot": cot}
 
 @app.get("/api/session/{session_id}")
 def get_session(session_id: str, user=Depends(get_current_user)):

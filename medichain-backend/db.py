@@ -182,5 +182,7 @@ def init_db():
         # Lightweight migration for existing prototype DBs.
         if not _column_exists(c, "sessions", "severity_level"):
             c.execute("ALTER TABLE sessions ADD COLUMN severity_level TEXT NOT NULL DEFAULT 'moderate'")
+        if not _column_exists(c, "sessions", "cot"):
+            c.execute("ALTER TABLE sessions ADD COLUMN cot TEXT")
 
         c.commit()

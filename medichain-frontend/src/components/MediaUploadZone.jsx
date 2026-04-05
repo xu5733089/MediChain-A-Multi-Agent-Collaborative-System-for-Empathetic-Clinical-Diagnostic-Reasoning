@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "./ui/button";
 
 const ACCEPTED_TYPES = {
@@ -17,6 +18,7 @@ function getFileKind(filename) {
 }
 
 function AttachmentChip({ item, onRemove }) {
+  const { t } = useTranslation();
   const kind = ACCEPTED_TYPES[item.fileType] || ACCEPTED_TYPES.txt;
   return (
     <div style={{
@@ -37,7 +39,7 @@ function AttachmentChip({ item, onRemove }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--ink2)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.fileName}</p>
           <p style={{ fontFamily: "var(--mono)", fontSize: 9, color: kind.color, letterSpacing: "0.1em", marginTop: 1 }}>
-            {item.analysing ? "ANALYSING…" : kind.label.toUpperCase()}
+            {item.analysing ? t("upload.analysing") : kind.label.toUpperCase()}
             {!item.analysing && item.analysisLength ? ` · ${item.analysisLength} chars` : ""}
           </p>
         </div>
@@ -57,6 +59,7 @@ function AttachmentChip({ item, onRemove }) {
 
 // ── Microphone recorder using Web Speech API ───────────────
 function MicButton({ onTranscript, disabled }) {
+  const { t } = useTranslation();
   const [recording, setRecording] = useState(false);
   const [interim, setInterim] = useState("");
   // Single ref object to avoid stale-closure issues across restarts
@@ -140,7 +143,7 @@ function MicButton({ onTranscript, disabled }) {
         style={{ gap: 6 }}
       >
         <span style={{ fontSize: 15 }}>{recording ? "⏹" : "🎙"}</span>
-        {recording ? "Stop recording" : "Record speech"}
+        {recording ? t("upload.stop") : t("upload.record")}
       </Button>
       {interim && (
         <p style={{ fontFamily: "var(--body)", fontSize: 12, color: "var(--ink4)", fontStyle: "italic", lineHeight: 1.5 }}>
@@ -153,6 +156,7 @@ function MicButton({ onTranscript, disabled }) {
 
 // ── Main export ────────────────────────────────────────────
 export default function MediaUploadZone({ api, onUpdate, disabled }) {
+  const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef(null);
@@ -254,10 +258,10 @@ export default function MediaUploadZone({ api, onUpdate, disabled }) {
         />
         <div style={{ fontSize: 28, marginBottom: 8, lineHeight: 1 }}>🩻🎵🎬</div>
         <p style={{ fontFamily: "var(--body)", fontSize: 14, color: "var(--ink3)", marginBottom: 4 }}>
-          Drop files here or <span style={{ color: "var(--rose)", fontWeight: 600 }}>click to browse</span>
+          {t("upload.drop_title")} <span style={{ color: "var(--rose)", fontWeight: 600 }}>{t("upload.drop_browse")}</span>
         </p>
         <p style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", letterSpacing: "0.08em" }}>
-          Images · Audio · Video · PDF · TXT
+          {t("upload.drop_types")}
         </p>
       </div>
 
