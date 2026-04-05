@@ -107,21 +107,41 @@ def call_interviewer(messages: list[dict]) -> str:
     return response.content[0].text
 
 
+def _rewrite_query_for_rag(case_text: str) -> str:
+    """
+    用 LLM 将患者口语描述重写为医学专业检索词，
+    弥合患者用语与医学文献之间的语义鸿沟。
+    """
+    try:
+        response = client.messages.create(
+            model=MODEL,
+            max_tokens=120,
+            messages=[{
+                "role": "user",
+                "content": (
+                    "You are a medical search query optimizer. "
+                    "Extract 5-8 precise medical search terms from the patient case below. "
+                    "Use professional medical terminology (e.g. 'myocardial infarction' not 'heart attack'). "
+                    "Include relevant symptoms, suspected conditions, and anatomical terms. "
+                    "Output ONLY the terms, comma-separated, nothing else.\n\n"
+                    f"Patient case:\n{case_text}"
+                ),
+            }],
+        )
+        return response.content[0].text.strip()
+    except Exception:
+        return case_text  # fallback: 使用原始文本
+
+
 def _build_rag_queries(rag_query: str) -> list[str]:
     """
-    从 rag_query 生成多个检索视角，提高召回率。
-    rag_query 通常是 "{description} {bodyPart} {duration}" 的拼接。
+    结合 LLM 改写 + 多视角扩展，生成多个检索 query 提高召回率。
     """
-    parts = [p.strip() for p in rag_query.split() if p.strip()]
-    # 主查询
-    queries = [rag_query]
-    # 只用前半段（症状描述）
-    if len(parts) > 4:
-        queries.append(" ".join(parts[:len(parts)//2]))
-    # 加上诊断导向的问句
-    queries.append(f"What is {rag_query}?")
-    queries.append(f"treatment and diagnosis of {rag_query}")
-    return queries
+    medical = _rewrite_query_for_rag(rag_query)
+    queries = [medical, rag_query]
+    queries.append(f"treatment and diagnosis of {medical}")
+    queries.append(f"What is {medical}?")
+    return list(dict.fromkeys(q for q in queries if q.strip()))
 
 
 def call_diagnostician(case_text: str, rag_query: str) -> tuple[str, list[dict]]:
