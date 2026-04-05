@@ -318,17 +318,20 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
           )}
 
           <div style={{ flex: 1, overflowY: "auto", padding: "22px 22px" }}>
-            {msgs.map((m, i) => (
-              <div key={i} style={{ display: "flex", flexDirection: m.role === "user" ? "row-reverse" : "row", gap: 10, marginBottom: 16, alignItems: "flex-end" }}>
-                {m.role !== "user" && (
-                  <div style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg,var(--sagePale),var(--sageDim))", border: "1.5px solid var(--sage)40", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0, boxShadow: "0 2px 8px rgba(46,104,56,0.15)" }}>🩺</div>
-                )}
-                <div style={{ maxWidth: "78%" }}>
-                  {m.role !== "user" && <p style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--sage)", marginBottom: 4, letterSpacing: "0.12em" }}>INTERVIEWER · {fmtT(m.time)}</p>}
-                  <div className={m.role === "user" ? "bubble-user" : "bubble-ai"}>{m.text}</div>
+            {msgs.map((m, i) => {
+              const isUser = m.role === "user";
+              return (
+                <div key={i} style={{ display: "flex", justifyContent: isUser ? "flex-end" : "flex-start", gap: 10, marginBottom: 16, alignItems: "flex-end" }}>
+                  {!isUser && (
+                    <div style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg,var(--sagePale),var(--sageDim))", border: "1.5px solid var(--sage)40", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0, boxShadow: "0 2px 8px rgba(46,104,56,0.15)" }}>🩺</div>
+                  )}
+                  <div style={isUser ? { width: "78%", display: "flex", justifyContent: "flex-end" } : { maxWidth: "78%" }}>
+                    {!isUser && <p style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--sage)", marginBottom: 4, letterSpacing: "0.12em" }}>INTERVIEWER · {fmtT(m.time)}</p>}
+                    <div className={isUser ? "bubble-user" : "bubble-ai"}>{m.text}</div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {loading && phase === "interviewing" && (
               <div style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
                 <div style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg,var(--sagePale),var(--sageDim))", border: "1.5px solid var(--sage)40", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🩺</div>
