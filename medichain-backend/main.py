@@ -5,7 +5,7 @@ main.py — MediChain FastAPI 后端 v4.0
 """
 import os, json, uuid
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, Union
 
@@ -72,6 +72,88 @@ MAX_UPLOAD_CONTEXT_CHARS = 6000
 
 def _now():
     return now_iso()
+
+
+def _extract_latest_safety_payload(session_id: str):
+    with get_db() as c:
+        row = c.execute(
+            """SELECT content FROM messages
+               WHERE session_id=? AND role='agent' AND agent_type='safety'
+               ORDER BY created_at DESC LIMIT 1""",
+            (session_id,),
+        ).fetchone()
+    if not row:
+        return None
+    try:
+        payload = json.loads(row["content"])
+        return {
+            "final_risk": payload.get("final_risk", payload.get("risk_level", "low")),
+            "message": payload.get("message", ""),
+            "warning": payload.get("warning", ""),
+            "rule_risk": payload.get("rule_risk", "low"),
+            "llm_risk": payload.get("llm_risk", "low"),
+        }
+    except Exception:
+        return None
+
+
+def _maybe_reuse_recent_session(symptoms, user_id, severity_level):
+    # In dev StrictMode, ChatPage init can run twice. Reuse a very recent,
+    # untouched interviewing session with the same symptom payload.
+    with get_db() as c:
+        if user_id:
+            row = c.execute(
+                """SELECT id, symptoms, severity_level, created_at, turns, status
+                   FROM sessions
+                   WHERE user_id=?
+                   ORDER BY created_at DESC
+                   LIMIT 1""",
+                (user_id,),
+            ).fetchone()
+        else:
+            row = c.execute(
+                """SELECT id, symptoms, severity_level, created_at, turns, status
+                   FROM sessions
+                   WHERE user_id IS NULL
+                   ORDER BY created_at DESC
+                   LIMIT 1"""
+            ).fetchone()
+
+    if not row:
+        return None
+
+    latest = dict(row)
+    if latest.get("status") != "interviewing" or int(latest.get("turns") or 0) != 0:
+        return None
+
+    try:
+        created_at = datetime.fromisoformat(latest["created_at"])
+    except Exception:
+        return None
+
+    if (datetime.utcnow() - created_at) > timedelta(seconds=20):
+        return None
+
+    try:
+        old_symptoms = json.loads(latest.get("symptoms") or "{}")
+    except Exception:
+        return None
+
+    same_payload = (
+        old_symptoms.get("description") == symptoms.description
+        and old_symptoms.get("bodyPart") == symptoms.bodyPart
+        and old_symptoms.get("duration") == symptoms.duration
+        and (old_symptoms.get("notes") or "") == (symptoms.notes or "")
+        and old_symptoms.get("patient_id") == symptoms.patient_id
+    )
+    if not same_payload:
+        return None
+
+    old_level = latest.get("severity_level") or old_symptoms.get("severity_level")
+    if severity_to_level(old_level) != severity_level:
+        return None
+
+    return latest["id"]
 
 # ── Session DB helpers ────────────────────────────────────
 def session_get(sid):
@@ -607,9 +689,26 @@ async def analyze_file(file: UploadFile = File(...), user=Depends(get_current_us
 # ── Session Routes ────────────────────────────────────────
 @app.post("/api/session/start")
 def start_session(symptoms: SymptomInput, user=Depends(get_current_user)):
-    sid = str(uuid.uuid4())
+    uid = user["id"] if user else None
     severity_level = severity_to_level(symptoms.severity)
     severity_score = severity_to_score(severity_level)
+
+    existing_sid = _maybe_reuse_recent_session(symptoms, uid, severity_level)
+    if existing_sid:
+        existing = session_get(existing_sid)
+        existing_reply = ""
+        for m in (existing.get("messages") or []):
+            if m.get("role") == "ai" and m.get("agent") == "interviewer":
+                existing_reply = m.get("text") or ""
+                break
+        return {
+            "session_id": existing_sid,
+            "reply": existing_reply,
+            "status": "interviewing",
+            "safety": _extract_latest_safety_payload(existing_sid),
+        }
+
+    sid = str(uuid.uuid4())
     payload = symptoms.model_dump()
     payload["severity"] = severity_score
     payload["severity_level"] = severity_level
@@ -632,7 +731,6 @@ def start_session(symptoms: SymptomInput, user=Depends(get_current_user)):
     history.append({"role":"assistant","content":reply})
     messages = [{"role":"ai","agent":"interviewer","text":reply}]
     now = _now()
-    uid = user["id"] if user else None
     with get_db() as c:
         c.execute("""INSERT INTO sessions(id,user_id,patient_id,symptoms,messages,history,turns,status,severity_level,created_at,updated_at)
             VALUES(?,?,?,?,?,?,0,'interviewing',?,?,?)""",

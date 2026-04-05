@@ -119,7 +119,7 @@ export default function AuthPage({ api, onLogin, onSkip }) {
           </div>
 
           <div className="fade-up s1" style={{ display: "flex", gap: 18, marginBottom: 24 }}>
-            <RoleCard role="patient" icon="🧑‍⚕️" title={t("auth.patient")} description={t("auth.patient_desc")} selected={selectedRole === "patient"} onClick={() => chooseRole("patient")} />
+            <RoleCard role="patient" icon=" 😷" title={t("auth.patient")} description={t("auth.patient_desc")} selected={selectedRole === "patient"} onClick={() => chooseRole("patient")} />
             <RoleCard role="provider" icon="👨‍⚕️" title={t("auth.provider")} description={t("auth.provider_desc")} selected={selectedRole === "provider"} onClick={() => chooseRole("provider")} />
           </div>
 
@@ -138,7 +138,7 @@ export default function AuthPage({ api, onLogin, onSkip }) {
         <div style={{ width: "100%", maxWidth: 460, position: "relative", zIndex: 1 }}>
           <div className="fade-up" style={{ textAlign: "center", marginBottom: 32 }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: isProvider ? "var(--navyPale)" : "var(--rosePale,#fdf0ef)", border: `1.5px solid ${isProvider ? "var(--navy)" : "var(--rose)"}30`, borderRadius: 30, padding: "7px 18px", marginBottom: 22 }}>
-              <span style={{ fontSize: 18 }}>{isProvider ? "👨‍⚕️" : "🧑‍⚕️"}</span>
+              <span style={{ fontSize: 18 }}>{isProvider ? " 😷" : "🧑‍⚕️"}</span>
               <span style={{ fontFamily: "var(--mono)", fontSize: 11, letterSpacing: "0.12em", color: isProvider ? "var(--navy)" : "var(--rose)", fontWeight: 700 }}>
                 {isProvider ? t("nav.provider_full") : t("nav.patient_badge")}
               </span>

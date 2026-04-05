@@ -15,7 +15,8 @@ export default function HistoryPage({ api, onNew }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setSessions(await api.sessions());
+      const rows = await api.sessions();
+      setSessions((Array.isArray(rows) ? rows : []).filter(s => s?.status === "done"));
     } catch {}
     setLoading(false);
   }, [api]);
