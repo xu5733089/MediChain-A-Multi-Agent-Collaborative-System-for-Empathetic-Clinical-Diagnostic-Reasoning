@@ -4,6 +4,44 @@ import { AmbientBlobs } from "../components/illustrations";
 import { Button } from "../components/ui/button";
 import { fmtD } from "../core/utils";
 
+function dedupeProviderRows(items) {
+  const rows = Array.isArray(items) ? [...items] : [];
+  rows.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+
+  const chosen = [];
+  const WINDOW_MS = 10 * 60 * 1000;
+
+  for (const row of rows) {
+    const keyPatient = row.patient_id || row.patient_username || "";
+    const keyDesc = (row.description || "").trim().toLowerCase();
+    const t = new Date(row.created_at || 0).getTime();
+
+    let replaced = false;
+    for (let i = 0; i < chosen.length; i++) {
+      const cur = chosen[i];
+      const curPatient = cur.patient_id || cur.patient_username || "";
+      const curDesc = (cur.description || "").trim().toLowerCase();
+      const curT = new Date(cur.created_at || 0).getTime();
+
+      const sameTask = keyPatient === curPatient && keyDesc && keyDesc === curDesc;
+      const closeEnough = Number.isFinite(t) && Number.isFinite(curT) && Math.abs(t - curT) <= WINDOW_MS;
+      if (!sameTask || !closeEnough) continue;
+
+      const rowDone = row.status === "done";
+      const curDone = cur.status === "done";
+      if (rowDone && !curDone) {
+        chosen[i] = row;
+      }
+      replaced = true;
+      break;
+    }
+
+    if (!replaced) chosen.push(row);
+  }
+
+  return chosen;
+}
+
 export default function ProviderDashboard({ api }) {
   const { t } = useTranslation();
   const [rows, setRows] = useState([]);
@@ -16,7 +54,7 @@ export default function ProviderDashboard({ api }) {
     setLoading(true);
     try {
       const data = await api.providerSessions();
-      setRows(Array.isArray(data) ? data : []);
+      setRows(dedupeProviderRows(data));
     } catch { setRows([]); }
     setLoading(false);
   }, [api]);
