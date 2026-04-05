@@ -49,9 +49,12 @@ dist/
 *.egg-info/
 pip-wheel-metadata/
 
+# ------------------------------
 # Backend runtime data
+# ------------------------------
 medichain-backend/.env
 medichain-backend/chroma_db/
+medichain-backend/qdrant_db/
 medichain-backend/uploads/
 medichain-backend/medichain.db
 medichain-backend/*.db
