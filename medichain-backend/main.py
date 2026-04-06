@@ -10,7 +10,8 @@ from pathlib import Path
 from typing import Optional, Union
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Depends, UploadFile, File
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Query
+from typing import List
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from fastapi.security import OAuth2PasswordRequestForm
@@ -47,6 +48,7 @@ ALLOWED_UPLOAD_TYPES = {
     ".gif": "image",
     ".bmp": "image",
     ".webp": "image",
+    ".dcm": "dicom",
     # Audio
     ".mp3": "audio",
     ".wav": "audio",
@@ -302,54 +304,134 @@ def _compress_image_bytes(raw: bytes, orig_ext: str) -> tuple[bytes, str]:
     return last, "image/jpeg"
 
 
-def _analyze_medical_image(path: Path) -> str:
+def _analyze_medical_image_bytes(raw: bytes, media_type: str) -> dict:
+    """Send image bytes to Claude Vision. Returns {analysis, annotations}."""
     import base64
+    import re
     import anthropic as _anthropic
 
+    VALID_REGIONS = {
+        "UPPER-LEFT", "UPPER-CENTER", "UPPER-RIGHT",
+        "CENTER-LEFT", "CENTER", "CENTER-RIGHT",
+        "LOWER-LEFT", "LOWER-CENTER", "LOWER-RIGHT", "OVERALL",
+    }
+
+    image_data = base64.standard_b64encode(raw).decode("utf-8")
+    _client = _anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    response = _client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=1500,
+        messages=[{
+            "role": "user",
+            "content": [
+                {
+                    "type": "image",
+                    "source": {"type": "base64", "media_type": media_type, "data": image_data},
+                },
+                {
+                    "type": "text",
+                    "text": (
+                        "You are a medical imaging specialist. Analyze this medical image.\n\n"
+                        "First write the clinical report with these sections:\n"
+                        "1. **Image Type**: Modality (X-ray, MRI, CT, ultrasound, dermatology, etc.)\n"
+                        "2. **Key Findings**: Main visible structures and appearance\n"
+                        "3. **Abnormalities**: Any abnormal findings with location and characteristics\n"
+                        "4. **Clinical Significance**: Potential clinical relevance\n"
+                        "5. **Limitations**: Any limitations\n\n"
+                        "Then output a JSON block (no markdown fences) exactly like this:\n"
+                        'ANNOTATIONS_JSON:[{"region":"UPPER-LEFT","finding":"..."},{"region":"CENTER","finding":"..."}]\n\n'
+                        "Rules for ANNOTATIONS_JSON:\n"
+                        "- 3 to 6 entries\n"
+                        "- region must be one of: UPPER-LEFT, UPPER-CENTER, UPPER-RIGHT, "
+                        "CENTER-LEFT, CENTER, CENTER-RIGHT, LOWER-LEFT, LOWER-CENTER, LOWER-RIGHT, OVERALL\n"
+                        "- finding: short phrase describing what is visible in that region\n"
+                        "- Output valid JSON only, no extra text after the JSON array\n\n"
+                        "If this is not a medical image, still output ANNOTATIONS_JSON with OVERALL region describing what you see."
+                    ),
+                },
+            ],
+        }],
+    )
+    text = response.content[0].text
+
+    # Parse ANNOTATIONS_JSON
+    annotations = []
+    json_match = re.search(r"ANNOTATIONS_JSON:\s*(\[.*?\])", text, re.DOTALL)
+    if json_match:
+        try:
+            raw_annotations = json.loads(json_match.group(1))
+            for entry in raw_annotations:
+                region = str(entry.get("region", "")).upper().strip()
+                finding = str(entry.get("finding", "")).strip()
+                if region in VALID_REGIONS and finding:
+                    annotations.append({"region": region, "finding": finding})
+        except (json.JSONDecodeError, AttributeError):
+            pass
+        text = text[:json_match.start()].strip()
+
+    return {"analysis": text, "annotations": annotations}
+
+
+def _analyze_medical_image(path: Path) -> dict:
     ext = path.suffix.lower()
     raw = path.read_bytes()
     if len(raw) > _MAX_IMAGE_BYTES:
         raw, media_type = _compress_image_bytes(raw, ext)
     else:
         media_type = IMAGE_MEDIA_TYPES.get(ext, "image/jpeg")
-    image_data = base64.standard_b64encode(raw).decode("utf-8")
-
-    _client = _anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-    response = _client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=1024,
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": media_type,
-                            "data": image_data,
-                        },
-                    },
-                    {
-                        "type": "text",
-                        "text": (
-                            "You are a medical imaging specialist. Analyze this medical image and provide a structured clinical report covering:\n"
-                            "1. **Image Type**: Identify the modality (X-ray, MRI, CT, ultrasound, dermatology photo, fundus, etc.)\n"
-                            "2. **Key Findings**: Describe the main visible structures and their appearance\n"
-                            "3. **Abnormalities**: Note any abnormal findings, lesions, or areas of concern with their location and characteristics\n"
-                            "4. **Clinical Significance**: Explain the potential clinical relevance of the findings\n"
-                            "5. **Limitations**: State any limitations in this analysis (e.g. image quality, lack of clinical context)\n\n"
-                            "Be objective and thorough. If this does not appear to be a medical image, describe what you see and note that it may not be a medical image."
-                        ),
-                    },
-                ],
-            }
-        ],
-    )
-    return response.content[0].text
+    return _analyze_medical_image_bytes(raw, media_type)
 
 
-def _transcribe_audio(path: Path) -> str:
+def _analyze_dicom(path: Path) -> dict:
+    """Read DICOM file, convert pixel data to JPEG, analyze with Claude Vision."""
+    try:
+        import pydicom
+    except ImportError:
+        return {
+            "analysis": f"DICOM file: {path.name}. (Install pydicom to enable DICOM analysis.)",
+            "annotations": [],
+        }
+    import io
+    import numpy as np
+    from PIL import Image
+
+    ds = pydicom.dcmread(str(path))
+    arr = ds.pixel_array.astype(float)
+
+    # Normalize to 0-255
+    pmin, pmax = arr.min(), arr.max()
+    if pmax > pmin:
+        arr = ((arr - pmin) / (pmax - pmin) * 255).astype("uint8")
+    else:
+        arr = arr.astype("uint8")
+
+    # Handle multi-frame: take middle frame
+    if arr.ndim == 3 and arr.shape[0] > 1:
+        arr = arr[arr.shape[0] // 2]
+    elif arr.ndim == 3:
+        arr = arr[0]
+
+    img = Image.fromarray(arr).convert("RGB")
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=85)
+    raw = buf.getvalue()
+
+    # Build metadata prefix
+    modality = getattr(ds, "Modality", "Unknown")
+    body_part = getattr(ds, "BodyPartExamined", "")
+    study_desc = getattr(ds, "StudyDescription", "")
+    meta = f"DICOM — Modality: {modality}"
+    if body_part:
+        meta += f" | Body Part: {body_part}"
+    if study_desc:
+        meta += f" | Study: {study_desc}"
+
+    result = _analyze_medical_image_bytes(raw, "image/jpeg")
+    result["analysis"] = f"**{meta}**\n\n" + result["analysis"]
+    return result
+
+
+def _transcribe_audio(path: Path, language: str = "en-US") -> str:
     """Transcribe an audio file using SpeechRecognition + Google Speech API."""
     try:
         import speech_recognition as sr
@@ -360,8 +442,8 @@ def _transcribe_audio(path: Path) -> str:
     try:
         with sr.AudioFile(str(path)) as source:
             audio_data = r.record(source)
-        text = r.recognize_google(audio_data)
-        return f"Audio transcription of '{path.name}':\n\n{text}"
+        text = r.recognize_google(audio_data, language=language)
+        return f"Audio transcription of '{path.name}' [{language}]:\n\n{text}"
     except sr.UnknownValueError:
         return f"Audio file '{path.name}' uploaded but speech could not be understood (too quiet or unclear)."
     except sr.RequestError as e:
@@ -639,9 +721,12 @@ def patient_sessions(patient_id: str, user=Depends(require_user)):
 
 # ── Stateless file analysis (no session required) ─────────
 @app.post("/api/analyze/file")
-async def analyze_file(file: UploadFile = File(...), user=Depends(get_current_user)):
-    """Analyse a file and return the result without persisting to any session.
-    Used for pre-consultation uploads on the intake form."""
+async def analyze_file(
+    file: UploadFile = File(...),
+    lang: str = Query(default="en-US"),
+    user=Depends(get_current_user),
+):
+    """Analyse a file and return the result without persisting to any session."""
     import tempfile
 
     original_name = _safe_filename(file.filename or "upload")
@@ -649,8 +734,7 @@ async def analyze_file(file: UploadFile = File(...), user=Depends(get_current_us
     if ext not in ALLOWED_UPLOAD_TYPES:
         raise HTTPException(
             400,
-            "Unsupported file type. Supported: PDF, TXT, images (JPG/PNG/…), "
-            "audio (MP3/WAV/M4A/OGG/FLAC), video (MP4/MOV/AVI/MKV/WEBM).",
+            "Unsupported file type. Supported: PDF, TXT, DICOM, images, audio, video.",
         )
     file_type = ALLOWED_UPLOAD_TYPES[ext]
     payload = await file.read()
@@ -659,15 +743,22 @@ async def analyze_file(file: UploadFile = File(...), user=Depends(get_current_us
         tmp.write(payload)
         tmp_path = Path(tmp.name)
 
+    annotations = []
     try:
         if file_type == "txt":
             analysis = _extract_text_from_txt(tmp_path)
         elif file_type == "pdf":
             analysis = _extract_text_from_pdf(tmp_path)
         elif file_type == "image":
-            analysis = _analyze_medical_image(tmp_path)
+            result = _analyze_medical_image(tmp_path)
+            analysis = result["analysis"]
+            annotations = result["annotations"]
+        elif file_type == "dicom":
+            result = _analyze_dicom(tmp_path)
+            analysis = result["analysis"]
+            annotations = result["annotations"]
         elif file_type == "audio":
-            analysis = _transcribe_audio(tmp_path)
+            analysis = _transcribe_audio(tmp_path, language=lang)
         elif file_type == "video":
             analysis = _analyze_video(tmp_path)
         else:
@@ -680,9 +771,95 @@ async def analyze_file(file: UploadFile = File(...), user=Depends(get_current_us
     return {
         "ok": True,
         "file_name": original_name,
-        "file_type": file_type,
+        "file_type": file_type if file_type != "dicom" else "image",
         "analysis": analysis,
         "analysis_preview": analysis[:400],
+        "annotations": annotations,
+    }
+
+
+@app.post("/api/analyze/compare")
+async def analyze_compare(
+    files: List[UploadFile] = File(...),
+    user=Depends(get_current_user),
+):
+    """Compare 2–6 medical images with Claude Vision."""
+    import tempfile, base64
+    import anthropic as _anthropic
+
+    if len(files) < 2:
+        raise HTTPException(400, "At least 2 images required for comparison.")
+    if len(files) > 6:
+        raise HTTPException(400, "Maximum 6 images for comparison.")
+
+    content = []
+    image_names = []
+
+    for i, upload in enumerate(files):
+        original_name = _safe_filename(upload.filename or f"image{i+1}")
+        ext = Path(original_name).suffix.lower()
+        raw = await upload.read()
+
+        if ext == ".dcm":
+            # DICOM → JPEG conversion
+            with tempfile.NamedTemporaryFile(suffix=".dcm", delete=False) as tmp:
+                tmp.write(raw)
+                tmp_path = Path(tmp.name)
+            try:
+                result = _analyze_dicom(tmp_path)
+                # Re-render pixel array to bytes for Vision
+                import pydicom, io, numpy as np
+                from PIL import Image as _PIL
+                ds = pydicom.dcmread(str(tmp_path))
+                arr = ds.pixel_array.astype(float)
+                pmin, pmax = arr.min(), arr.max()
+                if pmax > pmin:
+                    arr = ((arr - pmin) / (pmax - pmin) * 255).astype("uint8")
+                if arr.ndim == 3:
+                    arr = arr[arr.shape[0] // 2]
+                buf = io.BytesIO()
+                _PIL.fromarray(arr).convert("RGB").save(buf, format="JPEG", quality=85)
+                raw = buf.getvalue()
+            finally:
+                tmp_path.unlink(missing_ok=True)
+            media_type = "image/jpeg"
+        elif ext in IMAGE_MEDIA_TYPES:
+            media_type = IMAGE_MEDIA_TYPES[ext]
+        else:
+            raise HTTPException(400, f"{original_name} is not a supported image type.")
+
+        if len(raw) > _MAX_IMAGE_BYTES:
+            raw, media_type = _compress_image_bytes(raw, ext)
+
+        b64 = base64.standard_b64encode(raw).decode("utf-8")
+        image_names.append(original_name)
+        content.append({"type": "text", "text": f"**Image {i+1}: {original_name}**"})
+        content.append({"type": "image", "source": {"type": "base64", "media_type": media_type, "data": b64}})
+
+    content.append({
+        "type": "text",
+        "text": (
+            f"You are a medical imaging specialist. Compare these {len(files)} medical images:\n\n"
+            "1. **Individual Assessment**: Brief findings for each image (1-2 sentences each)\n"
+            "2. **Comparison**: Key similarities and differences\n"
+            "3. **Progression/Change**: If same patient over time, describe any change\n"
+            "4. **Clinical Interpretation**: Overall significance of the comparison\n\n"
+            "Be systematic and objective."
+        ),
+    })
+
+    _client = _anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    response = _client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=1500,
+        messages=[{"role": "user", "content": content}],
+    )
+
+    return {
+        "ok": True,
+        "image_count": len(files),
+        "image_names": image_names,
+        "analysis": response.content[0].text,
     }
 
 

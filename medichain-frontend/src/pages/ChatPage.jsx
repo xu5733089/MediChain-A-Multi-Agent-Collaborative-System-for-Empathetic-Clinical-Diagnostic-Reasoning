@@ -178,7 +178,7 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
         const transcript = Array.isArray(fullSession?.messages)
           ? fullSession.messages.filter(m => m.role === "user" || m.role === "ai")
           : [];
-        setTimeout(() => onComplete({ symptoms, date: new Date(), sessionId: sid, transcript, diagnosis: dd.diagnosis || dd.result || JSON.stringify(dd), review: dd.review || dd.critique || "", refs: safeRefs, cot: dd.cot || null }), 1500);
+        setTimeout(() => onComplete({ symptoms, date: new Date(), sessionId: sid, transcript, diagnosis: dd.diagnosis || dd.result || JSON.stringify(dd), review: dd.review || dd.critique || "", refs: safeRefs, cot: dd.cot || null, mediaItems: symptoms.pre_items || [] }), 1500);
       }
     } catch (e) {
       addLog("interviewer", `Error: ${e.message}`);

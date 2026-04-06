@@ -198,7 +198,7 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
             </Banner>
 
             <Button
-              onClick={() => valid && onSubmit({ ...form, patient_id: selectedPatient?.id || null, pre_context: preContext })}
+              onClick={() => valid && onSubmit({ ...form, patient_id: selectedPatient?.id || null, pre_context: preContext, pre_items: preItems })}
               disabled={!valid || preItems.some(it => it.analysing)}
               size="xl" className="fade-up s4 w-full"
             >

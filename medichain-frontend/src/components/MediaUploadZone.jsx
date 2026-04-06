@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "./ui/button";
 
 const ACCEPTED_TYPES = {
-  image: { exts: [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"], icon: "🩻", label: "Image", color: "var(--rose)" },
+  image: { exts: [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".dcm"], icon: "🩻", label: "Image", color: "var(--rose)" },
   audio: { exts: [".mp3", ".wav", ".m4a", ".ogg", ".flac"], icon: "🎵", label: "Audio", color: "var(--navy)" },
   video: { exts: [".mp4", ".mov", ".avi", ".mkv", ".webm"], icon: "🎬", label: "Video", color: "var(--plum)" },
   pdf:   { exts: [".pdf"], icon: "📄", label: "PDF", color: "var(--amber)" },
@@ -12,9 +12,41 @@ const ACCEPTED_TYPES = {
 
 const ALL_ACCEPT = Object.values(ACCEPTED_TYPES).flatMap(t => t.exts).join(",");
 
+const AUDIO_LANGS = [
+  { code: "en-US", label: "EN" },
+  { code: "zh-CN", label: "中" },
+  { code: "ja-JP", label: "日" },
+];
+
 function getFileKind(filename) {
   const ext = ("." + filename.split(".").pop()).toLowerCase();
   return Object.entries(ACCEPTED_TYPES).find(([, { exts }]) => exts.includes(ext))?.[0] || null;
+}
+
+const REGION_COLOR = {
+  "UPPER-LEFT": "var(--navy)", "UPPER-CENTER": "var(--navy)", "UPPER-RIGHT": "var(--navy)",
+  "CENTER-LEFT": "var(--plum)", "CENTER": "var(--plum)", "CENTER-RIGHT": "var(--plum)",
+  "LOWER-LEFT": "var(--sage)", "LOWER-CENTER": "var(--sage)", "LOWER-RIGHT": "var(--sage)",
+  "OVERALL": "var(--rose)",
+};
+
+function AnnotationTags({ annotations }) {
+  if (!annotations?.length) return null;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 6 }}>
+      <p style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)", letterSpacing: "0.1em" }}>ANNOTATIONS</p>
+      {annotations.map((a, i) => (
+        <div key={i} style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
+          <span style={{
+            fontFamily: "var(--mono)", fontSize: 8, color: "#fff",
+            background: REGION_COLOR[a.region] || "var(--ink4)",
+            borderRadius: 3, padding: "1px 5px", flexShrink: 0, letterSpacing: "0.06em",
+          }}>{a.region}</span>
+          <span style={{ fontFamily: "var(--body)", fontSize: 11, color: "var(--ink3)", lineHeight: 1.45 }}>{a.finding}</span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function AttachmentChip({ item, onRemove }) {
@@ -50,6 +82,9 @@ function AttachmentChip({ item, onRemove }) {
           {item.analysisPreview.slice(0, 160)}{item.analysisPreview.length > 160 ? "…" : ""}
         </p>
       )}
+      {item.annotations?.length > 0 && !item.analysing && (
+        <AnnotationTags annotations={item.annotations} />
+      )}
       {item.error && (
         <p style={{ fontFamily: "var(--body)", fontSize: 12, color: "var(--rose)", margin: 0 }}>{item.error}</p>
       )}
@@ -58,11 +93,10 @@ function AttachmentChip({ item, onRemove }) {
 }
 
 // ── Microphone recorder using Web Speech API ───────────────
-function MicButton({ onTranscript, disabled }) {
+function MicButton({ onTranscript, disabled, lang }) {
   const { t } = useTranslation();
   const [recording, setRecording] = useState(false);
   const [interim, setInterim] = useState("");
-  // Single ref object to avoid stale-closure issues across restarts
   const sr = useRef({ active: false, text: "", rec: null });
   const supported = typeof window !== "undefined" && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 
@@ -71,7 +105,7 @@ function MicButton({ onTranscript, disabled }) {
     if (!s.active) return;
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const rec = new SR();
-    rec.lang = "en-US";
+    rec.lang = lang || navigator.language || "en-US";
     rec.continuous = true;
     rec.interimResults = true;
 
@@ -85,7 +119,6 @@ function MicButton({ onTranscript, disabled }) {
     };
 
     rec.onerror = e => {
-      // "aborted" fires when stop() is called — ignore it, onend handles finalization
       if (e.error === "aborted" || e.error === "no-speech" || e.error === "audio-capture") return;
       s.rec = null;
       if (s.active) setTimeout(launch, 250);
@@ -96,7 +129,6 @@ function MicButton({ onTranscript, disabled }) {
       s.rec = null;
       setInterim("");
       if (s.active) {
-        // Delay prevents rapid-restart rejection by Chrome
         setTimeout(launch, 150);
       } else {
         setRecording(false);
@@ -119,9 +151,8 @@ function MicButton({ onTranscript, disabled }) {
     const s = sr.current;
     s.active = false;
     if (s.rec) {
-      s.rec.stop(); // onend will finalize
+      s.rec.stop();
     } else {
-      // No active rec (between restarts) — finalize immediately
       setRecording(false);
       if (s.text.trim()) onTranscript(s.text.trim());
       s.text = "";
@@ -159,9 +190,13 @@ export default function MediaUploadZone({ api, onUpdate, disabled }) {
   const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [dragging, setDragging] = useState(false);
+  const [audioLang, setAudioLang] = useState(
+    () => AUDIO_LANGS.find(l => navigator.language?.startsWith(l.code.split("-")[0]))?.code || "en-US"
+  );
+  const [comparing, setComparing] = useState(false);
+  const [compareResult, setCompareResult] = useState(null);
   const fileInputRef = useRef(null);
 
-  // Notify parent whenever items change
   useEffect(() => {
     const analyses = items
       .filter(it => !it.analysing && it.analysis)
@@ -179,24 +214,25 @@ export default function MediaUploadZone({ api, onUpdate, disabled }) {
     setItems(prev => [...prev, {
       id, fileName: file.name, fileType: kind,
       analysing: true, analysis: "", analysisPreview: "", analysisLength: 0,
-      previewUrl, error: null,
+      annotations: [], previewUrl, error: null, file,
     }]);
 
     try {
-      const res = await api.analyzeFile(file);
+      const res = await api.analyzeFile(file, kind === "audio" ? audioLang : "en-US");
       setItems(prev => prev.map(it => it.id !== id ? it : {
         ...it,
         analysing: false,
         analysis: res.analysis || "",
         analysisPreview: res.analysis_preview || "",
         analysisLength: (res.analysis || "").length,
+        annotations: res.annotations || [],
       }));
     } catch (err) {
       setItems(prev => prev.map(it => it.id !== id ? it : {
         ...it, analysing: false, error: err.message || "Analysis failed",
       }));
     }
-  }, [api]);
+  }, [api, audioLang]);
 
   function handleFiles(files) {
     Array.from(files).forEach(processFile);
@@ -214,6 +250,7 @@ export default function MediaUploadZone({ api, onUpdate, disabled }) {
       if (item?.previewUrl) URL.revokeObjectURL(item.previewUrl);
       return prev.filter(it => it.id !== id);
     });
+    setCompareResult(null);
   }
 
   function onMicTranscript(text) {
@@ -224,8 +261,23 @@ export default function MediaUploadZone({ api, onUpdate, disabled }) {
       analysis: `Voice recording transcription:\n\n${text}`,
       analysisPreview: text,
       analysisLength: text.length,
-      previewUrl: null, error: null,
+      annotations: [], previewUrl: null, error: null, file: null,
     }]);
+  }
+
+  const readyImages = items.filter(it => it.fileType === "image" && !it.analysing && !it.error && it.file);
+
+  async function runCompare() {
+    if (readyImages.length < 2) return;
+    setComparing(true);
+    setCompareResult(null);
+    try {
+      const res = await api.analyzeCompare(readyImages.map(it => it.file));
+      setCompareResult(res.analysis);
+    } catch (err) {
+      setCompareResult(`Error: ${err.message}`);
+    }
+    setComparing(false);
   }
 
   return (
@@ -238,13 +290,10 @@ export default function MediaUploadZone({ api, onUpdate, disabled }) {
         onClick={() => !disabled && fileInputRef.current?.click()}
         style={{
           border: `2px dashed ${dragging ? "var(--rose)" : "rgba(22,15,6,0.18)"}`,
-          borderRadius: 12,
-          padding: "20px 18px",
-          textAlign: "center",
+          borderRadius: 12, padding: "20px 18px", textAlign: "center",
           cursor: disabled ? "not-allowed" : "pointer",
           background: dragging ? "var(--roseDim)" : "var(--paper3)",
-          transition: "all 0.18s",
-          opacity: disabled ? 0.5 : 1,
+          transition: "all 0.18s", opacity: disabled ? 0.5 : 1,
         }}
       >
         <input
@@ -261,12 +310,30 @@ export default function MediaUploadZone({ api, onUpdate, disabled }) {
           {t("upload.drop_title")} <span style={{ color: "var(--rose)", fontWeight: 600 }}>{t("upload.drop_browse")}</span>
         </p>
         <p style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", letterSpacing: "0.08em" }}>
-          {t("upload.drop_types")}
+          {t("upload.drop_types")} · DICOM
         </p>
       </div>
 
-      {/* Microphone button */}
-      <MicButton onTranscript={onMicTranscript} disabled={disabled} />
+      {/* Mic + audio language selector */}
+      <div style={{ display: "flex", gap: 8, alignItems: "flex-start", flexWrap: "wrap" }}>
+        <MicButton onTranscript={onMicTranscript} disabled={disabled} lang={audioLang} />
+        <div style={{ display: "flex", gap: 4, alignItems: "center", paddingTop: 2 }}>
+          {AUDIO_LANGS.map(l => (
+            <button
+              key={l.code}
+              onClick={() => setAudioLang(l.code)}
+              style={{
+                fontFamily: "var(--mono)", fontSize: 10, padding: "4px 8px", borderRadius: 6,
+                border: `1.5px solid ${audioLang === l.code ? "var(--navy)" : "rgba(22,15,6,0.18)"}`,
+                background: audioLang === l.code ? "var(--navyPale)" : "transparent",
+                color: audioLang === l.code ? "var(--navy)" : "var(--ink4)",
+                cursor: "pointer", fontWeight: audioLang === l.code ? 600 : 400,
+              }}
+            >{l.label}</button>
+          ))}
+          <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)" }}>audio lang</span>
+        </div>
+      </div>
 
       {/* Attachment chips */}
       {items.length > 0 && (
@@ -274,6 +341,36 @@ export default function MediaUploadZone({ api, onUpdate, disabled }) {
           {items.map(item => (
             <AttachmentChip key={item.id} item={item} onRemove={removeItem} />
           ))}
+        </div>
+      )}
+
+      {/* Multi-image compare */}
+      {readyImages.length >= 2 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={runCompare}
+            disabled={comparing || disabled}
+            style={{ gap: 6 }}
+          >
+            <span style={{ fontSize: 14 }}>🔍</span>
+            {comparing ? "Comparing…" : `Compare ${readyImages.length} images`}
+          </Button>
+          {compareResult && (
+            <div style={{
+              background: "var(--navyPale)", border: "1px solid rgba(22,15,6,0.12)",
+              borderRadius: 8, padding: "12px 14px",
+            }}>
+              <p style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--navy)", letterSpacing: "0.1em", marginBottom: 6 }}>
+                IMAGE COMPARISON · {readyImages.length} IMAGES
+              </p>
+              <p style={{ fontFamily: "var(--body)", fontSize: 12.5, color: "var(--ink3)", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
+                {compareResult}
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>

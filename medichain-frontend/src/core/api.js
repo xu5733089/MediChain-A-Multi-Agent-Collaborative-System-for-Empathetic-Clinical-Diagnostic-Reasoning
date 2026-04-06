@@ -57,10 +57,15 @@ export function makeApi(token) {
       fd.append("file", file);
       return postForm(`/api/sessions/${id}/upload`, fd);
     },
-    analyzeFile: (file) => {
+    analyzeFile: (file, lang = "en-US") => {
       const fd = new FormData();
       fd.append("file", file);
-      return postForm("/api/analyze/file", fd);
+      return postForm(`/api/analyze/file?lang=${encodeURIComponent(lang)}`, fd);
+    },
+    analyzeCompare: (files) => {
+      const fd = new FormData();
+      files.forEach(f => fd.append("files", f));
+      return postForm("/api/analyze/compare", fd);
     },
     questions: () => get("/api/eval/questions"),
     evalRun: b => post("/api/eval/run", b),
