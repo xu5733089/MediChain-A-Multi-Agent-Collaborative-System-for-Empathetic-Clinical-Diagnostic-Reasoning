@@ -863,6 +863,88 @@ async def analyze_compare(
     }
 
 
+@app.post("/api/analyze/ocr")
+async def analyze_ocr(file: UploadFile = File(...), user=Depends(get_current_user)):
+    """Extract structured medical information from a handwritten or printed medical record image."""
+    import tempfile, base64
+    import anthropic as _anthropic
+
+    original_name = _safe_filename(file.filename or "upload")
+    ext = Path(original_name).suffix.lower()
+    if ext not in IMAGE_MEDIA_TYPES and ext != ".dcm":
+        raise HTTPException(400, "OCR requires an image file (JPG, PNG, etc.) or DICOM.")
+
+    payload = await file.read()
+    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+        tmp.write(payload)
+        tmp_path = Path(tmp.name)
+
+    try:
+        if ext == ".dcm":
+            import pydicom, io, numpy as np
+            from PIL import Image as _PIL
+            ds = pydicom.dcmread(str(tmp_path))
+            arr = ds.pixel_array.astype(float)
+            pmin, pmax = arr.min(), arr.max()
+            if pmax > pmin:
+                arr = ((arr - pmin) / (pmax - pmin) * 255).astype("uint8")
+            if arr.ndim == 3:
+                arr = arr[arr.shape[0] // 2]
+            buf = io.BytesIO()
+            _PIL.fromarray(arr).convert("RGB").save(buf, format="JPEG", quality=85)
+            raw = buf.getvalue()
+            media_type = "image/jpeg"
+        else:
+            raw = payload
+            media_type = IMAGE_MEDIA_TYPES.get(ext, "image/jpeg")
+
+        if len(raw) > _MAX_IMAGE_BYTES:
+            raw, media_type = _compress_image_bytes(raw, ext)
+
+        b64 = base64.standard_b64encode(raw).decode("utf-8")
+        _client = _anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        response = _client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1500,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": b64}},
+                    {"type": "text", "text": (
+                        "You are a medical scribe specialist. This image contains a medical record, "
+                        "clinical note, prescription, or handwritten patient notes.\n\n"
+                        "Extract ALL readable text and organize it into structured fields:\n\n"
+                        "**Patient Information** (name, DOB, gender, ID if visible)\n"
+                        "**Chief Complaint / Presenting Symptoms**\n"
+                        "**Medical History** (past illnesses, surgeries, family history)\n"
+                        "**Current Medications** (drug name, dose, frequency)\n"
+                        "**Allergies**\n"
+                        "**Physical Examination Findings** (vitals, examination notes)\n"
+                        "**Investigations / Test Results** (lab values, imaging reports)\n"
+                        "**Assessment / Diagnosis**\n"
+                        "**Treatment Plan / Prescriptions**\n"
+                        "**Follow-up Instructions**\n\n"
+                        "For any section not visible or not applicable, write 'Not documented'.\n"
+                        "Preserve original medical terminology. Flag any illegible text with [illegible].\n"
+                        "If this is not a medical document, describe what you see."
+                    )},
+                ],
+            }],
+        )
+        text = response.content[0].text
+    except Exception as e:
+        raise HTTPException(400, f"OCR failed: {e}")
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+    return {
+        "ok": True,
+        "file_name": original_name,
+        "ocr_text": text,
+        "ocr_preview": text[:400],
+    }
+
+
 # ── Session Routes ────────────────────────────────────────
 @app.post("/api/session/start")
 def start_session(symptoms: SymptomInput, user=Depends(get_current_user)):

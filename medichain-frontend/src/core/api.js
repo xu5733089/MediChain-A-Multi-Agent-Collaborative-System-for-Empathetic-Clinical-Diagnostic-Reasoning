@@ -62,6 +62,11 @@ export function makeApi(token) {
       fd.append("file", file);
       return postForm(`/api/analyze/file?lang=${encodeURIComponent(lang)}`, fd);
     },
+    analyzeOcr: (file) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      return postForm("/api/analyze/ocr", fd);
+    },
     analyzeCompare: (files) => {
       const fd = new FormData();
       files.forEach(f => fd.append("files", f));

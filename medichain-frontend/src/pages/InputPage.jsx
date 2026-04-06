@@ -28,7 +28,9 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
     { value: 5, label: t("common.moderate"), description: t("input.moderate_desc") },
     { value: 9, label: t("common.severe"), description: t("input.severe_desc") },
   ];
-  const valid = form.description.trim().length > 15;
+  // Valid if: description typed, OR at least one fully-analysed file uploaded
+  const hasReadyFile = preItems.some(it => !it.analysing && !it.error && it.analysis);
+  const valid = form.description.trim().length > 15 || hasReadyFile;
   const s = SEV(form.severity);
   const activeSeverity = severityOptions.find(o => o.value === form.severity) || severityOptions[1];
 
@@ -101,7 +103,9 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
               />
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: 9, alignItems: "center" }}>
                 <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: valid ? "var(--sage)" : "var(--ink5)", transition: "color 0.3s" }}>
-                  {valid ? t("input.sufficient") : t("input.min_chars", { count: form.description.length })}
+                  {valid && hasReadyFile && !form.description.trim()
+                    ? `✓  ${preItems.filter(it => !it.analysing && !it.error && it.analysis).length} file(s) ready — text description optional`
+                    : valid ? t("input.sufficient") : t("input.min_chars", { count: form.description.length })}
                 </span>
                 {valid && <Badge variant="sage" className="scale-in">{t("input.ready")}</Badge>}
               </div>
@@ -198,7 +202,19 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
             </Banner>
 
             <Button
-              onClick={() => valid && onSubmit({ ...form, patient_id: selectedPatient?.id || null, pre_context: preContext, pre_items: preItems })}
+              onClick={() => {
+                if (!valid) return;
+                let description = form.description.trim();
+                if (!description && hasReadyFile) {
+                  // Auto-generate description from file analyses
+                  const fileSummaries = preItems
+                    .filter(it => !it.analysing && !it.error && it.analysis)
+                    .map(it => `[${it.fileName}]: ${it.analysis.slice(0, 300)}`)
+                    .join("\n\n");
+                  description = `Medical record uploaded for analysis:\n\n${fileSummaries}`;
+                }
+                onSubmit({ ...form, description, patient_id: selectedPatient?.id || null, pre_context: preContext, pre_items: preItems });
+              }}
               disabled={!valid || preItems.some(it => it.analysing)}
               size="xl" className="fade-up s4 w-full"
             >

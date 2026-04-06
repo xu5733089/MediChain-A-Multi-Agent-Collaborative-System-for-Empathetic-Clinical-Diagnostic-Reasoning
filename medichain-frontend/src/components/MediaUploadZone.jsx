@@ -49,9 +49,26 @@ function AnnotationTags({ annotations }) {
   );
 }
 
-function AttachmentChip({ item, onRemove }) {
+function AttachmentChip({ item, onRemove, onOcrResult, api }) {
   const { t } = useTranslation();
+  const [ocring, setOcring] = useState(false);
+  const [ocrText, setOcrText] = useState("");
   const kind = ACCEPTED_TYPES[item.fileType] || ACCEPTED_TYPES.txt;
+
+  async function runOcr() {
+    if (!item.file || ocring) return;
+    setOcring(true);
+    setOcrText("");
+    try {
+      const res = await api.analyzeOcr(item.file);
+      setOcrText(res.ocr_text || "");
+      onOcrResult?.(item.id, res.ocr_text || "");
+    } catch (e) {
+      setOcrText(`OCR failed: ${e.message}`);
+    }
+    setOcring(false);
+  }
+
   return (
     <div style={{
       display: "flex", flexDirection: "column", gap: 6,
@@ -75,6 +92,21 @@ function AttachmentChip({ item, onRemove }) {
             {!item.analysing && item.analysisLength ? ` · ${item.analysisLength} chars` : ""}
           </p>
         </div>
+        {/* OCR button for images */}
+        {item.fileType === "image" && !item.analysing && item.file && (
+          <button
+            onClick={runOcr}
+            disabled={ocring}
+            title="Extract text / OCR medical record"
+            style={{
+              background: ocring ? "var(--amberPale)" : "transparent",
+              border: "1px solid rgba(22,15,6,0.15)",
+              borderRadius: 5, cursor: ocring ? "not-allowed" : "pointer",
+              fontSize: 11, padding: "2px 6px", color: "var(--amber)", fontFamily: "var(--mono)",
+              letterSpacing: "0.06em",
+            }}
+          >{ocring ? "…" : "📋 OCR"}</button>
+        )}
         <button onClick={() => onRemove(item.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink5)", fontSize: 14, lineHeight: 1, padding: "2px 4px", borderRadius: 4 }}>×</button>
       </div>
       {item.analysisPreview && !item.analysing && (
@@ -84,6 +116,14 @@ function AttachmentChip({ item, onRemove }) {
       )}
       {item.annotations?.length > 0 && !item.analysing && (
         <AnnotationTags annotations={item.annotations} />
+      )}
+      {ocrText && (
+        <div style={{ background: "var(--amberPale)", border: "1px solid rgba(160,88,8,0.2)", borderRadius: 7, padding: "8px 10px" }}>
+          <p style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--amber)", letterSpacing: "0.1em", marginBottom: 4 }}>OCR · EXTRACTED MEDICAL RECORD</p>
+          <p style={{ fontFamily: "var(--body)", fontSize: 12, color: "var(--ink2)", lineHeight: 1.65, whiteSpace: "pre-wrap", margin: 0 }}>
+            {ocrText.slice(0, 400)}{ocrText.length > 400 ? "…" : ""}
+          </p>
+        </div>
       )}
       {item.error && (
         <p style={{ fontFamily: "var(--body)", fontSize: 12, color: "var(--rose)", margin: 0 }}>{item.error}</p>
@@ -339,7 +379,19 @@ export default function MediaUploadZone({ api, onUpdate, disabled }) {
       {items.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {items.map(item => (
-            <AttachmentChip key={item.id} item={item} onRemove={removeItem} />
+            <AttachmentChip
+              key={item.id}
+              item={item}
+              onRemove={removeItem}
+              api={api}
+              onOcrResult={(id, ocrText) => {
+                setItems(prev => prev.map(it => it.id !== id ? it : {
+                  ...it,
+                  analysis: it.analysis + `\n\n**OCR — Extracted Medical Record:**\n${ocrText}`,
+                  analysisLength: it.analysis.length + ocrText.length,
+                }));
+              }}
+            />
           ))}
         </div>
       )}

@@ -7,6 +7,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Alert } from "../components/ui/alert";
 import { fmtT } from "../core/utils";
+import CameraCapture from "../components/CameraCapture";
 
 export default function ChatPage({ api, symptoms, onComplete, onBack }) {
   const { t } = useTranslation();
@@ -26,6 +27,7 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
   const [pendingAttachments, setPendingAttachments] = useState([]);
   const [safetyAlert, setSafetyAlert] = useState(null);
   const [micRecording, setMicRecording] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const fileInputRef = useRef(null);
   // Single ref object — avoids stale-closure issues across restarts
   const micSR = useRef({ active: false, text: "", rec: null });
@@ -184,6 +186,21 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
       addLog("interviewer", `Error: ${e.message}`);
     }
     setLoading(false);
+  }
+
+  function onCameraCapture({ transcript, frameAnalyses }) {
+    // Build combined context message
+    const parts = [];
+    if (transcript) parts.push(`**Patient description (transcribed):**\n${transcript}`);
+    if (frameAnalyses.length > 0) {
+      parts.push(`**Video frame analysis (${frameAnalyses.length} frames captured):**`);
+      frameAnalyses.forEach(f => parts.push(`Frame ${f.frame}: ${f.analysis}`));
+    }
+    const combined = parts.join("\n\n");
+    if (combined) {
+      setPendingAttachments(prev => [...prev, combined]);
+      setInput(prev => prev || transcript || "Please review my video description above.");
+    }
   }
 
   const IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"];
@@ -469,6 +486,12 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
                     {micRecording ? "⏹" : "🎙"}
                   </Button>
                 )}
+                <CameraCapture
+                  api={api}
+                  onCapture={onCameraCapture}
+                  onClose={() => setCameraOpen(false)}
+                  disabled={!sid || loading || phase !== "interviewing"}
+                />
                 <Input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()} placeholder={micRecording ? t("chat.listening") : t("chat.placeholder")} disabled={loading} style={{ flex: 1, fontSize: 15, fontFamily: "var(--body)", borderRadius: 999 }} />
                 <Button
                   onClick={send}
