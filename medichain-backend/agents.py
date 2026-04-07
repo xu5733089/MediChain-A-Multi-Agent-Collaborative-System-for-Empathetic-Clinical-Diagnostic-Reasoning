@@ -144,6 +144,35 @@ def _build_rag_queries(rag_query: str) -> list[str]:
     return list(dict.fromkeys(q for q in queries if q.strip()))
 
 
+def rewrite_image_findings_for_rag(image_analyses: list[str]) -> str:
+    """
+    将多模态视觉分析结果通过 LLM 提取医学关键词，
+    用于 RAG 检索，而非粗暴截断。
+    """
+    if not image_analyses:
+        return ""
+    combined = "\n---\n".join(image_analyses)
+    try:
+        response = client.messages.create(
+            model=MODEL,
+            max_tokens=150,
+            messages=[{
+                "role": "user",
+                "content": (
+                    "You are a medical image analysis summarizer. "
+                    "Extract the key medical findings, suspected conditions, "
+                    "anatomical structures, and relevant clinical terms from the image analysis below. "
+                    "Output ONLY the medical terms and findings, comma-separated, nothing else.\n\n"
+                    f"Image analysis:\n{combined[:3000]}"
+                ),
+            }],
+        )
+        return response.content[0].text.strip()
+    except Exception:
+        # fallback: take first 300 chars of each analysis
+        return " ".join(a[:300] for a in image_analyses)
+
+
 def call_diagnostician(case_text: str, rag_query: str) -> tuple[str, list[dict]]:
     """
     调用 Diagnostician Agent（附 RAG 检索）

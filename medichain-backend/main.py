@@ -19,9 +19,10 @@ from pydantic import BaseModel
 
 load_dotenv()
 
-from agents import call_interviewer, call_diagnostician, call_critic, call_diagnostician_cot, call_critic_cot
+from agents import call_interviewer, call_diagnostician, call_critic, call_diagnostician_cot, call_critic_cot, rewrite_image_findings_for_rag
 from safety import classify_safety
-from rag    import get_collection_size, search
+from rag    import get_collection_size, search, add_documents
+from ingest import fetch_pmids, fetch_article_details, DEFAULT_TERMS
 from export import generate_pdf
 from eval   import run_single_llm, run_multi_agent, SAMPLE_QUESTIONS
 from db import get_db, init_db, now_iso, severity_to_level, severity_to_score, VALID_AGENT_TYPES
@@ -36,6 +37,15 @@ app.add_middleware(CORSMiddleware,
     allow_origins=["http://localhost:5173","http://localhost:5174","http://localhost:3000"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 init_db()
+
+# ── 启动时打印 RAG 库状态 ──────────────────────────────────
+_rag_size = get_collection_size()
+print(f"\n{'='*50}")
+print(f"  MediChain RAG Knowledge Base")
+print(f"  Documents loaded: {_rag_size}")
+print(f"  Status: {'✅ Ready' if _rag_size > 0 else '⚠️  Empty — run POST /api/rag/ingest to populate'}")
+print(f"{'='*50}\n")
+
 UPLOAD_ROOT = Path(__file__).parent / "uploads"
 ALLOWED_UPLOAD_TYPES = {
     # Documents
@@ -614,6 +624,10 @@ class EvalRequest(BaseModel):
     question_id: str
     mode: str = "both"
 
+class IngestRequest(BaseModel):
+    terms: list[str] = []       # 自定义搜索词；为空则使用默认词表
+    per_term: int = 15          # 每个搜索词最多抓取文章数
+
 # ── Health ────────────────────────────────────────────────
 @app.get("/")
 def root():
@@ -623,6 +637,53 @@ def root():
 def rag_status():
     size = get_collection_size()
     return {"document_count":size,"status":"ready" if size>0 else "empty"}
+
+@app.post("/api/rag/ingest")
+def rag_ingest(body: IngestRequest):
+    """
+    按需从 PubMed 抓取最新文章并写入 RAG 向量库。
+    面向所有用户开放，无需认证。
+    返回每个搜索词的抓取结果 + 总计。
+    """
+    import time as _time
+
+    terms = body.terms if body.terms else DEFAULT_TERMS
+    per_term = min(body.per_term, 50)  # 上限保护
+
+    initial_size = get_collection_size()
+    total_added = 0
+    details = []
+
+    for term in terms:
+        pmids = fetch_pmids(term, per_term)
+        if not pmids:
+            details.append({"term": term, "found": 0, "added": 0})
+            continue
+
+        articles = fetch_article_details(pmids)
+        if not articles:
+            details.append({"term": term, "found": len(pmids), "added": 0})
+            continue
+
+        added = add_documents(articles)
+        total_added += added
+        details.append({
+            "term": term,
+            "found": len(pmids),
+            "fetched": len(articles),
+            "added": added,
+            "skipped_duplicates": len(articles) - added,
+        })
+        _time.sleep(0.4)  # NCBI rate limit
+
+    final_size = get_collection_size()
+    return {
+        "total_added": total_added,
+        "initial_db_size": initial_size,
+        "final_db_size": final_size,
+        "terms_processed": len(terms),
+        "details": details,
+    }
 
 # ── Auth Routes ───────────────────────────────────────────
 @app.post("/api/auth/register")
@@ -1143,11 +1204,9 @@ def diagnose(body: DiagnoseRequest, user=Depends(get_current_user)):
         + "\n\n".join(lines)
     )
 
-    # Enrich RAG query with image findings if available
-    image_query_suffix = " ".join(
-        a[:200] for a in image_analyses
-    ) if image_analyses else ""
-    rag_query = f"{s['description']} {s['bodyPart']} {s['duration']} {image_query_suffix}".strip()
+    # Enrich RAG query with image findings via LLM medical term extraction
+    image_medical_terms = rewrite_image_findings_for_rag(image_analyses) if image_analyses else ""
+    rag_query = f"{s['description']} {s['bodyPart']} {s['duration']} {image_medical_terms}".strip()
 
     # Use extended thinking (CoT) — fall back to standard call if not supported
     try:

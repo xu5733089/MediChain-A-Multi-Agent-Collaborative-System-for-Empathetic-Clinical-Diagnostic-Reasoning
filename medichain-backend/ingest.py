@@ -16,23 +16,103 @@ import json
 
 from rag import add_documents, get_collection_size
 
-# ── 默认搜索词（覆盖常见疾病领域）────────────────────────────
+# ── 默认搜索词（覆盖 ICD-10 主要临床科室，目标 1000+ 篇文献）────
 DEFAULT_TERMS = [
-    "differential diagnosis clinical symptoms",
-    "headache migraine diagnosis treatment",
-    "chest pain cardiac diagnosis",
-    "abdominal pain diagnosis",
-    "fever infectious disease diagnosis",
-    "hair loss alopecia treatment",
-    "diabetes mellitus diagnosis management",
-    "hypertension cardiovascular risk",
-    "depression anxiety mental health diagnosis",
-    "asthma COPD respiratory diagnosis",
-    "anemia hematology diagnosis",
-    "thyroid disorder diagnosis treatment",
-    "urinary tract infection diagnosis",
-    "skin rash dermatology diagnosis",
+    # ── Cardiology 心血管 ──
+    "chest pain cardiac differential diagnosis",
+    "hypertension cardiovascular risk management",
+    "heart failure diagnosis treatment guidelines",
+    "atrial fibrillation anticoagulation management",
+    "myocardial infarction acute coronary syndrome",
+    "valvular heart disease diagnosis echocardiography",
+    # ── Pulmonology 呼吸 ──
+    "asthma COPD respiratory diagnosis treatment",
+    "pneumonia community acquired diagnosis",
+    "pulmonary embolism diagnosis anticoagulation",
+    "lung cancer screening diagnosis staging",
+    "interstitial lung disease pulmonary fibrosis",
+    # ── Gastroenterology 消化 ──
+    "abdominal pain differential diagnosis",
+    "gastroesophageal reflux disease GERD treatment",
+    "inflammatory bowel disease Crohn ulcerative colitis",
+    "liver cirrhosis hepatitis diagnosis management",
+    "gallstone cholecystitis pancreatitis diagnosis",
+    "colorectal cancer screening colonoscopy",
+    # ── Neurology 神经 ──
+    "headache migraine cluster tension diagnosis",
+    "stroke cerebrovascular diagnosis thrombolysis",
+    "epilepsy seizure diagnosis treatment",
+    "Parkinson disease diagnosis management",
+    "Alzheimer dementia cognitive decline diagnosis",
+    "multiple sclerosis diagnosis treatment",
+    "peripheral neuropathy diagnosis etiology",
+    # ── Endocrinology 内分泌 ──
+    "diabetes mellitus type 2 diagnosis management",
+    "diabetes mellitus type 1 insulin therapy",
+    "thyroid disorder hypothyroidism hyperthyroidism",
+    "adrenal insufficiency Cushing syndrome diagnosis",
+    "obesity metabolic syndrome management",
+    "polycystic ovary syndrome PCOS diagnosis",
+    # ── Nephrology 肾脏 ──
+    "chronic kidney disease diagnosis staging",
+    "acute kidney injury diagnosis management",
+    "urinary tract infection diagnosis treatment",
+    "nephrotic syndrome glomerulonephritis",
+    # ── Hematology 血液 ──
+    "anemia iron deficiency B12 folate diagnosis",
+    "leukemia lymphoma diagnosis treatment",
+    "deep vein thrombosis diagnosis anticoagulation",
+    "coagulation disorder bleeding diagnosis",
+    # ── Rheumatology 风湿 ──
+    "rheumatoid arthritis diagnosis treatment",
+    "systemic lupus erythematosus diagnosis",
+    "gout crystal arthropathy management",
+    "osteoarthritis diagnosis joint replacement",
     "back pain musculoskeletal diagnosis",
+    # ── Infectious Disease 感染 ──
+    "fever infectious disease differential diagnosis",
+    "sepsis diagnosis management antibiotics",
+    "HIV AIDS diagnosis antiretroviral therapy",
+    "tuberculosis diagnosis treatment",
+    "COVID-19 SARS-CoV-2 diagnosis treatment",
+    "malaria tropical disease diagnosis",
+    # ── Dermatology 皮肤 ──
+    "skin rash dermatology differential diagnosis",
+    "eczema atopic dermatitis treatment",
+    "psoriasis diagnosis management biologics",
+    "melanoma skin cancer diagnosis staging",
+    "hair loss alopecia areata treatment",
+    # ── Psychiatry 精神 ──
+    "depression major depressive disorder treatment",
+    "anxiety disorder generalized panic diagnosis",
+    "bipolar disorder diagnosis mood stabilizer",
+    "schizophrenia psychosis diagnosis treatment",
+    "insomnia sleep disorder diagnosis management",
+    # ── Oncology 肿瘤 ──
+    "breast cancer diagnosis staging treatment",
+    "prostate cancer screening diagnosis",
+    "pancreatic cancer diagnosis management",
+    "ovarian cancer diagnosis treatment",
+    # ── Orthopedics 骨科 ──
+    "fracture orthopedic diagnosis management",
+    "osteoporosis bone density diagnosis treatment",
+    "spinal stenosis disc herniation diagnosis",
+    # ── Ophthalmology / ENT 五官 ──
+    "glaucoma macular degeneration diagnosis",
+    "otitis media sinusitis diagnosis treatment",
+    "allergic rhinitis diagnosis management",
+    # ── Pediatrics 儿科 ──
+    "pediatric fever infection diagnosis",
+    "childhood asthma diagnosis management",
+    "neonatal jaundice diagnosis treatment",
+    # ── OB/GYN 妇产 ──
+    "preeclampsia gestational diabetes diagnosis",
+    "endometriosis pelvic pain diagnosis",
+    "menopause hormone replacement therapy",
+    # ── Emergency 急诊 ──
+    "acute abdomen emergency differential diagnosis",
+    "anaphylaxis allergic reaction emergency management",
+    "traumatic brain injury diagnosis management",
 ]
 
 ENTREZ_BASE = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
