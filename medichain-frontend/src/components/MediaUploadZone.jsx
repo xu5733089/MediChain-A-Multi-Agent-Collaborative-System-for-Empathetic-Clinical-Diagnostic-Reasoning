@@ -247,6 +247,9 @@ export default function MediaUploadZone({ api, onUpdate, disabled }) {
         <p style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", letterSpacing: "0.08em" }}>
           {t("upload.drop_types")} · DICOM
         </p>
+        <p style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--navy)", letterSpacing: "0.08em", marginTop: 6, opacity: 0.7 }}>
+          🔍 Upload 2+ images to enable before/after comparison
+        </p>
       </div>
 
 
@@ -271,20 +274,27 @@ export default function MediaUploadZone({ api, onUpdate, disabled }) {
         </div>
       )}
 
-      {/* Multi-image compare */}
-      {readyImages.length >= 2 && (
+      {/* Multi-image compare — shown as soon as 1 image is ready */}
+      {readyImages.length >= 1 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={runCompare}
-            disabled={comparing || disabled}
-            style={{ gap: 6 }}
-          >
-            <span style={{ fontSize: 14 }}>🔍</span>
-            {comparing ? "Comparing…" : `Compare ${readyImages.length} images`}
-          </Button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={runCompare}
+              disabled={readyImages.length < 2 || comparing || disabled}
+              style={{ gap: 6, flex: 1 }}
+            >
+              <span style={{ fontSize: 14 }}>🔍</span>
+              {comparing ? "Comparing…" : readyImages.length >= 2 ? `Compare ${readyImages.length} images` : "Compare images"}
+            </Button>
+            {readyImages.length < 2 && (
+              <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>
+                +{2 - readyImages.length} more image needed
+              </span>
+            )}
+          </div>
           {compareResult && (
             <div style={{
               background: "var(--navyPale)", border: "1px solid rgba(22,15,6,0.12)",
