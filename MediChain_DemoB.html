@@ -1359,21 +1359,21 @@ body:hover .edit-hint{opacity:.6}
 <!-- ===================== SLIDE 20 — DESIGN PRINCIPLES ======= -->
 <div class="slide" id="s20">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Engineering Quality</div><div class="slide-num">13 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Engineering Quality</div><div class="slide-num">20 / 23</div></div>
     <div class="section-title reveal">Design <em>Principles</em></div>
     <p class="section-sub reveal">Architectural decisions that ensure clinical-grade reliability, safety, and extensibility</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(10px,1.5vw,20px)">
       <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
-        <div class="reveal pipe-step"><div class="pipe-num">01</div><div><div class="pipe-t">Safety-First — Pre-LLM Rules</div><div class="pipe-d">Hard-coded safety triggers evaluated <em>before</em> any LLM call. Pattern matching on symptom keywords is O(1) and cannot be bypassed by prompt injection or unusual phrasing.</div></div></div>
-        <div class="reveal pipe-step"><div class="pipe-num">02</div><div><div class="pipe-t">Grounded Outputs — No Fabrication</div><div class="pipe-d">Every diagnostic claim must be supported by a retrieved PubMed passage. Diagnostician is explicitly instructed: "Do not claim something not supported by the retrieved evidence."</div></div></div>
-        <div class="reveal pipe-step"><div class="pipe-num">03</div><div><div class="pipe-t">Agent Separation of Concerns</div><div class="pipe-d">Interviewer, Diagnostician, and Critic have distinct system prompts with no cross-contamination. Each agent receives only the information it needs — minimising prompt injection surface.</div></div></div>
-        <div class="reveal pipe-step"><div class="pipe-num">04</div><div><div class="pipe-t">Full Audit Trail</div><div class="pipe-d">Every agent's complete reasoning chain stored in SQLite. Provider can review, export, and dispute any AI output. Supports clinical accountability and educational use.</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">01</div><div><div class="pipe-t">Safety-First — Pre-LLM Rules</div><div class="pipe-d">Hard-coded safety checks run <em>before</em> any LLM call. Keyword matching is fast and helps prevent prompt injection or unusual phrasing from bypassing the system.</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">02</div><div><div class="pipe-t">Grounded Outputs — No Fabrication</div><div class="pipe-d">Every diagnostic claim must be supported by retrieved PubMed evidence. The Diagnostician is instructed not to make claims beyond the evidence.</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">03</div><div><div class="pipe-t">Agent Separation of Concerns</div><div class="pipe-d">The Interviewer, Diagnostician, and Critic use separate prompts. Each agent only receives the information it needs, which reduces the prompt injection surface.</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">04</div><div><div class="pipe-t">Full Audit Trail</div><div class="pipe-d">Each agent's reasoning chain is stored in SQLite. Providers can review, export, and challenge any AI output for accountability and education.</div></div></div>
       </div>
       <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
-        <div class="reveal pipe-step"><div class="pipe-num">05</div><div><div class="pipe-t">Multimodal Unification</div><div class="pipe-d">All 6 input modalities normalise to a text context string before agent processing. DICOM→JPEG, audio→transcript, video→frame analyses — uniform interface regardless of input type.</div></div></div>
-        <div class="reveal pipe-step"><div class="pipe-num">06</div><div><div class="pipe-t">Zero-Config Persistence</div><div class="pipe-d">SQLite with FK constraints — no separate DB server required. Qdrant in embedded mode — no Qdrant server. Both run in-process alongside FastAPI for simple single-server deployment.</div></div></div>
-        <div class="reveal pipe-step"><div class="pipe-num">07</div><div><div class="pipe-t">Graceful Degradation</div><div class="pipe-d">If speech recognition unavailable (no browser support), text input remains. If RAG returns zero results above threshold, agent defaults to LLM-only with explicit "no evidence found" caveat.</div></div></div>
-        <div class="reveal pipe-step"><div class="pipe-num">08</div><div><div class="pipe-t">Structured JSON Throughout</div><div class="pipe-d">Claude instructed to output structured JSON for annotations, diagnoses, and agent verdicts. Eliminates fragile regex parsing — json.loads() with schema validation on all AI outputs.</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">05</div><div><div class="pipe-t">Multimodal Unification</div><div class="pipe-d">All six input types are converted into text context before agent processing. This creates one consistent interface across different modalities.</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">06</div><div><div class="pipe-t">Zero-Config Persistence</div><div class="pipe-d">SQLite and embedded Qdrant run in-process with FastAPI. This avoids extra database servers and keeps deployment simple.</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">07</div><div><div class="pipe-t">Graceful Degradation</div><div class="pipe-d">If speech recognition is unavailable, users can still type. If RAG finds no strong evidence, the agent falls back to LLM-only with a clear warning.</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">08</div><div><div class="pipe-t">Structured JSON Throughout</div><div class="pipe-d">Claude returns structured JSON for annotations, diagnoses, and agent outputs. This avoids fragile regex parsing and allows schema validation.</div></div></div>
       </div>
     </div>
   </div>
@@ -1383,23 +1383,23 @@ body:hover .edit-hint{opacity:.6}
 <!-- ===================== SLIDE 21 — LIMITATIONS ============= -->
 <div class="slide" id="s21">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Honest Evaluation</div><div class="slide-num">13 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Honest Evaluation</div><div class="slide-num">21 / 23</div></div>
     <div class="section-title reveal">Limitations & <em>Future Work</em></div>
     <p class="section-sub reveal">Known constraints of the current implementation and planned directions for continued research</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,24px);align-items:stretch">
       <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
         <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px">Current Limitations</div>
-        <div class="reveal safety-item"><div class="sdot" style="background:var(--rose)"></div><div><div class="st">No Formal Clinical Validation</div><div class="sd">Diagnostic accuracy not yet benchmarked against standardised clinical case sets (MedQA, USMLE). Safety rules are heuristic-based, not clinically audited. Not for medical use.</div></div></div>
-        <div class="reveal safety-item"><div class="sdot" style="background:var(--rose)"></div><div><div class="st">Single-Node Deployment</div><div class="sd">SQLite and Qdrant embedded — suitable for demo but not horizontally scalable. No load balancing, rate limiting, or multi-tenant isolation.</div></div></div>
-        <div class="reveal safety-item"><div class="sdot" style="background:var(--amber)"></div><div><div class="st">Corpus Currency</div><div class="sd">PubMed snapshot at ingestion time — medical knowledge not continuously updated. New research published after ingest date not retrievable.</div></div></div>
-        <div class="reveal safety-item"><div class="sdot" style="background:var(--amber)"></div><div><div class="st">LLM Latency</div><div class="sd">3-agent chain with RAG adds ~8–15 s per diagnostic turn depending on context length. Streaming partially mitigates perceived latency.</div></div></div>
+        <div class="reveal safety-item"><div class="sdot" style="background:var(--rose)"></div><div><div class="st">No Formal Clinical Validation</div><div class="sd">Diagnostic accuracy has not yet been benchmarked on standard clinical datasets such as MedQA or USMLE. The safety rules are heuristic-based and not clinically audited.</div></div></div>
+        <div class="reveal safety-item"><div class="sdot" style="background:var(--rose)"></div><div><div class="st">Single-Node Deployment</div><div class="sd">SQLite and embedded Qdrant are suitable for a demo, but not for large-scale deployment. The current system does not include load balancing or multi-tenant isolation.</div></div></div>
+        <div class="reveal safety-item"><div class="sdot" style="background:var(--amber)"></div><div><div class="st">Corpus Currency</div><div class="sd">The PubMed corpus reflects the state of knowledge at ingestion time. New research published later cannot be retrieved until the corpus is updated.</div></div></div>
+        <div class="reveal safety-item"><div class="sdot" style="background:var(--amber)"></div><div><div class="st">LLM Latency</div><div class="sd">The three-agent pipeline with RAG adds about 8 to 15 seconds per diagnostic turn. Streaming helps reduce the perceived delay.</div></div></div>
       </div>
       <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
         <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px">Future Directions</div>
-        <div class="reveal pipe-step"><div class="pipe-num">①</div><div><div class="pipe-t">Formal Evaluation — MedQA Benchmark</div><div class="pipe-d">LLM-as-judge scoring across diagnostic accuracy, empathy, hallucination rate, citation relevance. Benchmark on 50+ clinical case vignettes from MedQA dataset.</div></div></div>
-        <div class="reveal pipe-step"><div class="pipe-num">②</div><div><div class="pipe-t">Reasoning Visualisation Graph</div><div class="pipe-d">Interactive D3.js node-link diagram showing agent conversation flow, evidence retrieval nodes, and diagnostic branches with confidence scores.</div></div></div>
-        <div class="reveal pipe-step"><div class="pipe-num">③</div><div><div class="pipe-t">Production Deployment</div><div class="pipe-d">Docker Compose (frontend + FastAPI + Qdrant server + PostgreSQL) · HTTPS · OAuth2 · rate limiting · horizontal scaling via stateless agent design.</div></div></div>
-        <div class="reveal pipe-step"><div class="pipe-num">④</div><div><div class="pipe-t">Continual RAG Update</div><div class="pipe-d">Scheduled PubMed delta ingest · new publications automatically embedded and indexed · knowledge currency maintained without full re-ingest.</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">①</div><div><div class="pipe-t">Formal Evaluation — MedQA Benchmark</div><div class="pipe-d">We plan to evaluate the system on MedQA case vignettes, covering diagnostic accuracy, empathy, hallucination rate, and citation relevance.</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">②</div><div><div class="pipe-t">Reasoning Visualisation Graph</div><div class="pipe-d">We plan to add an interactive graph to show agent dialogue flow, evidence retrieval, and diagnostic branches with confidence scores.</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">③</div><div><div class="pipe-t">Production Deployment</div><div class="pipe-d">Future deployment could use Docker Compose, HTTPS, OAuth2, rate limiting, and a more scalable backend architecture.</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">④</div><div><div class="pipe-t">Continual RAG Update</div><div class="pipe-d">We also plan to support scheduled PubMed updates, so new publications can be embedded and indexed without a full re-ingest.</div></div></div>
       </div>
     </div>
   </div>
@@ -1409,7 +1409,7 @@ body:hover .edit-hint{opacity:.6}
 <!-- ===================== SLIDE 22 — CONTRIBUTION SUMMARY ==== -->
 <div class="slide" id="s22">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Research Contribution</div><div class="slide-num">13 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Research Contribution</div><div class="slide-num">22 / 23</div></div>
     <div class="section-title reveal">Key <em>Contributions</em></div>
     <p class="section-sub reveal">What MediChain contributes to the state of practice in AI-assisted clinical decision support</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(10px,1.5vw,20px);align-items:stretch">
@@ -1417,24 +1417,24 @@ body:hover .edit-hint{opacity:.6}
         <div class="reveal" style="padding:clamp(10px,1.5vh,18px);background:var(--bg2);border:1px solid rgba(0,229,192,.2);border-radius:6px;border-left:3px solid var(--teal)">
           <div style="font-size:clamp(13px,1.3vw,15px);color:var(--teal);letter-spacing:.18em;text-transform:uppercase;margin-bottom:6px">Contribution 1</div>
           <div style="font-family:var(--serif);font-size:clamp(14px,1.8vw,20px);color:var(--text);margin-bottom:5px">Biomedical Hybrid RAG Pipeline</div>
-          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.6">Demonstrate that combining LLM query rewriting, BioLORD-2023 dense embeddings, BM25 sparse retrieval, and Reciprocal Rank Fusion over a 47,441-document PubMed corpus significantly improves medical concept recall over single-vector approaches.</div>
+          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.6">We show that combining query rewriting, dense retrieval, sparse retrieval, and rank fusion improves medical concept recall compared with single-vector retrieval.</div>
         </div>
         <div class="reveal" style="padding:clamp(10px,1.5vh,18px);background:var(--bg2);border:1px solid rgba(245,166,35,.2);border-radius:6px;border-left:3px solid var(--amber)">
           <div style="font-size:clamp(13px,1.3vw,15px);color:var(--amber);letter-spacing:.18em;text-transform:uppercase;margin-bottom:6px">Contribution 2</div>
           <div style="font-family:var(--serif);font-size:clamp(14px,1.8vw,20px);color:var(--text);margin-bottom:5px">Multi-Agent Clinical Safety Framework</div>
-          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.6">Propose a three-agent architecture where Critic serves as a pre-output safety verifier with hard-coded escalation rules evaluated pre-LLM. Separates patient interaction, diagnostic reasoning, and safety verification into independently auditable components.</div>
+          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.6">We propose a three-agent architecture in which the Critic acts as a safety verifier. This separates interaction, diagnosis, and safety checking into auditable components.</div>
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
         <div class="reveal" style="padding:clamp(10px,1.5vh,18px);background:var(--bg2);border:1px solid rgba(255,107,107,.2);border-radius:6px;border-left:3px solid var(--rose)">
           <div style="font-size:clamp(13px,1.3vw,15px);color:var(--rose);letter-spacing:.18em;text-transform:uppercase;margin-bottom:6px">Contribution 3</div>
           <div style="font-family:var(--serif);font-size:clamp(14px,1.8vw,20px);color:var(--text);margin-bottom:5px">Multimodal Clinical Input Unification</div>
-          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.6">Implement a unified preprocessing pipeline accepting 6 clinical input modalities (text, image, DICOM, audio, video, handwritten) and normalising all to structured text context before agent processing — enabling richer symptom capture than text-only systems.</div>
+          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.6">We implement a unified preprocessing pipeline for six clinical input types, converting them into structured text context before agent processing.</div>
         </div>
         <div class="reveal" style="padding:clamp(10px,1.5vh,18px);background:var(--bg2);border:1px solid rgba(0,229,192,.2);border-radius:6px;border-left:3px solid rgba(0,229,192,.5)">
           <div style="font-size:clamp(13px,1.3vw,15px);color:var(--teal);letter-spacing:.18em;text-transform:uppercase;margin-bottom:6px">Contribution 4</div>
           <div style="font-family:var(--serif);font-size:clamp(14px,1.8vw,20px);color:var(--text);margin-bottom:5px">Empathetic AI Interviewer Design</div>
-          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.6">Apply SOCRATES clinical framework within an LLM-driven conversational agent augmented with warm language conventions. Show that empathetic framing is compatible with rigorous symptom elicitation — addressing a gap in prior clinical AI dialogue systems.</div>
+          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.6">We apply the SOCRATES framework in an LLM-based interviewer with warm language. This shows that empathy can still support structured symptom collection.</div>
         </div>
       </div>
     </div>
