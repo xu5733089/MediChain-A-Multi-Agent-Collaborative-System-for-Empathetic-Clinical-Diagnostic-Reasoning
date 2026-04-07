@@ -267,7 +267,7 @@ body:hover .edit-hint{opacity:.6}
 <div class="slide" id="s2">
   <div class="slide-inner">
     <div class="slide-header reveal">
-      <div class="eyebrow">Motivation</div><div class="slide-num">02 / 23</div>
+      <div class="eyebrow">Motivation</div><div class="slide-num">02 / 24</div>
     </div>
     <div class="section-title reveal">Problem <em>Background</em></div>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(14px,2vw,28px);align-items:stretch">
@@ -334,7 +334,7 @@ body:hover .edit-hint{opacity:.6}
 <!-- ===================== SLIDE 3 — LIMITATIONS ============== -->
 <div class="slide" id="s3">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Research Gap</div><div class="slide-num">03 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Research Gap</div><div class="slide-num">03 / 24</div></div>
     <div class="section-title reveal">Existing <em>Limitations</em></div>
     <p class="section-sub reveal">Current AI diagnostic tools fail on at least one of five critical clinical dimensions</p>
     <div class="reveal" style="flex:1;overflow:hidden">
@@ -367,7 +367,7 @@ body:hover .edit-hint{opacity:.6}
 <!-- ===================== SLIDE 4 — SOLUTION ================= -->
 <div class="slide" id="s4">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Our Approach</div><div class="slide-num">04 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Our Approach</div><div class="slide-num">04 / 24</div></div>
     <div class="section-title reveal">MediChain <em>Design</em></div>
     <p class="section-sub reveal">Four integrated design pillars address each identified limitation simultaneously</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:clamp(8px,1.2vw,16px)">
@@ -408,10 +408,59 @@ body:hover .edit-hint{opacity:.6}
   <div class="bottom-bar"></div>
 </div>
 
-<!-- ===================== SLIDE 5 — ARCHITECTURE ============= -->
+<!-- ===================== SLIDE 5 — USER JOURNEY ============= -->
 <div class="slide" id="s5">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">System Design</div><div class="slide-num">05 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Demo Flow</div><div class="slide-num">05 / 24</div></div>
+    <div class="section-title reveal">User <em>Journey</em></div>
+    <p class="section-sub reveal">End-to-end clinical consultation in 5 steps — from login to PubMed-cited diagnosis</p>
+    <div style="flex:1;display:flex;flex-direction:column;gap:clamp(14px,2.2vh,24px);justify-content:center">
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0;position:relative;padding:0 clamp(10px,2vw,30px)">
+        <div style="position:absolute;top:35px;left:calc(10% + 36px);right:calc(10% + 36px);height:2px;background:linear-gradient(90deg,var(--teal),rgba(0,229,192,.25));z-index:0"></div>
+        <div class="reveal" style="display:flex;flex-direction:column;align-items:center;gap:10px;z-index:1">
+          <div style="width:70px;height:70px;border-radius:50%;background:var(--bg2);border:2px solid var(--teal);display:flex;align-items:center;justify-content:center;font-size:26px">🔐</div>
+          <div style="text-align:center"><div style="font-family:var(--serif);font-size:clamp(15px,1.7vw,20px);color:var(--text);margin-bottom:3px">Login</div><div style="font-size:clamp(11px,1.1vw,13px);color:var(--muted);line-height:1.5">Patient · Provider<br>JWT Role Auth</div></div>
+        </div>
+        <div class="reveal" style="display:flex;flex-direction:column;align-items:center;gap:10px;z-index:1">
+          <div style="width:70px;height:70px;border-radius:50%;background:var(--bg2);border:2px solid var(--teal);display:flex;align-items:center;justify-content:center;font-size:26px">📝</div>
+          <div style="text-align:center"><div style="font-family:var(--serif);font-size:clamp(15px,1.7vw,20px);color:var(--text);margin-bottom:3px">Describe</div><div style="font-size:clamp(11px,1.1vw,13px);color:var(--muted);line-height:1.5">Symptoms + history<br>Severity level</div></div>
+        </div>
+        <div class="reveal" style="display:flex;flex-direction:column;align-items:center;gap:10px;z-index:1">
+          <div style="width:70px;height:70px;border-radius:50%;background:var(--bg2);border:2px solid var(--amber);display:flex;align-items:center;justify-content:center;font-size:26px">🩻</div>
+          <div style="text-align:center"><div style="font-family:var(--serif);font-size:clamp(15px,1.7vw,20px);color:var(--text);margin-bottom:3px">Upload Media</div><div style="font-size:clamp(11px,1.1vw,13px);color:var(--muted);line-height:1.5">DICOM · Image · Video<br>PDF · OCR <em style="color:var(--amber)">(optional)</em></div></div>
+        </div>
+        <div class="reveal" style="display:flex;flex-direction:column;align-items:center;gap:10px;z-index:1">
+          <div style="width:70px;height:70px;border-radius:50%;background:var(--bg2);border:2px solid var(--teal);display:flex;align-items:center;justify-content:center;font-size:26px">🤖</div>
+          <div style="text-align:center"><div style="font-family:var(--serif);font-size:clamp(15px,1.7vw,20px);color:var(--text);margin-bottom:3px">AI Interviews</div><div style="font-size:clamp(11px,1.1vw,13px);color:var(--muted);line-height:1.5">SOCRATES · Empathetic<br>3–5 follow-up turns</div></div>
+        </div>
+        <div class="reveal" style="display:flex;flex-direction:column;align-items:center;gap:10px;z-index:1">
+          <div style="width:70px;height:70px;border-radius:50%;background:rgba(0,229,192,.12);border:2px solid var(--teal);box-shadow:0 0 18px rgba(0,229,192,.2);display:flex;align-items:center;justify-content:center;font-size:26px">📊</div>
+          <div style="text-align:center"><div style="font-family:var(--serif);font-size:clamp(15px,1.7vw,20px);color:var(--teal);margin-bottom:3px">Diagnosis</div><div style="font-size:clamp(11px,1.1vw,13px);color:var(--muted);line-height:1.5">Ranked differential<br>PubMed citations</div></div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(8px,1.2vw,16px)">
+        <div class="reveal card" style="text-align:center;padding:clamp(10px,1.5vh,18px)">
+          <div style="font-size:clamp(11px,1.1vw,13px);color:var(--teal);letter-spacing:.16em;text-transform:uppercase;margin-bottom:6px">3-Agent Pipeline</div>
+          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted)">Interviewer → Diagnostician → Critic · full chain logged to SQLite</div>
+        </div>
+        <div class="reveal card" style="text-align:center;padding:clamp(10px,1.5vh,18px)">
+          <div style="font-size:clamp(11px,1.1vw,13px);color:var(--amber);letter-spacing:.16em;text-transform:uppercase;margin-bottom:6px">RAG-Grounded</div>
+          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted)">Every diagnosis backed by 47,441-doc PubMed corpus · clickable citations</div>
+        </div>
+        <div class="reveal card" style="text-align:center;padding:clamp(10px,1.5vh,18px)">
+          <div style="font-size:clamp(11px,1.1vw,13px);color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-bottom:6px">Export & History</div>
+          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted)">PDF / JSON export · session history · Provider dashboard view</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 6 — ARCHITECTURE ============= -->
+<div class="slide" id="s6">
+  <div class="slide-inner">
+    <div class="slide-header reveal"><div class="eyebrow">System Design</div><div class="slide-num">06 / 24</div></div>
     <div class="section-title reveal">System <em>Architecture</em></div>
     <p class="section-sub reveal">Five-layer architecture — each layer independently testable and horizontally scalable</p>
     <div style="flex:1;display:flex;flex-direction:column;gap:clamp(5px,.9vh,10px);justify-content:center">
@@ -456,9 +505,9 @@ body:hover .edit-hint{opacity:.6}
 </div>
 
 <!-- ===================== SLIDE 6 — THREE-AGENT ============== -->
-<div class="slide" id="s6">
+<div class="slide" id="s7">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Core Innovation</div><div class="slide-num">06 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Core Innovation</div><div class="slide-num">07 / 24</div></div>
     <div class="section-title reveal">Three-Agent <em>Design</em></div>
     <p class="section-sub reveal">Specialised agents operate in sequence, each with a distinct clinical role — mirroring real multi-disciplinary team consultation</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:clamp(10px,1.5vw,20px);align-items:stretch">
@@ -515,9 +564,9 @@ body:hover .edit-hint{opacity:.6}
 </div>
 
 <!-- ===================== SLIDE 7 — DELIVERY ================= -->
-<div class="slide" id="s7">
+<div class="slide" id="s8">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Project Delivery</div><div class="slide-num">07 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Project Delivery</div><div class="slide-num">08 / 24</div></div>
     <div class="section-title reveal">Delivery <em>Summary</em></div>
     <p class="section-sub reveal">14 user stories · 48 story points · 2 sprints · all targets met on schedule</p>
     <div style="flex:1;display:flex;flex-direction:column;gap:clamp(5px,.8vh,9px)">
@@ -529,7 +578,7 @@ body:hover .edit-hint{opacity:.6}
       <div class="reveal story-row"><div class="story-id">PROJ-2–3</div><div class="story-name">Patient Chat UI + Multi-Agent Coordinator Logic</div><div class="story-sp">5 SP</div><div class="badge badge-done">Done</div></div>
       <div class="reveal story-row"><div class="story-id">PROJ-4–6</div><div class="story-name">Reasoning Display Panel + DB Schema + RAG Foundation</div><div class="story-sp">4 SP</div><div class="badge badge-done">Done</div></div>
       <div class="reveal story-row" style="border-color:rgba(245,166,35,.2)"><div class="story-id">PROJ-7</div><div class="story-name">RAG 2.0 — Qdrant Hybrid Search (Dense + BM25 + RRF)</div><div class="story-sp">8 SP</div><div class="badge badge-done">Done</div></div>
-      <div class="reveal story-row" style="border-color:rgba(245,166,35,.2)"><div class="story-id">PROJ-8</div><div class="story-name">Multimodal Input — DICOM, Audio, Video, PDF, OCR</div><div class="story-sp">8 SP</div><div class="badge badge-done">Done</div></div>
+      <div class="reveal story-row" style="border-color:rgba(245,166,35,.2)"><div class="story-id">PROJ-8</div><div class="story-name">Multimodal Input — DICOM, Image Compare, Video, PDF, OCR</div><div class="story-sp">8 SP</div><div class="badge badge-done">Done</div></div>
       <div class="reveal story-row" style="border-color:rgba(245,166,35,.2)"><div class="story-id">PROJ-9</div><div class="story-name">Dual Authentication (Patient / Provider) + JWT RBAC</div><div class="story-sp">5 SP</div><div class="badge badge-done">Done</div></div>
       <div class="reveal story-row" style="border-color:rgba(245,166,35,.2)"><div class="story-id">PROJ-10</div><div class="story-name">AI Image Annotation — 9-region JSON overlay</div><div class="story-sp">4 SP</div><div class="badge badge-done">Done</div></div>
       <div class="reveal story-row" style="border-color:rgba(245,166,35,.2)"><div class="story-id">PROJ-11–14</div><div class="story-name">Safety Rules · Empathetic AI · i18n (3 langs) · Session Export</div><div class="story-sp">10 SP</div><div class="badge badge-done">Done</div></div>
@@ -548,9 +597,9 @@ body:hover .edit-hint{opacity:.6}
 </div>
 
 <!-- ===================== SLIDE 8 — RAG 2.0 OVERVIEW ======== -->
-<div class="slide" id="s8">
+<div class="slide" id="s9">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-7</div><div class="slide-num">08 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-7</div><div class="slide-num">09 / 24</div></div>
     <div class="section-title reveal">RAG <em>2.0</em></div>
     <p class="section-sub reveal">ChromaDB → Qdrant embedded · BioLORD-2023 768d + BM25 sparse + RRF · 9.4× knowledge growth</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,28px);align-items:stretch">
@@ -627,9 +676,9 @@ body:hover .edit-hint{opacity:.6}
 </div>
 
 <!-- ===================== SLIDE 9 — RAG PIPELINE ============= -->
-<div class="slide" id="s9">
+<div class="slide" id="s10">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">RAG Detail</div><div class="slide-num">09 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">RAG Detail</div><div class="slide-num">10 / 24</div></div>
     <div class="section-title reveal">Query <em>Pipeline</em></div>
     <p class="section-sub reveal">6-stage pipeline from patient language to PubMed-cited diagnostic output — including multimodal image rewriting</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,24px);align-items:stretch">
@@ -698,9 +747,9 @@ body:hover .edit-hint{opacity:.6}
 </div>
 
 <!-- ===================== SLIDE 10 — MULTIMODAL ============== -->
-<div class="slide" id="s10">
+<div class="slide" id="s11">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-8</div><div class="slide-num">10 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-8</div><div class="slide-num">11 / 24</div></div>
     <div class="section-title reveal">Multimodal <em>Input</em></div>
     <p class="section-sub reveal">6 clinical input modalities — unified preprocessing pipeline → Claude Vision / Speech / Text agents</p>
     <div style="flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(6px,1vw,12px)">
@@ -865,9 +914,9 @@ body:hover .edit-hint{opacity:.6}
 </div>
 
 <!-- ===================== SLIDE 11 — IMAGE ANNOTATION ======== -->
-<div class="slide" id="s11">
+<div class="slide" id="s12">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-10</div><div class="slide-num">11 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-10</div><div class="slide-num">12 / 24</div></div>
     <div class="section-title reveal">AI Image <em>Annotation</em></div>
     <p class="section-sub reveal">Claude Vision → structured JSON · 9-region grid · interactive numbered overlays · hover-linked findings list</p>
     <div style="flex:1;display:grid;grid-template-columns:.95fr 1.05fr;gap:clamp(12px,2vw,24px);align-items:stretch">
@@ -945,29 +994,75 @@ body:hover .edit-hint{opacity:.6}
 </div>
 
 <!-- ===================== SLIDE 12 — VIDEO CONSULTATION ======= -->
-<div class="slide" id="s12">
+<div class="slide" id="s13">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Feature · Video</div><div class="slide-num">12 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Feature · Video</div><div class="slide-num">13 / 24</div></div>
     <div class="section-title reveal">Video Frame <em>Consultation</em></div>
-    <p class="section-sub reveal">Real-time webcam consultation — simultaneous speech transcription and automated frame-by-frame visual analysis</p>
+    <p class="section-sub reveal">Real-time webcam consultation — automated frame-by-frame visual analysis bundled as multimodal context</p>
     <div style="flex:1;display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(12px,2vw,24px);align-items:stretch">
       <div style="display:flex;flex-direction:column;gap:clamp(6px,1vh,11px)">
         <div class="reveal pipe-step"><div class="pipe-num">01</div><div><div class="pipe-t">getUserMedia() Camera Access</div><div class="pipe-d">Browser requests webcam permission · video stream rendered in modal · live preview displayed to user</div></div></div>
         <div class="reveal pipe-step"><div class="pipe-num">02</div><div><div class="pipe-t">Automatic Frame Capture</div><div class="pipe-d">canvas.toBlob() captures JPEG every 5 s (FRAME_INTERVAL_MS=5000) · blob → File → POST /api/analyze/file · Claude Vision analyses each frame asynchronously</div></div></div>
         <div class="reveal pipe-step"><div class="pipe-num">03</div><div><div class="pipe-t">Stop → Bundle Context</div><div class="pipe-d">All frame analyses combined into structured message · passed to AI Interviewer as multimodal context · triggers file-only submission flow if no text typed</div></div></div>
+        <div class="reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:clamp(6px,1vw,10px)">
+          <div class="stat-card"><div class="stat-num">5 s</div><div class="stat-label">Frame interval</div></div>
+          <div class="stat-card"><div class="stat-num">6</div><div class="stat-label">Max frames</div></div>
+        </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
-        <div class="reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:clamp(6px,1vw,10px)">
-          <div class="stat-card"><div class="stat-num">5 s</div><div class="stat-label">Frame capture interval</div></div>
-          <div class="stat-card"><div class="stat-num">6</div><div class="stat-label">Max frames per session</div></div>
-          <div class="stat-card"><div class="stat-num">3</div><div class="stat-label">Speech lang options</div></div>
-          <div class="stat-card"><div class="stat-num">0</div><div class="stat-label">Extra npm dependencies</div></div>
+        <!-- Data flow SVG -->
+        <div class="reveal" style="background:var(--bg2);border:1px solid rgba(0,229,192,.12);border-radius:6px;padding:clamp(10px,1.5vh,14px);flex:1">
+          <div style="font-size:clamp(11px,1.1vw,13px);color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px">Data Flow</div>
+          <svg viewBox="0 0 240 180" style="width:100%;display:block">
+            <!-- Webcam box -->
+            <rect x="4" y="10" width="68" height="42" rx="4" fill="#0D1F35" stroke="rgba(0,229,192,.3)" stroke-width=".8"/>
+            <rect x="14" y="16" width="48" height="28" rx="2" fill="#060E1A"/>
+            <ellipse cx="38" cy="30" rx="9" ry="10" fill="rgba(30,60,80,.8)" stroke="rgba(0,229,192,.2)" stroke-width=".5"/>
+            <circle cx="38" cy="30" r="4" fill="#0D1F35"/>
+            <circle cx="18" cy="18" r="2.5" fill="var(--rose)" opacity=".9"><animate attributeName="opacity" values=".9;.3;.9" dur="1.2s" repeatCount="indefinite"/></circle>
+            <text x="38" y="52" font-family="monospace" font-size="5" fill="var(--muted)" text-anchor="middle">Webcam</text>
+            <!-- Arrow 1 -->
+            <line x1="72" y1="31" x2="90" y2="31" stroke="rgba(0,229,192,.5)" stroke-width="1.2" marker-end="url(#arr)"/>
+            <!-- Canvas box -->
+            <rect x="90" y="16" width="52" height="28" rx="3" fill="#0A1825" stroke="rgba(0,229,192,.2)" stroke-width=".8"/>
+            <text x="116" y="27" font-family="monospace" font-size="5" fill="#6A9BB5" text-anchor="middle">canvas</text>
+            <text x="116" y="36" font-family="monospace" font-size="5" fill="var(--teal)" text-anchor="middle">.toBlob()</text>
+            <text x="116" y="52" font-family="monospace" font-size="4.5" fill="var(--muted)" text-anchor="middle">every 5 s</text>
+            <!-- Arrow 2 -->
+            <line x1="142" y1="31" x2="160" y2="31" stroke="rgba(0,229,192,.5)" stroke-width="1.2" marker-end="url(#arr)"/>
+            <!-- API box -->
+            <rect x="160" y="16" width="72" height="28" rx="3" fill="#0D1F35" stroke="rgba(245,166,35,.3)" stroke-width=".8"/>
+            <text x="196" y="27" font-family="monospace" font-size="5" fill="var(--amber)" text-anchor="middle">POST</text>
+            <text x="196" y="36" font-family="monospace" font-size="4.5" fill="#6A9BB5" text-anchor="middle">/api/analyze/file</text>
+            <text x="196" y="52" font-family="monospace" font-size="4.5" fill="var(--muted)" text-anchor="middle">Claude Vision</text>
+            <!-- Arrow down from API -->
+            <line x1="196" y1="58" x2="196" y2="76" stroke="rgba(0,229,192,.5)" stroke-width="1.2" marker-end="url(#arr)"/>
+            <!-- Frame analyses box -->
+            <rect x="130" y="76" width="130" height="34" rx="3" fill="#0A1825" stroke="rgba(0,229,192,.2)" stroke-width=".8"/>
+            <text x="195" y="88" font-family="monospace" font-size="5" fill="var(--teal)" text-anchor="middle">Frame Analysis ×1–6</text>
+            <text x="195" y="100" font-family="monospace" font-size="4.5" fill="#6A9BB5" text-anchor="middle">"Redness observed on left forearm..."</text>
+            <!-- Arrow left and down -->
+            <line x1="130" y1="93" x2="100" y2="93" stroke="rgba(0,229,192,.4)" stroke-width="1.2" marker-end="url(#arr)"/>
+            <!-- Bundle box -->
+            <rect x="4" y="76" width="96" height="34" rx="3" fill="#0D1F35" stroke="rgba(0,229,192,.3)" stroke-width=".8"/>
+            <text x="52" y="89" font-family="monospace" font-size="5" fill="var(--text2)" text-anchor="middle">Bundle Context</text>
+            <text x="52" y="100" font-family="monospace" font-size="4.5" fill="#6A9BB5" text-anchor="middle">frames + metadata</text>
+            <!-- Arrow down -->
+            <line x1="52" y1="110" x2="52" y2="128" stroke="rgba(0,229,192,.5)" stroke-width="1.2" marker-end="url(#arr)"/>
+            <!-- AI Interviewer -->
+            <rect x="4" y="128" width="256" height="34" rx="3" fill="rgba(0,229,192,.07)" stroke="rgba(0,229,192,.35)" stroke-width=".8"/>
+            <text x="132" y="140" font-family="monospace" font-size="5.5" fill="var(--teal)" text-anchor="middle" font-weight="bold">AI Interviewer Agent</text>
+            <text x="132" y="152" font-family="monospace" font-size="4.5" fill="#6A9BB5" text-anchor="middle">multimodal context → SOCRATES questioning → diagnosis</text>
+            <!-- Arrowhead marker -->
+            <defs>
+              <marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                <path d="M0,0 L0,6 L6,3 z" fill="rgba(0,229,192,.6)"/>
+              </marker>
+            </defs>
+          </svg>
         </div>
-        <div class="reveal" style="padding:clamp(8px,1.3vh,14px);background:rgba(0,229,192,.05);border:1px solid rgba(0,229,192,.2);border-radius:4px;font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.65">
-          <strong style="color:var(--teal)">Clinical Value:</strong> Patients with mobility limitations or difficulty typing can describe symptoms verbally while showing affected areas on camera. Frame analyses + transcript provide richer context than text alone.
-        </div>
-        <div class="reveal" style="padding:clamp(8px,1.3vh,14px);background:rgba(0,229,192,.05);border:1px solid rgba(0,229,192,.2);border-radius:4px;font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.65">
-          <strong style="color:var(--teal)">File-Only Submission:</strong> If video or file provided and analysed, typed description is optional. On submit, system auto-generates description from file/frame analyses. Validation: description.length &gt; 15 <strong>OR</strong> hasReadyFile.
+        <div class="reveal" style="padding:clamp(8px,1.3vh,12px);background:rgba(0,229,192,.05);border:1px solid rgba(0,229,192,.2);border-radius:4px;font-size:clamp(12px,1.2vw,14px);color:var(--muted);line-height:1.6">
+          <strong style="color:var(--teal)">File-Only Submission:</strong> Video analysed → typed description optional. Validation: description.length &gt; 15 <strong>OR</strong> hasReadyFile.
         </div>
       </div>
     </div>
@@ -976,9 +1071,9 @@ body:hover .edit-hint{opacity:.6}
 </div>
 
 <!-- ===================== SLIDE 13 — EMPATHETIC AI =========== -->
-<div class="slide" id="s13">
+<div class="slide" id="s14">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-14</div><div class="slide-num">13 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-14</div><div class="slide-num">14 / 24</div></div>
     <div class="section-title reveal">Empathetic <em>AI Interviewer</em></div>
     <p class="section-sub reveal">SOCRATES clinical framework + warm language conventions + LLM query rewriting for RAG</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,24px);align-items:stretch">
@@ -1024,9 +1119,9 @@ body:hover .edit-hint{opacity:.6}
 </div>
 
 <!-- ===================== SLIDE 14 — SAFETY ================== -->
-<div class="slide" id="s14">
+<div class="slide" id="s15">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-10</div><div class="slide-num">14 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-10</div><div class="slide-num">15 / 24</div></div>
     <div class="section-title reveal">Safety & <em>Critic Agent</em></div>
     <p class="section-sub reveal">Hard-coded safety rules in the Critic Agent — three escalation classes covering life-threatening presentations</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,24px);align-items:stretch">
@@ -1079,9 +1174,9 @@ body:hover .edit-hint{opacity:.6}
 </div>
 
 <!-- ===================== SLIDE 15 — DUAL AUTH =============== -->
-<div class="slide" id="s15">
+<div class="slide" id="s16">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-9</div><div class="slide-num">15 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-9</div><div class="slide-num">16 / 24</div></div>
     <div class="section-title reveal">Dual Auth <em>Roles</em></div>
     <p class="section-sub reveal">JWT-based authentication with role claims — Patient and Provider access to distinct UI views and API endpoints</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,24px);align-items:stretch">
@@ -1124,9 +1219,9 @@ body:hover .edit-hint{opacity:.6}
 </div>
 
 <!-- ===================== SLIDE 16 — i18n ==================== -->
-<div class="slide" id="s16">
+<div class="slide" id="s17">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-12</div><div class="slide-num">16 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-12</div><div class="slide-num">17 / 24</div></div>
     <div class="section-title reveal">Multilingual <em>Support</em></div>
     <p class="section-sub reveal">Full react-i18next internationalisation — UI, agent responses, and audio file analysis in EN / ZH / JA</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,24px);align-items:stretch">
@@ -1159,9 +1254,9 @@ body:hover .edit-hint{opacity:.6}
 </div>
 
 <!-- ===================== SLIDE 17 — SESSION & EXPORT ======== -->
-<div class="slide" id="s17">
+<div class="slide" id="s18">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Feature · Data Persistence</div><div class="slide-num">17 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Feature · Data Persistence</div><div class="slide-num">18 / 24</div></div>
     <div class="section-title reveal">Session <em>Management</em></div>
     <p class="section-sub reveal">Automatic session persistence · full history access · one-click PDF/JSON export for clinical integration</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,24px);align-items:stretch">
@@ -1174,12 +1269,51 @@ body:hover .edit-hint{opacity:.6}
       <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
         <div class="reveal" style="background:var(--bg2);border:1px solid rgba(0,229,192,.15);border-radius:5px;padding:clamp(10px,1.5vh,16px)">
           <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px">Results Page — 4 Tabs</div>
-          <div style="display:flex;flex-direction:column;gap:6px">
-            <div style="display:flex;gap:8px;align-items:center"><div style="width:8px;height:8px;background:var(--teal);border-radius:50%;flex-shrink:0"></div><div style="font-size:clamp(13px,1.3vw,15px);color:var(--text2)"><strong>Diagnosis</strong> — ranked differential · probability · Critic verdict</div></div>
-            <div style="display:flex;gap:8px;align-items:center"><div style="width:8px;height:8px;background:var(--amber);border-radius:50%;flex-shrink:0"></div><div style="font-size:clamp(13px,1.3vw,15px);color:var(--text2)"><strong>Reasoning</strong> — full agent chain · Interviewer → Diagnostician → Critic</div></div>
-            <div style="display:flex;gap:8px;align-items:center"><div style="width:8px;height:8px;background:var(--rose);border-radius:50%;flex-shrink:0"></div><div style="font-size:clamp(13px,1.3vw,15px);color:var(--text2)"><strong>Literature</strong> — PubMed citations · title · authors · year · relevance</div></div>
-            <div style="display:flex;gap:8px;align-items:center"><div style="width:8px;height:8px;background:rgba(0,229,192,.5);border-radius:50%;flex-shrink:0"></div><div style="font-size:clamp(13px,1.3vw,15px);color:var(--text2)"><strong>Media</strong> — uploaded files · annotated images with overlay dots</div></div>
-          </div>
+          <!-- SVG mock of the results page tab UI -->
+          <svg viewBox="0 0 340 140" style="width:100%;display:block">
+            <!-- Browser chrome -->
+            <rect x="0" y="0" width="340" height="140" rx="5" fill="#060E1A" stroke="rgba(0,229,192,.18)" stroke-width=".8"/>
+            <!-- Tab bar -->
+            <rect x="0" y="0" width="340" height="26" rx="5" fill="#0A1628"/>
+            <rect x="0" y="13" width="340" height="13" fill="#0A1628"/>
+            <!-- Tab 1: Diagnosis (active) -->
+            <rect x="4" y="4" width="74" height="18" rx="3" fill="var(--bg)" stroke="rgba(0,229,192,.5)" stroke-width=".8"/>
+            <text x="41" y="16" font-family="monospace" font-size="6" fill="var(--teal)" text-anchor="middle" font-weight="bold">Diagnosis</text>
+            <!-- Tab 2: Reasoning -->
+            <rect x="82" y="6" width="72" height="15" rx="3" fill="transparent"/>
+            <text x="118" y="16" font-family="monospace" font-size="6" fill="#6A9BB5" text-anchor="middle">Reasoning</text>
+            <!-- Tab 3: Literature -->
+            <rect x="158" y="6" width="72" height="15" rx="3" fill="transparent"/>
+            <text x="194" y="16" font-family="monospace" font-size="6" fill="#6A9BB5" text-anchor="middle">Literature</text>
+            <!-- Tab 4: Media -->
+            <rect x="234" y="6" width="50" height="15" rx="3" fill="transparent"/>
+            <text x="259" y="16" font-family="monospace" font-size="6" fill="#6A9BB5" text-anchor="middle">Media</text>
+            <!-- Tab underline indicator -->
+            <rect x="4" y="22" width="74" height="2" rx="1" fill="var(--teal)"/>
+            <!-- Content area: Diagnosis tab -->
+            <rect x="6" y="30" width="328" height="104" rx="3" fill="#080F1A"/>
+            <!-- Diagnosis row 1 -->
+            <rect x="12" y="36" width="314" height="26" rx="3" fill="#0D1F35" stroke="rgba(0,229,192,.2)" stroke-width=".5"/>
+            <rect x="12" y="36" width="4" height="26" rx="2" fill="var(--teal)"/>
+            <text x="22" y="46" font-family="monospace" font-size="6" fill="var(--teal)" font-weight="bold">Stable Angina</text>
+            <text x="22" y="55" font-family="monospace" font-size="5" fill="#6A9BB5">Probability: High · Evidence: 3 passages · Critic: ✓ Confirmed</text>
+            <text x="290" y="46" font-family="monospace" font-size="6" fill="var(--amber)" text-anchor="middle">78%</text>
+            <!-- Diagnosis row 2 -->
+            <rect x="12" y="66" width="314" height="22" rx="3" fill="#0A1825" stroke="rgba(0,229,192,.1)" stroke-width=".5"/>
+            <rect x="12" y="66" width="4" height="22" rx="2" fill="var(--amber)"/>
+            <text x="22" y="76" font-family="monospace" font-size="6" fill="var(--text2)">GERD / Oesophageal Spasm</text>
+            <text x="22" y="83" font-family="monospace" font-size="5" fill="#6A9BB5">Probability: Moderate · Evidence: 2 passages</text>
+            <text x="290" y="76" font-family="monospace" font-size="6" fill="#6A9BB5" text-anchor="middle">18%</text>
+            <!-- Diagnosis row 3 -->
+            <rect x="12" y="92" width="314" height="22" rx="3" fill="#0A1825" stroke="rgba(0,229,192,.06)" stroke-width=".5"/>
+            <rect x="12" y="92" width="4" height="22" rx="2" fill="var(--rose)"/>
+            <text x="22" y="102" font-family="monospace" font-size="6" fill="var(--text2)">Musculoskeletal Chest Pain</text>
+            <text x="22" y="109" font-family="monospace" font-size="5" fill="#6A9BB5">Probability: Low · Evidence: 1 passage</text>
+            <text x="290" y="102" font-family="monospace" font-size="6" fill="#6A9BB5" text-anchor="middle">4%</text>
+            <!-- Export button -->
+            <rect x="258" y="120" width="62" height="12" rx="2" fill="rgba(0,229,192,.12)" stroke="rgba(0,229,192,.4)" stroke-width=".5"/>
+            <text x="289" y="128.5" font-family="monospace" font-size="5.5" fill="var(--teal)" text-anchor="middle">↓ Export PDF</text>
+          </svg>
         </div>
         <div class="reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:clamp(6px,1vw,10px)">
           <div class="stat-card"><div class="stat-num">4</div><div class="stat-label">DB tables</div></div>
@@ -1195,9 +1329,9 @@ body:hover .edit-hint{opacity:.6}
 </div>
 
 <!-- ===================== SLIDE 18 — PERFORMANCE ============= -->
-<div class="slide" id="s18">
+<div class="slide" id="s19">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Evaluation</div><div class="slide-num">18 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Evaluation</div><div class="slide-num">19 / 24</div></div>
     <div class="section-title reveal">System <em>Performance</em></div>
     <p class="section-sub reveal">Quantitative comparison across all major system dimensions — Demo A baseline vs current implementation</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,28px);align-items:stretch">
@@ -1210,7 +1344,7 @@ body:hover .edit-hint{opacity:.6}
             <tr><td>Search Strategy</td><td class="bad">Single cosine</td><td class="good">Dense+BM25+RRF</td></tr>
             <tr><td>Query Variants</td><td class="bad">1 raw input</td><td class="good">3–4 LLM-rewritten</td></tr>
             <tr><td>Recall Threshold</td><td class="mid">0.25 (strict)</td><td class="good">0.15 (+recall)</td></tr>
-            <tr><td>Input Modalities</td><td class="bad">1 (text)</td><td class="good">6 (text·img·DICOM·vid·pdf·ocr)</td></tr>
+            <tr><td>Input Modalities</td><td class="bad">1 (text)</td><td class="good">6 (text·img·DICOM·vid·pdf·compare)</td></tr>
             <tr><td>Auth Roles</td><td class="bad">None</td><td class="good">Patient + Provider (JWT)</td></tr>
             <tr><td>UI Languages</td><td class="bad">EN only</td><td class="good">EN / ZH / JA</td></tr>
             <tr><td>Image Annotation</td><td class="bad">None</td><td class="good">9-region JSON overlay</td></tr>
@@ -1262,9 +1396,9 @@ body:hover .edit-hint{opacity:.6}
 </div>
 
 <!-- ===================== SLIDE 19 — TECH STACK ============== -->
-<div class="slide" id="s19">
+<div class="slide" id="s20">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Implementation</div><div class="slide-num">19 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Implementation</div><div class="slide-num">20 / 24</div></div>
     <div class="section-title reveal">Technical <em>Stack</em></div>
     <p class="section-sub reveal">Technology choices justified by clinical AI requirements — performance, biomedical specificity, and zero external dependencies</p>
     <div style="flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(8px,1.2vw,16px)">
@@ -1297,9 +1431,9 @@ body:hover .edit-hint{opacity:.6}
 </div>
 
 <!-- ===================== SLIDE 20 — DESIGN PRINCIPLES ======= -->
-<div class="slide" id="s20">
+<div class="slide" id="s21">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Engineering Quality</div><div class="slide-num">20 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Engineering Quality</div><div class="slide-num">21 / 24</div></div>
     <div class="section-title reveal">Design <em>Principles</em></div>
     <p class="section-sub reveal">Architectural decisions that ensure clinical-grade reliability, safety, and extensibility</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(10px,1.5vw,20px)">
@@ -1321,9 +1455,9 @@ body:hover .edit-hint{opacity:.6}
 </div>
 
 <!-- ===================== SLIDE 21 — LIMITATIONS ============= -->
-<div class="slide" id="s21">
+<div class="slide" id="s22">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Honest Evaluation</div><div class="slide-num">21 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Honest Evaluation</div><div class="slide-num">22 / 24</div></div>
     <div class="section-title reveal">Limitations & <em>Future Work</em></div>
     <p class="section-sub reveal">Known constraints of the current implementation and planned directions for continued research</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,24px);align-items:stretch">
@@ -1347,9 +1481,9 @@ body:hover .edit-hint{opacity:.6}
 </div>
 
 <!-- ===================== SLIDE 22 — CONTRIBUTION SUMMARY ==== -->
-<div class="slide" id="s22">
+<div class="slide" id="s23">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Research Contribution</div><div class="slide-num">22 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Research Contribution</div><div class="slide-num">23 / 24</div></div>
     <div class="section-title reveal">Key <em>Contributions</em></div>
     <p class="section-sub reveal">What MediChain contributes to the state of practice in AI-assisted clinical decision support</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(10px,1.5vw,20px);align-items:stretch">
@@ -1383,7 +1517,7 @@ body:hover .edit-hint{opacity:.6}
 </div>
 
 <!-- ===================== SLIDE 23 — THANK YOU =============== -->
-<div class="slide" id="s23">
+<div class="slide" id="s24">
   <div class="orb" style="position:absolute;width:clamp(300px,50vw,640px);height:clamp(300px,50vw,640px);border-radius:50%;background:radial-gradient(circle,rgba(0,229,192,.08) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:0;animation:breathe 8s ease-in-out infinite"></div>
   <div style="position:relative;z-index:1;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:clamp(24px,4vh,56px) clamp(32px,8vw,120px);gap:clamp(10px,1.8vh,22px)">
     <div class="reveal eyebrow">COMP9900 · Team 9900-W18C-CAKE · UNSW Sydney</div>
