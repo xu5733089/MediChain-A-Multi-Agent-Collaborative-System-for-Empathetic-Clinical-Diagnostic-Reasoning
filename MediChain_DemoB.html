@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediChain — Final Presentation</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+/* === RESET & TOKENS =========================================== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080F1A;--bg2:#0D1F35;--bg3:#0A1628;
+  --teal:#00E5C0;--teal2:#00C4A5;
+  --muted:#6A9BB5;--text:#E8F4F8;--text2:#A8C8D8;
+  --amber:#F5A623;--rose:#FF6B6B;
+  --mono:'JetBrains Mono',monospace;--serif:'DM Serif Display',serif;
+}
+html,body{width:100%;height:100%;background:var(--bg);overflow:hidden;font-family:var(--mono)}
+
+/* === SLIDE SYSTEM ============================================= */
+.deck{width:100vw;height:100vh;position:relative}
+.slide{
+  width:100vw;height:100vh;height:100dvh;
+  overflow:hidden;position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  opacity:0;pointer-events:none;transition:opacity .5s ease;
+}
+.slide.active{opacity:1;pointer-events:all}
+.slide::before{
+  content:'';position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(0,229,192,.032) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,229,192,.032) 1px,transparent 1px);
+  background-size:60px 60px;pointer-events:none;z-index:0;
+}
+
+/* === LAYOUT HELPERS ========================================== */
+.slide-inner{
+  position:relative;z-index:1;flex:1;display:flex;flex-direction:column;
+  padding:clamp(18px,3vh,40px) clamp(28px,4.5vw,64px);
+}
+.slide-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:clamp(10px,1.8vh,22px)}
+.eyebrow{font-size:clamp(11px,1.1vw,14px);color:var(--teal);letter-spacing:.28em;text-transform:uppercase}
+.eyebrow::before{content:'[ '}.eyebrow::after{content:' ]'}
+.slide-num{font-size:clamp(11px,1.1vw,14px);color:var(--muted);letter-spacing:.15em}
+.section-title{font-family:var(--serif);font-size:clamp(34px,5.2vw,68px);color:var(--text);line-height:.92;letter-spacing:-2px;margin-bottom:clamp(4px,1vh,12px)}
+.section-title em{color:var(--teal);font-style:italic}
+.section-sub{font-size:clamp(14px,1.4vw,17px);color:var(--muted);line-height:1.65;max-width:70ch;margin-bottom:clamp(10px,2vh,24px)}
+.rule{width:clamp(32px,5vw,60px);height:1px;background:var(--teal);margin:clamp(8px,1.5vh,16px) 0;opacity:.7}
+.bottom-bar{height:2px;background:linear-gradient(90deg,var(--teal),transparent);opacity:.55;flex-shrink:0}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:clamp(10px,1.5vw,22px)}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(8px,1.2vw,16px)}
+
+/* === BADGES ================================================== */
+.badge{display:inline-flex;align-items:center;font-size:clamp(10px,1vw,12px);letter-spacing:.18em;text-transform:uppercase;padding:3px 9px;border-radius:2px}
+.badge-teal{background:rgba(0,229,192,.12);color:var(--teal);border:1px solid rgba(0,229,192,.3)}
+.badge-amber{background:rgba(245,166,35,.12);color:var(--amber);border:1px solid rgba(245,166,35,.3)}
+.badge-rose{background:rgba(255,107,107,.12);color:var(--rose);border:1px solid rgba(255,107,107,.3)}
+.badge-done{background:rgba(0,229,192,.2);color:var(--teal);border:1px solid var(--teal)}
+.new-tag{display:inline-block;font-size:9px;background:var(--teal);color:var(--bg);padding:1px 5px;border-radius:2px;letter-spacing:.1em;margin-left:5px;vertical-align:middle}
+
+/* === CARDS =================================================== */
+.card{background:var(--bg2);border:1px solid rgba(0,229,192,.12);border-radius:6px;padding:clamp(10px,1.6vh,18px) clamp(12px,1.8vw,20px);position:relative;overflow:hidden}
+.card::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--teal),transparent)}
+.stat-card{background:var(--bg2);border:1px solid rgba(0,229,192,.18);border-radius:4px;padding:clamp(8px,1.4vh,16px) clamp(10px,1.5vw,18px)}
+.stat-card::after{content:'';display:block;width:100%;height:1px;background:linear-gradient(90deg,var(--teal),transparent);margin-bottom:4px}
+.stat-num{font-family:var(--serif);font-size:clamp(26px,4vw,54px);color:var(--teal);line-height:1;letter-spacing:-1px}
+.stat-label{font-size:clamp(11px,1.1vw,13px);color:var(--muted);letter-spacing:.18em;text-transform:uppercase;margin-top:3px}
+
+/* === ANIMATIONS ============================================== */
+.reveal{opacity:0;transform:translateY(14px);transition:opacity .55s ease,transform .55s ease}
+.slide.active .reveal{opacity:1;transform:translateY(0)}
+.reveal:nth-child(1){transition-delay:.08s}.reveal:nth-child(2){transition-delay:.16s}
+.reveal:nth-child(3){transition-delay:.24s}.reveal:nth-child(4){transition-delay:.32s}
+.reveal:nth-child(5){transition-delay:.40s}.reveal:nth-child(6){transition-delay:.48s}
+.reveal:nth-child(7){transition-delay:.56s}.reveal:nth-child(8){transition-delay:.64s}
+.reveal:nth-child(9){transition-delay:.72s}.reveal:nth-child(10){transition-delay:.80s}
+
+/* SVG bar chart animations */
+.bar-v{transform-box:fill-box;transform-origin:bottom;transform:scaleY(0);transition:transform .9s cubic-bezier(.16,1,.3,1)}
+.slide.active .bar-v{transform:scaleY(1)}
+.bar-h{transform-box:fill-box;transform-origin:left;transform:scaleX(0);transition:transform .9s cubic-bezier(.16,1,.3,1)}
+.slide.active .bar-h{transform:scaleX(1)}
+.line-draw{stroke-dashoffset:1;stroke-dasharray:1;transition:stroke-dashoffset 1.4s ease .3s}
+.slide.active .line-draw{stroke-dashoffset:0}
+
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes glow{0%,100%{box-shadow:0 0 48px rgba(0,229,192,.5)}50%{box-shadow:0 0 80px rgba(0,229,192,.75)}}
+@keyframes fnl{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes pulse-dot{0%,100%{r:8}50%{r:10}}
+@keyframes bar1{0%,100%{height:20%}50%{height:80%}}
+@keyframes bar2{0%,100%{height:50%}50%{height:30%}}
+@keyframes bar3{0%,100%{height:70%}50%{height:15%}}
+@keyframes bar4{0%,100%{height:40%}50%{height:85%}}
+@keyframes bar5{0%,100%{height:60%}50%{height:25%}}
+@keyframes bar6{0%,100%{height:25%}50%{height:65%}}
+@keyframes bar7{0%,100%{height:80%}50%{height:40%}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* === COMPARISON TABLE ======================================== */
+.ctable{width:100%;border-collapse:collapse}
+.ctable th{font-size:clamp(11px,1.1vw,13px);letter-spacing:.18em;text-transform:uppercase;color:var(--muted);padding:clamp(5px,.9vh,9px) clamp(8px,1.2vw,14px);border-bottom:1px solid rgba(0,229,192,.2);text-align:left}
+.ctable th:nth-child(2){color:var(--rose)}.ctable th:nth-child(3){color:var(--teal)}.ctable th:nth-child(4){color:var(--amber)}
+.ctable td{font-size:clamp(12px,1.2vw,14px);padding:clamp(5px,.9vh,9px) clamp(8px,1.2vw,14px);border-bottom:1px solid rgba(255,255,255,.04);color:var(--muted);vertical-align:middle}
+.ctable td:first-child{color:var(--text2)}
+.ctable td .good{color:var(--teal)}.ctable td .bad{color:rgba(255,107,107,.7)}.ctable td .mid{color:var(--amber)}
+
+/* === PIPELINE STEPS ========================================== */
+.pipe-step{display:flex;align-items:flex-start;gap:10px;padding:clamp(8px,1.2vh,13px) clamp(10px,1.4vw,16px);background:var(--bg2);border:1px solid rgba(0,229,192,.1);border-left:3px solid var(--teal);border-radius:4px}
+.pipe-num{font-size:clamp(11px,1.1vw,14px);color:var(--teal);flex-shrink:0;margin-top:2px}
+.pipe-t{font-family:var(--serif);font-size:clamp(15px,1.8vw,20px);color:var(--text);margin-bottom:2px}
+.pipe-d{font-size:clamp(12px,1.2vw,14px);color:var(--muted);line-height:1.55}
+
+/* === AGENT CARD ============================================== */
+.agent-card{background:var(--bg2);border:1px solid rgba(0,229,192,.15);border-radius:8px;padding:clamp(12px,2vh,22px) clamp(12px,2vw,20px);display:flex;flex-direction:column;gap:6px}
+.agent-icon{font-size:clamp(24px,3.2vw,36px)}
+.agent-name{font-family:var(--serif);font-size:clamp(18px,2.4vw,28px);color:var(--text)}
+.agent-role{font-size:clamp(11px,1.1vw,13px);color:var(--teal);letter-spacing:.18em;text-transform:uppercase;margin-bottom:4px}
+.agent-feat{font-size:clamp(12px,1.2vw,14px);color:var(--muted);line-height:1.55}
+.agent-feat::before{content:'→ ';color:var(--teal)}
+
+/* === METRIC BARS ============================================= */
+.mbar-wrap{display:flex;flex-direction:column;gap:4px}
+.mbar-label{display:flex;justify-content:space-between;font-size:clamp(12px,1.2vw,14px);color:var(--muted);letter-spacing:.1em}
+.mbar-label span{color:var(--teal)}
+.mbar-track{height:clamp(5px,.8vh,9px);background:var(--bg2);border-radius:99px;overflow:hidden;border:1px solid rgba(0,229,192,.1)}
+.mbar-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--teal2),var(--teal));transition:width 1.1s ease .6s}
+.slide:not(.active) .mbar-fill{width:0!important}
+
+/* === FEATURE ROWS =========================================== */
+.feat-row{display:flex;align-items:flex-start;gap:10px;padding:clamp(8px,1.2vh,12px) 0;border-bottom:1px solid rgba(0,229,192,.07)}
+.feat-icon{font-size:clamp(18px,2.2vw,24px);flex-shrink:0;margin-top:1px}
+.feat-t{font-family:var(--serif);font-size:clamp(15px,1.8vw,20px);color:var(--text);margin-bottom:2px}
+.feat-d{font-size:clamp(12px,1.2vw,14px);color:var(--muted);line-height:1.5}
+
+/* === STORY TABLE ============================================= */
+.story-row{display:grid;grid-template-columns:80px 1fr auto auto;align-items:center;gap:clamp(6px,1.2vw,16px);background:var(--bg2);border:1px solid rgba(0,229,192,.1);border-radius:4px;padding:clamp(6px,1vh,11px) clamp(10px,1.5vw,18px);transition:border-color .2s}
+.story-row:hover{border-color:rgba(0,229,192,.3)}
+.story-id{font-size:clamp(11px,1.1vw,13px);color:var(--teal);letter-spacing:.14em}
+.story-name{font-family:var(--serif);font-size:clamp(14px,1.6vw,18px);color:var(--text)}
+.story-sp{font-size:clamp(11px,1.1vw,13px);color:var(--muted);white-space:nowrap}
+.summary-bar{display:flex;gap:clamp(10px,1.5vw,20px);padding:clamp(8px,1.3vh,14px) clamp(10px,1.5vw,18px);background:rgba(0,229,192,.06);border:1px solid rgba(0,229,192,.2);border-radius:4px;margin-top:clamp(6px,1vh,12px);flex-wrap:wrap}
+.sitem{display:flex;flex-direction:column;gap:2px}
+.sval{font-family:var(--serif);font-size:clamp(22px,3vw,36px);color:var(--teal)}
+.slbl{font-size:clamp(10px,1vw,12px);color:var(--muted);letter-spacing:.16em;text-transform:uppercase}
+.ssep{width:1px;background:rgba(0,229,192,.2);margin:4px 0}
+
+/* === MODAL CARDS ============================================= */
+.modal-card{background:var(--bg2);border:1px solid rgba(0,229,192,.12);border-radius:6px;padding:clamp(8px,1.2vh,13px) clamp(10px,1.4vw,15px);display:flex;flex-direction:column;gap:4px;position:relative;overflow:hidden;transition:border-color .25s,transform .25s}
+.modal-card:hover{border-color:rgba(0,229,192,.35);transform:translateY(-2px)}
+.modal-card::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--teal),transparent)}
+.modal-visual{width:100%;height:clamp(58px,8vh,90px);border-radius:3px;overflow:hidden;background:var(--bg3);border:1px solid rgba(0,229,192,.08);flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.modal-visual svg{width:100%;height:100%;display:block}
+.modal-title{font-family:var(--serif);font-size:clamp(14px,1.6vw,18px);color:var(--text)}
+.modal-desc{font-size:clamp(11px,1.1vw,13px);color:var(--muted);line-height:1.5;flex:1}
+
+/* === ANNOTATION SLIDE ======================================= */
+.ann-img{position:relative;border-radius:4px;overflow:hidden;border:1px solid rgba(0,229,192,.1);flex-shrink:0}
+.ann-dot{position:absolute;width:clamp(14px,1.8vw,22px);height:clamp(14px,1.8vw,22px);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:clamp(12px,1.2vw,14px);font-weight:700;color:#fff;animation:pulse-dot 2s ease-in-out infinite}
+.ann-item{display:flex;align-items:flex-start;gap:7px;font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.5}
+.ann-bullet{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:2px}
+.region-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px}
+.region-cell{padding:clamp(4px,.7vh,7px) 2px;background:rgba(0,229,192,.06);border:1px solid rgba(0,229,192,.12);border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:clamp(9px,1vw,12px);color:rgba(0,229,192,.45);text-align:center;letter-spacing:.04em}
+.region-cell.active{background:rgba(0,229,192,.14);border-color:var(--teal);color:var(--teal)}
+
+/* === ARCH DIAGRAM =========================================== */
+.arch-row{display:flex;align-items:stretch;gap:clamp(6px,1vw,12px)}
+.arch-lbl{font-size:clamp(10px,1vw,12px);color:var(--muted);letter-spacing:.14em;text-transform:uppercase;writing-mode:vertical-rl;transform:rotate(180deg);flex-shrink:0;display:flex;align-items:center;opacity:.55}
+.arch-cards{flex:1;display:flex;gap:clamp(5px,.8vw,10px)}
+.arch-card{flex:1;background:var(--bg2);border:1px solid rgba(0,229,192,.12);border-radius:4px;padding:clamp(6px,1vh,12px) clamp(8px,1.2vw,14px);display:flex;flex-direction:column;gap:2px}
+.arch-card.hi{border-color:rgba(0,229,192,.35);background:rgba(0,229,192,.05)}
+.arch-ct{font-family:var(--serif);font-size:clamp(13px,1.5vw,17px);color:var(--text)}
+.arch-cd{font-size:clamp(11px,1.1vw,13px);color:var(--muted);line-height:1.35}
+.arch-arr{display:flex;align-items:center;justify-content:center;color:rgba(0,229,192,.35);font-size:clamp(10px,1.3vw,14px)}
+
+/* === SAFETY ITEMS =========================================== */
+.safety-item{display:flex;gap:9px;align-items:flex-start;padding:clamp(7px,1.1vh,12px) clamp(10px,1.4vw,15px);background:var(--bg2);border:1px solid rgba(0,229,192,.1);border-radius:4px}
+.sdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.st{font-family:var(--serif);font-size:clamp(15px,1.7vw,20px);color:var(--text);margin-bottom:2px}
+.sd{font-size:clamp(12px,1.2vw,14px);color:var(--muted);line-height:1.5}
+
+/* === REWRITE CARD =========================================== */
+.rw-card{background:var(--bg2);border:1px solid rgba(0,229,192,.15);border-radius:5px;padding:clamp(10px,1.5vh,16px) clamp(12px,1.6vw,18px)}
+.rw-lbl{font-size:clamp(11px,1.1vw,13px);color:var(--muted);letter-spacing:.18em;text-transform:uppercase;margin-bottom:5px}
+.rw-txt{font-size:clamp(13px,1.3vw,15px);line-height:1.55;padding:6px 9px;border-radius:3px;margin-bottom:5px}
+.rw-before{background:rgba(255,107,107,.08);color:#FF9999;border-left:2px solid #FF6B6B}
+.rw-after{background:rgba(0,229,192,.08);color:var(--teal);border-left:2px solid var(--teal)}
+.rw-arrow{text-align:center;color:var(--teal);font-size:14px;margin:3px 0}
+
+/* === PLAN CARD ============================================== */
+.plan-card{background:var(--bg2);border:1px solid rgba(0,229,192,.12);border-radius:5px;padding:clamp(10px,1.6vh,18px) clamp(12px,1.8vw,20px);display:flex;flex-direction:column;gap:5px;position:relative;overflow:hidden}
+.plan-card::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--amber),transparent)}
+.plan-sp{font-family:var(--serif);font-size:clamp(24px,3.5vw,44px);color:var(--amber);line-height:1}
+.plan-t{font-family:var(--serif);font-size:clamp(16px,1.9vw,22px);color:var(--text)}
+.plan-d{font-size:clamp(12px,1.2vw,14px);color:var(--muted);line-height:1.5}
+
+/* === NAV DOTS =============================================== */
+#nav-dots{position:fixed;bottom:clamp(12px,2vh,20px);left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:200}
+.nav-dot{width:5px;height:5px;border-radius:50%;background:var(--muted);opacity:.45;cursor:pointer;transition:all .3s}
+.nav-dot.active{background:var(--teal);opacity:1;transform:scale(1.5)}
+
+/* === INLINE EDIT ============================================ */
+.edit-hint{position:fixed;top:12px;left:12px;z-index:300;font-size:8px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;opacity:.35;pointer-events:none;transition:opacity .3s}
+body:hover .edit-hint{opacity:.6}
+[contenteditable="true"]{outline:1px dashed rgba(0,229,192,.4);border-radius:2px;cursor:text}
+[contenteditable="true"]:focus{outline:1px solid var(--teal);background:rgba(0,229,192,.04)}
+
+/* === S1 TITLE =============================================== */
+#s1 .orb{position:absolute;width:clamp(260px,44vw,540px);height:clamp(260px,44vw,540px);border-radius:50%;background:radial-gradient(circle,rgba(0,229,192,.10) 0%,transparent 70%);top:-14%;right:-7%;animation:breathe 7s ease-in-out infinite;pointer-events:none;z-index:0}
+#s1 .content{position:relative;z-index:1;flex:1;display:grid;grid-template-columns:1.15fr .85fr;align-items:center;gap:clamp(20px,3vw,40px);padding:clamp(20px,3.5vh,48px) clamp(28px,4.5vw,64px)}
+#s1 h1{font-family:var(--serif);font-size:clamp(58px,9vw,118px);color:var(--text);line-height:.88;letter-spacing:-3px;margin:clamp(6px,1.2vh,14px) 0}
+#s1 h1 em{color:var(--teal);font-style:italic}
+#s1 .demo-badge{display:inline-flex;align-items:center;gap:8px;background:var(--teal);color:var(--bg);font-weight:700;font-size:clamp(12px,1.3vw,15px);letter-spacing:.2em;padding:5px 14px;border-radius:2px;margin-bottom:clamp(6px,1.2vh,14px);width:fit-content}
+#s1 .sub{font-size:clamp(14px,1.5vw,18px);color:var(--muted);line-height:1.75;max-width:44ch;margin:clamp(8px,1.5vh,16px) 0}
+#s1 .meta{display:flex;flex-direction:column;gap:4px}
+#s1 .meta-line{font-size:clamp(12px,1.2vw,15px);color:var(--muted);letter-spacing:.1em}
+#s1 .meta-line span{color:var(--teal);margin-right:7px}
+#s1 .ring-wrap{position:relative;width:clamp(180px,26vw,340px);height:clamp(180px,26vw,340px)}
+#s1 .ring{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(0,229,192,.18);animation:spin 24s linear infinite}
+#s1 .ring:nth-child(2){inset:16%;border-color:rgba(0,229,192,.13);animation-duration:18s;animation-direction:reverse}
+#s1 .ring:nth-child(3){inset:32%;border-color:rgba(0,229,192,.22);animation-duration:12s}
+#s1 .core{position:absolute;inset:41%;background:var(--teal);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:clamp(14px,2vw,24px);color:var(--bg);animation:glow 3s ease-in-out infinite}
+#s1 .node{position:absolute;width:6px;height:6px;background:var(--teal);border-radius:50%;opacity:.55;animation:fnl 4s ease-in-out infinite}
+#s1 .node:nth-child(4){top:7%;left:48%}#s1 .node:nth-child(5){top:48%;right:5%;animation-delay:.9s}
+#s1 .node:nth-child(6){bottom:9%;left:28%;animation-delay:1.9s}#s1 .node:nth-child(7){top:30%;left:5%;animation-delay:.5s}
+
+/* === HEIGHT BREAKPOINTS ===================================== */
+@media(max-height:700px){.section-title{font-size:clamp(24px,4vw,44px)}.stat-num{font-size:clamp(20px,3vw,36px)}}
+@media(max-height:600px){.slide-inner{padding:12px 24px}.section-sub{display:none}}
+@media(max-height:500px){.slide-inner{padding:8px 18px}}
+@media(prefers-reduced-motion:reduce){.slide{transition:none}.reveal{opacity:1!important;transform:none!important;transition:none!important}*{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="edit-hint">E = edit · Ctrl+S = save</div>
+<div class="deck" id="deck">
+
+<!-- ===================== SLIDE 1 — TITLE ===================== -->
+<div class="slide active" id="s1">
+  <div class="orb"></div>
+  <div class="content">
+    <div style="display:flex;flex-direction:column">
+      <div class="reveal eyebrow">COMP9900 · Team 9900-W18C-CAKE · UNSW Sydney</div>
+      <div class="reveal demo-badge">▶ FINAL PRESENTATION</div>
+      <h1 class="reveal">Medi<em>Chain</em></h1>
+      <p class="reveal sub">A Multi-Agent Collaborative System for<br>Empathetic Clinical Diagnostic Reasoning</p>
+      <div class="reveal meta">
+        <div class="meta-line"><span>//</span>48 Story Points · 14 User Stories · 2 Sprints</div>
+        <div class="meta-line"><span>//</span>RAG: 47,441 Medical Documents · BioLORD-2023 768d</div>
+        <div class="meta-line"><span>//</span>6 Input Modalities · 3 Languages · Dual Auth Roles</div>
+        <div class="meta-line"><span>//</span>UNSW Sydney · April 2026</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center">
+      <div class="ring-wrap">
+        <div class="ring"></div><div class="ring"></div><div class="ring"></div>
+        <div class="core">Mc</div>
+        <div class="node"></div><div class="node"></div><div class="node"></div><div class="node"></div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 2 — PROBLEM ================== -->
+<div class="slide" id="s2">
+  <div class="slide-inner">
+    <div class="slide-header reveal">
+      <div class="eyebrow">Motivation</div><div class="slide-num">02 / 23</div>
+    </div>
+    <div class="section-title reveal">Problem <em>Background</em></div>
+    <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(14px,2vw,28px);align-items:stretch">
+      <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
+        <div class="reveal" style="font-size:clamp(13px,1.3vw,16px);color:var(--muted);line-height:1.7">
+          Diagnostic errors represent one of the most persistent and costly failures in modern healthcare. Despite advances in medical imaging, EHR systems, and AI-assisted tools, error rates have remained stubbornly high for over two decades.
+        </div>
+        <div class="reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:clamp(6px,1vw,12px)">
+          <div class="stat-card"><div class="stat-num">12M<span style="font-size:.45em;color:var(--muted)">+</span></div><div class="stat-label">Diagnostic errors / year · USA</div><div style="font-size:8px;color:rgba(106,155,181,.6);margin-top:3px">Graber et al., 2013</div></div>
+          <div class="stat-card"><div class="stat-num">22<span style="font-size:.45em;color:var(--muted)">%</span></div><div class="stat-label">Error rate · Internal medicine</div><div style="font-size:8px;color:rgba(106,155,181,.6);margin-top:3px">BMJ Quality & Safety, 2016</div></div>
+          <div class="stat-card"><div class="stat-num">$40<span style="font-size:.45em;color:var(--muted)">B</span></div><div class="stat-label">Annual cost · Diagnostic failures</div><div style="font-size:8px;color:rgba(106,155,181,.6);margin-top:3px">CRICO Strategies, 2021</div></div>
+          <div class="stat-card"><div class="stat-num">71<span style="font-size:.45em;color:var(--muted)">%</span></div><div class="stat-label">GPT-4 accuracy · MedQA bench.</div><div style="font-size:8px;color:rgba(106,155,181,.6);margin-top:3px">Kung et al., 2023</div></div>
+        </div>
+        <div class="reveal" style="padding:clamp(8px,1.3vh,14px);background:rgba(245,166,35,.07);border:1px solid rgba(245,166,35,.2);border-radius:4px;font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.6">
+          <strong style="color:var(--amber)">Critical Gap:</strong> GPT-4's 71% MedQA accuracy falls short of the &gt;90% threshold required for clinical decision support. On rare disease classification the gap widens to &gt;50 percentage points.
+        </div>
+      </div>
+      <!-- Bar chart -->
+      <div class="reveal" style="background:var(--bg2);border:1px solid rgba(0,229,192,.12);border-radius:6px;padding:clamp(10px,1.5vh,18px);display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);letter-spacing:.15em;text-transform:uppercase">Clinical AI Accuracy Gap</div>
+        <svg viewBox="0 0 340 190" style="width:100%;flex:1">
+          <!-- axes -->
+          <line x1="44" y1="10" x2="44" y2="158" stroke="rgba(0,229,192,.2)" stroke-width=".6"/>
+          <line x1="44" y1="158" x2="330" y2="158" stroke="rgba(0,229,192,.2)" stroke-width=".6"/>
+          <!-- Y grid -->
+          <line x1="44" y1="42" x2="330" y2="42" stroke="rgba(0,229,192,.06)" stroke-width=".5" stroke-dasharray="3"/>
+          <line x1="44" y1="100" x2="330" y2="100" stroke="rgba(0,229,192,.06)" stroke-width=".5" stroke-dasharray="3"/>
+          <line x1="44" y1="131" x2="330" y2="131" stroke="rgba(0,229,192,.06)" stroke-width=".5" stroke-dasharray="3"/>
+          <!-- Y labels -->
+          <text x="40" y="14" text-anchor="end" font-family="monospace" font-size="7" fill="#6A9BB5">100%</text>
+          <text x="40" y="45" text-anchor="end" font-family="monospace" font-size="7" fill="#6A9BB5">80%</text>
+          <text x="40" y="103" text-anchor="end" font-family="monospace" font-size="7" fill="#6A9BB5">50%</text>
+          <text x="40" y="134" text-anchor="end" font-family="monospace" font-size="7" fill="#6A9BB5">35%</text>
+          <!-- Target line at 90% -->
+          <line x1="44" y1="26" x2="330" y2="26" stroke="rgba(0,229,192,.55)" stroke-width="1" stroke-dasharray="5 3"/>
+          <text x="332" y="29" font-family="monospace" font-size="6.5" fill="var(--teal)">90% target</text>
+          <!-- Bar 1: Internal Medicine Error Rate (22%) -->
+          <rect x="62" y="123" width="52" height="35" rx="2" fill="var(--rose)" class="bar-v" style="transition-delay:.15s"/>
+          <text x="88" y="119" text-anchor="middle" font-family="monospace" font-size="8.5" fill="var(--rose)" font-weight="bold">22%</text>
+          <text x="88" y="172" text-anchor="middle" font-family="monospace" font-size="6" fill="#6A9BB5">Error Rate</text>
+          <text x="88" y="180" text-anchor="middle" font-family="monospace" font-size="6" fill="#6A9BB5">Internal Med.</text>
+          <!-- Bar 2: GPT-4 MedQA (71%) -->
+          <rect x="134" y="50" width="52" height="108" rx="2" fill="var(--amber)" class="bar-v" style="transition-delay:.3s"/>
+          <text x="160" y="46" text-anchor="middle" font-family="monospace" font-size="8.5" fill="var(--amber)" font-weight="bold">71%</text>
+          <text x="160" y="172" text-anchor="middle" font-family="monospace" font-size="6" fill="#6A9BB5">GPT-4</text>
+          <text x="160" y="180" text-anchor="middle" font-family="monospace" font-size="6" fill="#6A9BB5">MedQA</text>
+          <!-- Bar 3: GPT-4 Rare Disease (~40%) -->
+          <rect x="206" y="97" width="52" height="61" rx="2" fill="rgba(255,107,107,.65)" class="bar-v" style="transition-delay:.45s"/>
+          <text x="232" y="93" text-anchor="middle" font-family="monospace" font-size="8.5" fill="var(--rose)" font-weight="bold">40%</text>
+          <text x="232" y="172" text-anchor="middle" font-family="monospace" font-size="6" fill="#6A9BB5">GPT-4 Rare</text>
+          <text x="232" y="180" text-anchor="middle" font-family="monospace" font-size="6" fill="#6A9BB5">Disease Dx</text>
+          <!-- Bar 4: Clinical target (90%) -->
+          <rect x="278" y="17" width="52" height="141" rx="2" fill="rgba(0,229,192,.25)" stroke="rgba(0,229,192,.5)" stroke-width=".8" class="bar-v" style="transition-delay:.6s"/>
+          <text x="304" y="13" text-anchor="middle" font-family="monospace" font-size="8.5" fill="var(--teal)" font-weight="bold">&gt;90%</text>
+          <text x="304" y="172" text-anchor="middle" font-family="monospace" font-size="6" fill="var(--teal)">Required</text>
+          <text x="304" y="180" text-anchor="middle" font-family="monospace" font-size="6" fill="var(--teal)">Threshold</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 3 — LIMITATIONS ============== -->
+<div class="slide" id="s3">
+  <div class="slide-inner">
+    <div class="slide-header reveal"><div class="eyebrow">Research Gap</div><div class="slide-num">03 / 23</div></div>
+    <div class="section-title reveal">Existing <em>Limitations</em></div>
+    <p class="section-sub reveal">Current AI diagnostic tools fail on at least one of five critical clinical dimensions</p>
+    <div class="reveal" style="flex:1;overflow:hidden">
+      <table class="ctable" style="height:100%">
+        <thead>
+          <tr>
+            <th>Capability</th>
+            <th>GPT-4 (standalone)</th>
+            <th>RAG-only systems</th>
+            <th>Single-agent AI</th>
+            <th style="color:var(--teal)">MediChain (ours)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Hallucination Control</td><td><span class="bad">✗ None — static knowledge</span></td><td><span class="mid">△ Partial — no reasoning check</span></td><td><span class="mid">△ Partial</span></td><td><span class="good">✓ RAG + Critic verification</span></td></tr>
+          <tr><td>Explainable Reasoning</td><td><span class="bad">✗ Black-box output</span></td><td><span class="bad">✗ No chain visible</span></td><td><span class="mid">△ Single-pass only</span></td><td><span class="good">✓ Agent chain + Critic log</span></td></tr>
+          <tr><td>Clinical Safety Rules</td><td><span class="bad">✗ No escalation</span></td><td><span class="bad">✗ No safety layer</span></td><td><span class="bad">✗ None</span></td><td><span class="good">✓ Cardiac · Stroke · Drug</span></td></tr>
+          <tr><td>Multimodal Intake</td><td><span class="mid">△ Image only</span></td><td><span class="bad">✗ Text only</span></td><td><span class="bad">✗ Text only</span></td><td><span class="good">✓ 6 modalities</span></td></tr>
+          <tr><td>Empathetic Dialogue</td><td><span class="bad">✗ Clinical tone only</span></td><td><span class="bad">✗ No dialogue</span></td><td><span class="bad">✗ No empathy layer</span></td><td><span class="good">✓ SOCRATES + warm framing</span></td></tr>
+          <tr><td>Knowledge Currency</td><td><span class="bad">✗ Static training cut-off</span></td><td><span class="good">✓ Dynamic retrieval</span></td><td><span class="bad">✗ Static</span></td><td><span class="good">✓ 47,441 docs · live RAG</span></td></tr>
+          <tr><td>Multi-Disciplinary Review</td><td><span class="bad">✗ Single model pass</span></td><td><span class="bad">✗ No review</span></td><td><span class="bad">✗ Single agent</span></td><td><span class="good">✓ 3-agent: Interview · Dx · Critic</span></td></tr>
+          <tr><td>Verified Citations</td><td><span class="bad">✗ No sources</span></td><td><span class="mid">△ Retrieval only</span></td><td><span class="bad">✗ None</span></td><td><span class="good">✓ PubMed links per diagnosis</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 4 — SOLUTION ================= -->
+<div class="slide" id="s4">
+  <div class="slide-inner">
+    <div class="slide-header reveal"><div class="eyebrow">Our Approach</div><div class="slide-num">04 / 23</div></div>
+    <div class="section-title reveal">MediChain <em>Design</em></div>
+    <p class="section-sub reveal">Four integrated design pillars address each identified limitation simultaneously</p>
+    <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:clamp(8px,1.2vw,16px)">
+      <div class="reveal agent-card">
+        <div class="agent-icon">🤝</div>
+        <div class="agent-name">Multi-Agent Collaboration</div>
+        <div class="agent-role">Clinical Team Simulation</div>
+        <div class="agent-feat">Interviewer collects structured symptoms via SOCRATES framework</div>
+        <div class="agent-feat">Diagnostician proposes ranked differential diagnoses with evidence</div>
+        <div class="agent-feat">Critic verifies reasoning, flags safety risks, prevents hallucination</div>
+      </div>
+      <div class="reveal agent-card">
+        <div class="agent-icon">📚</div>
+        <div class="agent-name">Knowledge Grounding (RAG)</div>
+        <div class="agent-role">Evidence-Based Reasoning</div>
+        <div class="agent-feat">47,441 PubMed abstracts + clinical guidelines in Qdrant vector DB</div>
+        <div class="agent-feat">BioLORD-2023 biomedical embeddings (768d) + BM25 hybrid search</div>
+        <div class="agent-feat">Every diagnosis backed by clickable PubMed citation with relevance score</div>
+      </div>
+      <div class="reveal agent-card">
+        <div class="agent-icon">🔍</div>
+        <div class="agent-name">Explainable Reasoning</div>
+        <div class="agent-role">Clinical Auditability</div>
+        <div class="agent-feat">Full agent reasoning chain visible in Results → Reasoning tab</div>
+        <div class="agent-feat">Critic verdict displayed alongside every diagnostic conclusion</div>
+        <div class="agent-feat">Session exportable as PDF / JSON for clinical record keeping</div>
+      </div>
+      <div class="reveal agent-card">
+        <div class="agent-icon">💙</div>
+        <div class="agent-name">Empathetic Interaction</div>
+        <div class="agent-role">Patient-Centred Design</div>
+        <div class="agent-feat">Warm language conventions — acknowledges concerns before asking questions</div>
+        <div class="agent-feat">LLM rewrites patient lay language to medical terminology for RAG</div>
+        <div class="agent-feat">Multilingual: EN / 中文 / 日本語 across all UI and agent responses</div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 5 — ARCHITECTURE ============= -->
+<div class="slide" id="s5">
+  <div class="slide-inner">
+    <div class="slide-header reveal"><div class="eyebrow">System Design</div><div class="slide-num">05 / 23</div></div>
+    <div class="section-title reveal">System <em>Architecture</em></div>
+    <p class="section-sub reveal">Five-layer architecture — each layer independently testable and horizontally scalable</p>
+    <div style="flex:1;display:flex;flex-direction:column;gap:clamp(5px,.9vh,10px);justify-content:center">
+      <div class="reveal arch-row">
+        <div class="arch-lbl">User</div>
+        <div class="arch-cards">
+          <div class="arch-card hi"><div class="arch-ct">React + Vite Frontend<span class="new-tag">Enhanced</span></div><div class="arch-cd">Symptom Input · Chat UI · Results Dashboard · History</div></div>
+          <div class="arch-card hi"><div class="arch-ct">Multimodal Zone<span class="new-tag">New</span></div><div class="arch-cd">DICOM · Video · OCR · Audio · PDF · Compare</div></div>
+          <div class="arch-card hi"><div class="arch-ct">i18n + RBAC<span class="new-tag">New</span></div><div class="arch-cd">EN / ZH / JA · Patient view · Provider view</div></div>
+        </div>
+      </div>
+      <div class="arch-arr reveal">▼</div>
+      <div class="reveal arch-row">
+        <div class="arch-lbl">API</div>
+        <div class="arch-cards">
+          <div class="arch-card"><div class="arch-ct">FastAPI REST</div><div class="arch-cd">Session routing · File upload · Export</div></div>
+          <div class="arch-card hi"><div class="arch-ct">Multimodal API<span class="new-tag">New</span></div><div class="arch-cd">/analyze/file · /analyze/ocr · /analyze/compare</div></div>
+          <div class="arch-card hi"><div class="arch-ct">JWT Auth<span class="new-tag">New</span></div><div class="arch-cd">Role claims · /api/provider/* guard</div></div>
+        </div>
+      </div>
+      <div class="arch-arr reveal">▼</div>
+      <div class="reveal arch-row">
+        <div class="arch-lbl">Agents</div>
+        <div class="arch-cards">
+          <div class="arch-card"><div class="arch-ct">Interviewer Agent</div><div class="arch-cd">SOCRATES · Empathetic framing · Multimodal context</div></div>
+          <div class="arch-card"><div class="arch-ct">Diagnostician Agent</div><div class="arch-cd">Differential Dx · RAG citations · Confidence ranking</div></div>
+          <div class="arch-card hi"><div class="arch-ct">Critic Agent<span class="new-tag">Enhanced</span></div><div class="arch-cd">Safety rules · Hallucination check · Drug conflicts</div></div>
+        </div>
+      </div>
+      <div class="arch-arr reveal">▼</div>
+      <div class="reveal arch-row">
+        <div class="arch-lbl">Knowledge</div>
+        <div class="arch-cards">
+          <div class="arch-card hi"><div class="arch-ct">Qdrant Vector DB<span class="new-tag">Upgraded</span></div><div class="arch-cd">47,441 docs · BioLORD 768d Dense + BM25 Sparse + RRF</div></div>
+          <div class="arch-card hi"><div class="arch-ct">LLM Rewriter<span class="new-tag">New</span></div><div class="arch-cd">Patient lang → SNOMED/MeSH terms · 3-variant expansion</div></div>
+          <div class="arch-card"><div class="arch-ct">SQLite Persistence</div><div class="arch-cd">Sessions · Messages · Users · Uploads</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 6 — THREE-AGENT ============== -->
+<div class="slide" id="s6">
+  <div class="slide-inner">
+    <div class="slide-header reveal"><div class="eyebrow">Core Innovation</div><div class="slide-num">06 / 23</div></div>
+    <div class="section-title reveal">Three-Agent <em>Design</em></div>
+    <p class="section-sub reveal">Specialised agents operate in sequence, each with a distinct clinical role — mirroring real multi-disciplinary team consultation</p>
+    <div style="flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:clamp(10px,1.5vw,20px);align-items:stretch">
+      <div class="reveal agent-card" style="border-top:3px solid var(--teal)">
+        <div class="agent-icon">🩺</div>
+        <div class="agent-name">Interviewer</div>
+        <div class="agent-role">Patient Intake Specialist</div>
+        <div style="height:1px;background:rgba(0,229,192,.2);margin:4px 0"></div>
+        <div class="agent-feat">Opens with empathetic acknowledgement</div>
+        <div class="agent-feat">Applies SOCRATES framework: Site · Onset · Character · Radiation · Associated symptoms · Timing · Exacerbating factors · Severity</div>
+        <div class="agent-feat">Accepts text, voice, video, images as context</div>
+        <div class="agent-feat">Decides when sufficient info collected → hands to Diagnostician</div>
+        <div style="margin-top:auto;padding-top:8px">
+          <div class="badge badge-teal" style="font-size:11px">Claude claude-sonnet-4-6</div>
+        </div>
+      </div>
+      <div class="reveal agent-card" style="border-top:3px solid var(--amber)">
+        <div class="agent-icon">🔬</div>
+        <div class="agent-name">Diagnostician</div>
+        <div class="agent-role">Evidence-Based Diagnosis</div>
+        <div style="height:1px;background:rgba(245,166,35,.2);margin:4px 0"></div>
+        <div class="agent-feat">Receives full symptom context from Interviewer</div>
+        <div class="agent-feat">Fires 3–4 Qdrant hybrid queries via LLM rewrite pipeline</div>
+        <div class="agent-feat">Produces ranked differential: condition · probability · evidence</div>
+        <div class="agent-feat">Attaches PubMed citation for every claim made</div>
+        <div style="margin-top:auto;padding-top:8px">
+          <div class="badge badge-amber" style="font-size:11px">RAG-augmented · 47K docs</div>
+        </div>
+      </div>
+      <div class="reveal agent-card" style="border-top:3px solid var(--rose)">
+        <div class="agent-icon">⚖️</div>
+        <div class="agent-name">Critic</div>
+        <div class="agent-role">Clinical Safety Verifier</div>
+        <div style="height:1px;background:rgba(255,107,107,.2);margin:4px 0"></div>
+        <div class="agent-feat">Reviews Diagnostician's full reasoning chain</div>
+        <div class="agent-feat">Checks: logic consistency · evidence alignment · hallucination markers</div>
+        <div class="agent-feat">Hard-coded safety triggers: STEMI · Stroke FAST · drug interactions</div>
+        <div class="agent-feat">Issues verdict: "Consistent" or specific objection with reasoning</div>
+        <div style="margin-top:auto;padding-top:8px">
+          <div class="badge badge-rose" style="font-size:11px">Safety rules · Hard-coded</div>
+        </div>
+      </div>
+    </div>
+    <!-- flow arrow -->
+    <div class="reveal" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:clamp(6px,1vh,12px);font-size:clamp(13px,1.3vw,15px);color:var(--muted);letter-spacing:.12em">
+      <span style="color:var(--teal)">Patient</span>
+      <span>→</span><span style="color:var(--teal)">Interviewer</span>
+      <span>→</span><span style="color:var(--amber)">Diagnostician</span>
+      <span>→</span><span style="color:var(--rose)">Critic</span>
+      <span>→</span><span style="color:var(--teal)">Results + Citations</span>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 7 — DELIVERY ================= -->
+<div class="slide" id="s7">
+  <div class="slide-inner">
+    <div class="slide-header reveal"><div class="eyebrow">Project Delivery</div><div class="slide-num">07 / 23</div></div>
+    <div class="section-title reveal">Delivery <em>Summary</em></div>
+    <p class="section-sub reveal">14 user stories · 48 story points · 2 sprints · all targets met on schedule</p>
+    <div style="flex:1;display:flex;flex-direction:column;gap:clamp(5px,.8vh,9px)">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:clamp(5px,.8vw,10px)">
+        <div class="reveal" style="padding:clamp(4px,.8vh,8px) clamp(8px,1.2vw,14px);background:rgba(0,229,192,.05);border:1px solid rgba(0,229,192,.2);border-radius:3px;font-size:clamp(13px,1.3vw,15px);color:var(--teal);letter-spacing:.15em">SPRINT 1 — Weeks 3–5 · 13 SP</div>
+        <div class="reveal" style="padding:clamp(4px,.8vh,8px) clamp(8px,1.2vw,14px);background:rgba(245,166,35,.05);border:1px solid rgba(245,166,35,.2);border-radius:3px;font-size:clamp(13px,1.3vw,15px);color:var(--amber);letter-spacing:.15em">SPRINT 2 — Weeks 5–8 · 35 SP</div>
+      </div>
+      <div class="reveal story-row"><div class="story-id">PROJ-1</div><div class="story-name">Symptom Input UI + Session Init API</div><div class="story-sp">4 SP</div><div class="badge badge-done">Done</div></div>
+      <div class="reveal story-row"><div class="story-id">PROJ-2–3</div><div class="story-name">Patient Chat UI + Multi-Agent Coordinator Logic</div><div class="story-sp">5 SP</div><div class="badge badge-done">Done</div></div>
+      <div class="reveal story-row"><div class="story-id">PROJ-4–6</div><div class="story-name">Reasoning Display Panel + DB Schema + RAG Foundation</div><div class="story-sp">4 SP</div><div class="badge badge-done">Done</div></div>
+      <div class="reveal story-row" style="border-color:rgba(245,166,35,.2)"><div class="story-id">PROJ-7</div><div class="story-name">RAG 2.0 — Qdrant Hybrid Search (Dense + BM25 + RRF)</div><div class="story-sp">8 SP</div><div class="badge badge-done">Done</div></div>
+      <div class="reveal story-row" style="border-color:rgba(245,166,35,.2)"><div class="story-id">PROJ-8</div><div class="story-name">Multimodal Input — DICOM, Audio, Video, PDF, OCR</div><div class="story-sp">8 SP</div><div class="badge badge-done">Done</div></div>
+      <div class="reveal story-row" style="border-color:rgba(245,166,35,.2)"><div class="story-id">PROJ-9</div><div class="story-name">Dual Authentication (Patient / Provider) + JWT RBAC</div><div class="story-sp">5 SP</div><div class="badge badge-done">Done</div></div>
+      <div class="reveal story-row" style="border-color:rgba(245,166,35,.2)"><div class="story-id">PROJ-10</div><div class="story-name">AI Image Annotation — 9-region JSON overlay</div><div class="story-sp">4 SP</div><div class="badge badge-done">Done</div></div>
+      <div class="reveal story-row" style="border-color:rgba(245,166,35,.2)"><div class="story-id">PROJ-11–14</div><div class="story-name">Safety Rules · Empathetic AI · i18n (3 langs) · Session Export</div><div class="story-sp">10 SP</div><div class="badge badge-done">Done</div></div>
+      <div class="reveal summary-bar">
+        <div class="sitem"><div class="sval">48</div><div class="slbl">Total SP</div></div><div class="ssep"></div>
+        <div class="sitem"><div class="sval">14</div><div class="slbl">User Stories</div></div><div class="ssep"></div>
+        <div class="sitem"><div class="sval">47,441</div><div class="slbl">RAG Docs</div></div><div class="ssep"></div>
+        <div class="sitem"><div class="sval">6</div><div class="slbl">Modalities</div></div><div class="ssep"></div>
+        <div class="sitem"><div class="sval">3</div><div class="slbl">Languages</div></div><div class="ssep"></div>
+        <div class="sitem"><div class="sval">4</div><div class="slbl">New Endpoints</div></div><div class="ssep"></div>
+        <div class="sitem"><div class="sval">2</div><div class="slbl">Auth Roles</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 8 — RAG 2.0 OVERVIEW ======== -->
+<div class="slide" id="s8">
+  <div class="slide-inner">
+    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-7</div><div class="slide-num">08 / 23</div></div>
+    <div class="section-title reveal">RAG <em>2.0</em></div>
+    <p class="section-sub reveal">ChromaDB → Qdrant embedded · BioLORD-2023 768d + BM25 sparse + RRF · 9.4× knowledge growth</p>
+    <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,28px);align-items:stretch">
+      <!-- Left: comparison chart -->
+      <div class="reveal" style="background:var(--bg2);border:1px solid rgba(0,229,192,.12);border-radius:6px;padding:clamp(10px,1.5vh,16px);display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);letter-spacing:.15em;text-transform:uppercase">Demo A vs Demo B — Key Metrics</div>
+        <svg viewBox="0 0 300 200" style="width:100%;flex:1">
+          <!-- Axis -->
+          <line x1="100" y1="10" x2="100" y2="185" stroke="rgba(0,229,192,.2)" stroke-width=".6"/>
+          <line x1="100" y1="185" x2="295" y2="185" stroke="rgba(0,229,192,.2)" stroke-width=".6"/>
+          <line x1="295" y1="185" x2="295" y2="10" stroke="rgba(0,229,192,.08)" stroke-width=".4" stroke-dasharray="2"/>
+          <text x="197" y="195" text-anchor="middle" font-family="monospace" font-size="6" fill="#6A9BB5">0%  →  100% of Demo B</text>
+          <!-- Row 1: Knowledge Base (Demo A = 10.5%, Demo B = 100%) -->
+          <text x="96" y="30" text-anchor="end" font-family="monospace" font-size="6.5" fill="var(--text2)">Knowledge Base</text>
+          <rect x="101" y="22" width="20" height="9" rx="1" fill="rgba(255,107,107,.55)" class="bar-h" style="transition-delay:.1s"/>
+          <rect x="101" y="33" width="191" height="9" rx="1" fill="var(--teal)" class="bar-h" style="transition-delay:.15s"/>
+          <text x="124" y="30.5" font-family="monospace" font-size="5.5" fill="white">~5K</text>
+          <text x="220" y="40.5" font-family="monospace" font-size="5.5" fill="var(--bg)">47,441</text>
+          <!-- Row 2: Embedding Dimensions (384/768 = 50%) -->
+          <text x="96" y="60" text-anchor="end" font-family="monospace" font-size="6.5" fill="var(--text2)">Embedding Dims</text>
+          <rect x="101" y="52" width="95" height="9" rx="1" fill="rgba(255,107,107,.55)" class="bar-h" style="transition-delay:.25s"/>
+          <rect x="101" y="63" width="191" height="9" rx="1" fill="var(--teal)" class="bar-h" style="transition-delay:.3s"/>
+          <text x="150" y="60.5" font-family="monospace" font-size="5.5" fill="white">384d</text>
+          <text x="200" y="70.5" font-family="monospace" font-size="5.5" fill="var(--bg)">768d</text>
+          <!-- Row 3: Query variants (1/4 = 25%) -->
+          <text x="96" y="90" text-anchor="end" font-family="monospace" font-size="6.5" fill="var(--text2)">Query Variants</text>
+          <rect x="101" y="82" width="47" height="9" rx="1" fill="rgba(255,107,107,.55)" class="bar-h" style="transition-delay:.4s"/>
+          <rect x="101" y="93" width="191" height="9" rx="1" fill="var(--teal)" class="bar-h" style="transition-delay:.45s"/>
+          <text x="126" y="90.5" font-family="monospace" font-size="5.5" fill="white">1</text>
+          <text x="200" y="100.5" font-family="monospace" font-size="5.5" fill="var(--bg)">3–4</text>
+          <!-- Row 4: Search methods (1/3 = 33%) -->
+          <text x="96" y="120" text-anchor="end" font-family="monospace" font-size="6.5" fill="var(--text2)">Search Methods</text>
+          <rect x="101" y="112" width="63" height="9" rx="1" fill="rgba(255,107,107,.55)" class="bar-h" style="transition-delay:.55s"/>
+          <rect x="101" y="123" width="191" height="9" rx="1" fill="var(--teal)" class="bar-h" style="transition-delay:.6s"/>
+          <text x="133" y="120.5" font-family="monospace" font-size="5.5" fill="white">Cosine</text>
+          <text x="185" y="130.5" font-family="monospace" font-size="5.5" fill="var(--bg)">Dense+BM25+RRF</text>
+          <!-- Row 5: Recall threshold inverted (lower = better: 0.15 vs 0.25) -->
+          <text x="96" y="150" text-anchor="end" font-family="monospace" font-size="6.5" fill="var(--text2)">Recall Coverage</text>
+          <rect x="101" y="142" width="95" height="9" rx="1" fill="rgba(255,107,107,.55)" class="bar-h" style="transition-delay:.7s"/>
+          <rect x="101" y="153" width="191" height="9" rx="1" fill="var(--teal)" class="bar-h" style="transition-delay:.75s"/>
+          <text x="150" y="150.5" font-family="monospace" font-size="5.5" fill="white">thr=0.25</text>
+          <text x="195" y="160.5" font-family="monospace" font-size="5.5" fill="var(--bg)">thr=0.15 ↑recall</text>
+          <!-- Legend -->
+          <rect x="101" y="175" width="10" height="6" rx="1" fill="rgba(255,107,107,.55)"/>
+          <text x="115" y="180" font-family="monospace" font-size="5.5" fill="var(--rose)">Demo A (ChromaDB)</text>
+          <rect x="190" y="175" width="10" height="6" rx="1" fill="var(--teal)"/>
+          <text x="204" y="180" font-family="monospace" font-size="5.5" fill="var(--teal)">Demo B (Qdrant)</text>
+        </svg>
+      </div>
+      <!-- Right: stat cards -->
+      <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
+        <div class="reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:clamp(6px,1vw,12px)">
+          <div class="stat-card"><div class="stat-num">9.4×</div><div class="stat-label">Knowledge base growth</div></div>
+          <div class="stat-card"><div class="stat-num">2×</div><div class="stat-label">Richer embeddings</div></div>
+          <div class="stat-card"><div class="stat-num">3</div><div class="stat-label">Search methods fused</div></div>
+          <div class="stat-card"><div class="stat-num">4</div><div class="stat-label">Query variants/search</div></div>
+        </div>
+        <div class="reveal" style="padding:clamp(8px,1.3vh,14px);background:rgba(0,229,192,.05);border:1px solid rgba(0,229,192,.2);border-radius:4px;font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.65">
+          <strong style="color:var(--teal)">Why BioLORD-2023?</strong><br>
+          Pre-trained on SNOMED CT, MeSH, and UMLS ontology pairs. Unlike all-MiniLM-L6-v2, BioLORD natively understands that <em>"heart attack"</em> = <em>"myocardial infarction"</em> = <em>"AMI"</em> — without keyword overlap.
+        </div>
+        <div class="reveal" style="padding:clamp(8px,1.3vh,14px);background:rgba(0,229,192,.05);border:1px solid rgba(0,229,192,.2);border-radius:4px;font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.65">
+          <strong style="color:var(--teal)">Why Hybrid Search?</strong><br>
+          Dense vectors excel at semantic matching; BM25 excels at exact clinical term matching. RRF score = Σ 1/(k+rank) fuses both rankings — consistently outperforms either method alone across biomedical IR benchmarks.
+        </div>
+        <div class="reveal" style="padding:clamp(8px,1.3vh,14px);background:rgba(0,229,192,.05);border:1px solid rgba(0,229,192,.2);border-radius:4px;font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.65">
+          <strong style="color:var(--teal)">New: <code>/api/rag/ingest</code> <span class="new-tag">NEW</span></strong><br>
+          POST endpoint — triggers on-demand PubMed fetch and embedding without restart. Default: 60+ ICD-10 search terms covering all major clinical specialties. Custom terms accepted via request body.
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 9 — RAG PIPELINE ============= -->
+<div class="slide" id="s9">
+  <div class="slide-inner">
+    <div class="slide-header reveal"><div class="eyebrow">RAG Detail</div><div class="slide-num">09 / 23</div></div>
+    <div class="section-title reveal">Query <em>Pipeline</em></div>
+    <p class="section-sub reveal">6-stage pipeline from patient language to PubMed-cited diagnostic output — including multimodal image rewriting</p>
+    <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,24px);align-items:stretch">
+      <div style="display:flex;flex-direction:column;gap:clamp(6px,1vh,11px)">
+        <div class="reveal pipe-step">
+          <div class="pipe-num">00</div>
+          <div><div class="pipe-t">Image Findings → Medical Terms <span class="new-tag">NEW</span></div>
+          <div class="pipe-d">Claude Vision analyses uploaded images → raw finding text → <code style="color:var(--teal)">rewrite_image_findings_for_rag()</code> → comma-separated SNOMED terms injected into RAG query</div></div>
+        </div>
+        <div class="reveal pipe-step">
+          <div class="pipe-num">01</div>
+          <div><div class="pipe-t">LLM Query Rewrite</div>
+          <div class="pipe-d"><span style="color:rgba(255,153,153,.8)">"chest tightens when climbing stairs"</span><br>→ <span style="color:var(--teal)">"stable angina, exertional chest pain, cardiac ischaemia, coronary artery disease"</span><br>Maps lay language to SNOMED CT / MeSH controlled vocabulary</div></div>
+        </div>
+        <div class="reveal pipe-step">
+          <div class="pipe-num">02</div>
+          <div><div class="pipe-t">3-Variant Query Expansion</div>
+          <div class="pipe-d">① Raw patient text  ② Medical rewrite  ③ "treatment and diagnosis of {term}"  ④ "What is {term}?"<br>Deduplicated set submitted in parallel to Qdrant</div></div>
+        </div>
+        <div class="reveal pipe-step">
+          <div class="pipe-num">03</div>
+          <div><div class="pipe-t">Qdrant Hybrid Search</div>
+          <div class="pipe-d">For each variant: Dense (BioLORD cosine similarity) + BM25 sparse run in parallel — captures semantic similarity AND exact clinical term occurrences</div></div>
+        </div>
+        <div class="reveal pipe-step">
+          <div class="pipe-num">04</div>
+          <div><div class="pipe-t">RRF Fusion → Top 6</div>
+          <div class="pipe-d">score = Σ 1/(k+rank) across all query variants · Threshold 0.15 · Deduplication by document ID · Documents appearing in multiple queries rank highest</div></div>
+        </div>
+        <div class="reveal pipe-step">
+          <div class="pipe-num">05</div>
+          <div><div class="pipe-t">Cited Diagnostic Output</div>
+          <div class="pipe-d">Each diagnosis: condition name · probability · supporting passages · PubMed ID · authors · year · relevance score · clickable link</div></div>
+        </div>
+      </div>
+      <!-- Right: corpus detail -->
+      <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
+        <div class="reveal" style="background:var(--bg2);border:1px solid rgba(0,229,192,.15);border-radius:6px;padding:clamp(10px,1.5vh,16px)">
+          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);letter-spacing:.15em;text-transform:uppercase;margin-bottom:8px">Knowledge Corpus — 47,441 Documents</div>
+          <svg viewBox="0 0 260 130" style="width:100%">
+            <!-- Horizontal stacked bar showing corpus composition -->
+            <text x="0" y="18" font-family="monospace" font-size="6.5" fill="var(--text2)">PubMed Abstracts</text>
+            <rect x="0" y="22" width="195" height="10" rx="2" fill="var(--teal)" class="bar-h" style="transition-delay:.2s"/>
+            <text x="198" y="30" font-family="monospace" font-size="6.5" fill="var(--teal)">~41K</text>
+            <text x="0" y="48" font-family="monospace" font-size="6.5" fill="var(--text2)">Clinical Guidelines</text>
+            <rect x="0" y="52" width="58" height="10" rx="2" fill="var(--amber)" class="bar-h" style="transition-delay:.35s"/>
+            <text x="61" y="60" font-family="monospace" font-size="6.5" fill="var(--amber)">~5K</text>
+            <text x="0" y="78" font-family="monospace" font-size="6.5" fill="var(--text2)">Case Reports</text>
+            <rect x="0" y="82" width="14" height="10" rx="2" fill="var(--rose)" class="bar-h" style="transition-delay:.5s"/>
+            <text x="17" y="90" font-family="monospace" font-size="6.5" fill="var(--rose)">~1.4K</text>
+            <!-- Categories -->
+            <text x="0" y="112" font-family="monospace" font-size="5.5" fill="rgba(106,155,181,.6)">Coverage: Cardiology · Neurology · Oncology · Infectious Disease · Internal Med. · Rare Diseases</text>
+          </svg>
+        </div>
+        <div class="reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:clamp(6px,1vw,10px)">
+          <div class="stat-card"><div class="stat-num">768</div><div class="stat-label">Embedding dims per doc</div></div>
+          <div class="stat-card"><div class="stat-num">36M</div><div class="stat-label">Total float32 values</div></div>
+        </div>
+        <div class="reveal" style="padding:clamp(8px,1.2vh,13px);background:rgba(245,166,35,.06);border:1px solid rgba(245,166,35,.2);border-radius:4px;font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.6">
+          <strong style="color:var(--amber)">Ingestion:</strong> 47,441 documents processed via Qdrant Python client · BioLORD-2023 encoder batch inference · payload stored: title, authors, year, PMID, excerpt
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 10 — MULTIMODAL ============== -->
+<div class="slide" id="s10">
+  <div class="slide-inner">
+    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-8</div><div class="slide-num">10 / 23</div></div>
+    <div class="section-title reveal">Multimodal <em>Input</em></div>
+    <p class="section-sub reveal">6 clinical input modalities — unified preprocessing pipeline → Claude Vision / Speech / Text agents</p>
+    <div style="flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(6px,1vw,12px)">
+
+      <div class="reveal modal-card">
+        <div class="modal-visual">
+          <svg viewBox="0 0 200 86" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="86" fill="#060E1A"/>
+          <ellipse cx="100" cy="43" rx="78" ry="36" fill="none" stroke="#2A4A60" stroke-width="1.5"/>
+          <ellipse cx="72" cy="40" rx="25" ry="21" fill="rgba(20,80,100,.35)" stroke="#1A6080" stroke-width=".8"/>
+          <ellipse cx="128" cy="40" rx="25" ry="21" fill="rgba(20,80,100,.35)" stroke="#1A6080" stroke-width=".8"/>
+          <ellipse cx="100" cy="46" rx="15" ry="17" fill="rgba(50,20,20,.6)" stroke="#603030" stroke-width=".8"/>
+          <path d="M52,27 Q100,17 148,27" fill="none" stroke="#3A6070" stroke-width=".7" opacity=".7"/>
+          <path d="M48,38 Q100,26 152,38" fill="none" stroke="#3A6070" stroke-width=".7" opacity=".6"/>
+          <path d="M47,50 Q100,38 153,50" fill="none" stroke="#3A6070" stroke-width=".7" opacity=".5"/>
+          <text x="6" y="11" font-family="monospace" font-size="5" fill="#00E5C0" opacity=".55">HU:-1000 pydicom</text>
+          <text x="6" y="78" font-family="monospace" font-size="5" fill="#00E5C0" opacity=".45">DCM 512×512</text>
+          <line x1="20" y1="43" x2="180" y2="43" stroke="rgba(0,229,192,.18)" stroke-width=".5"><animate attributeName="y1" values="10;76;10" dur="3s" repeatCount="indefinite"/><animate attributeName="y2" values="10;76;10" dur="3s" repeatCount="indefinite"/></line>
+          </svg>
+        </div>
+        <div class="modal-title">DICOM Medical Imaging</div>
+        <div class="modal-desc">.dcm → pydicom → pixel normalise → JPEG → Claude Vision · HU metadata extracted</div>
+        <div class="badge badge-teal">New</div>
+      </div>
+
+      <div class="reveal modal-card">
+        <div class="modal-visual">
+          <svg viewBox="0 0 200 86" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="86" fill="#060E1A"/>
+          <rect x="10" y="7" width="180" height="72" rx="3" fill="#0D1F35" stroke="#1E3A52" stroke-width="1"/>
+          <ellipse cx="100" cy="43" rx="53" ry="30" fill="rgba(30,60,90,.7)"/>
+          <ellipse cx="82" cy="38" rx="17" ry="18" fill="rgba(0,180,150,.22)" stroke="rgba(0,229,192,.3)" stroke-width=".5"/>
+          <ellipse cx="118" cy="38" rx="17" ry="18" fill="rgba(0,180,150,.22)" stroke="rgba(0,229,192,.3)" stroke-width=".5"/>
+          <circle cx="76" cy="28" r="5" fill="rgba(255,107,107,.9)" stroke="#fff" stroke-width=".5"><animate attributeName="r" values="5;6.5;5" dur="2s" repeatCount="indefinite"/></circle>
+          <text x="76" y="31.5" font-family="monospace" font-size="5.5" fill="white" text-anchor="middle">1</text>
+          <circle cx="125" cy="36" r="5" fill="rgba(0,229,192,.9)" stroke="#fff" stroke-width=".5"><animate attributeName="r" values="5;6.5;5" dur="2s" begin=".7s" repeatCount="indefinite"/></circle>
+          <text x="125" y="39.5" font-family="monospace" font-size="5.5" fill="#060E1A" text-anchor="middle">2</text>
+          <circle cx="100" cy="60" r="5" fill="rgba(245,166,35,.9)" stroke="#fff" stroke-width=".5"><animate attributeName="r" values="5;6.5;5" dur="2s" begin="1.4s" repeatCount="indefinite"/></circle>
+          <text x="100" y="63.5" font-family="monospace" font-size="5.5" fill="#060E1A" text-anchor="middle">3</text>
+          <text x="152" y="76" font-family="monospace" font-size="5" fill="#00E5C0" opacity=".5">9-region</text>
+          </svg>
+        </div>
+        <div class="modal-title">Image Analysis + Annotation</div>
+        <div class="modal-desc">Claude Vision → ANNOTATIONS_JSON · 9-region grid · numbered dots · hover tooltips</div>
+        <div class="badge badge-teal">Enhanced</div>
+      </div>
+
+      <div class="reveal modal-card">
+        <div class="modal-visual">
+          <svg viewBox="0 0 200 86" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="86" fill="#060E1A"/>
+          <rect x="8" y="5" width="118" height="66" rx="4" fill="#0A1628" stroke="#1E3A52" stroke-width="1"/>
+          <path d="M16,13 L16,7 L22,7" fill="none" stroke="#00E5C0" stroke-width="1.5"/>
+          <path d="M118,13 L118,7 L112,7" fill="none" stroke="#00E5C0" stroke-width="1.5"/>
+          <path d="M16,65 L16,71 L22,71" fill="none" stroke="#00E5C0" stroke-width="1.5"/>
+          <path d="M118,65 L118,71 L112,71" fill="none" stroke="#00E5C0" stroke-width="1.5"/>
+          <ellipse cx="67" cy="33" rx="17" ry="19" fill="rgba(30,60,80,.55)" stroke="rgba(0,229,192,.18)" stroke-width=".5"/>
+          <ellipse cx="67" cy="58" rx="29" ry="11" fill="rgba(30,60,80,.35)"/>
+          <circle cx="19" cy="15" r="4" fill="#FF6B6B" opacity=".9"><animate attributeName="opacity" values=".9;.2;.9" dur="1s" repeatCount="indefinite"/></circle>
+          <text x="26" y="18" font-family="monospace" font-size="6" fill="#FF6B6B">REC</text>
+          <rect x="8" y="60" width="118" height="11" fill="rgba(0,0,0,.5)"/>
+          <text x="13" y="68.5" font-family="monospace" font-size="4.5" fill="white" opacity=".8" font-style="italic">"chest tightens when..."</text>
+          <rect x="134" y="5" width="58" height="66" rx="2" fill="#060E1A" stroke="#1E3A52" stroke-width=".5"/>
+          <text x="163" y="15" font-family="monospace" font-size="5" fill="#6A9BB5" text-anchor="middle">FRAMES</text>
+          <rect x="138" y="19" width="50" height="11" rx="1" fill="#0D1F35" stroke="rgba(0,229,192,.3)" stroke-width=".5"><animate attributeName="opacity" values="1;.5;1" dur="1s" repeatCount="indefinite"/></rect>
+          <text x="163" y="28" font-family="monospace" font-size="5.5" fill="#00E5C0" text-anchor="middle">Frame 1 ✓</text>
+          <rect x="138" y="33" width="50" height="11" rx="1" fill="#0D1F35" stroke="rgba(0,229,192,.3)" stroke-width=".5"/>
+          <text x="163" y="42" font-family="monospace" font-size="5.5" fill="#00E5C0" text-anchor="middle">Frame 2 ✓</text>
+          <rect x="138" y="47" width="50" height="11" rx="1" fill="#0D1F35" stroke="rgba(0,229,192,.1)" stroke-width=".5" stroke-dasharray="2"/>
+          <text x="163" y="56" font-family="monospace" font-size="5.5" fill="#3A6070" text-anchor="middle">+5 s →</text>
+          <text x="163" y="74" font-family="monospace" font-size="5" fill="#6A9BB5" text-anchor="middle">max 6 frames</text>
+          </svg>
+        </div>
+        <div class="modal-title">Video Frame Consultation</div>
+        <div class="modal-desc">Webcam + speech · frame every 5 s · max 6 · transcript + analyses bundled to chat</div>
+        <div class="badge badge-teal">New</div>
+      </div>
+
+      <div class="reveal modal-card">
+        <div class="modal-visual">
+          <svg viewBox="0 0 200 86" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="86" fill="#060E1A"/>
+          <rect x="20" y="5" width="66" height="76" rx="3" fill="#0D1F35" stroke="#1E3A52" stroke-width="1"/>
+          <polygon points="68,5 86,5 86,23" fill="#060E1A"/>
+          <polygon points="68,5 68,23 86,23" fill="#183050" stroke="#1E3A52" stroke-width=".5"/>
+          <rect x="26" y="12" width="28" height="10" rx="2" fill="rgba(245,166,35,.2)" stroke="rgba(245,166,35,.4)" stroke-width=".5"/>
+          <text x="40" y="20" font-family="monospace" font-size="6" fill="#F5A623" text-anchor="middle" font-weight="bold">PDF</text>
+          <rect x="26" y="27" width="50" height="2.5" rx="1" fill="rgba(168,200,216,.5)"/>
+          <rect x="26" y="33" width="42" height="2.5" rx="1" fill="rgba(168,200,216,.4)"/>
+          <rect x="26" y="39" width="48" height="2.5" rx="1" fill="rgba(168,200,216,.35)"/>
+          <rect x="26" y="45" width="36" height="2.5" rx="1" fill="rgba(168,200,216,.3)"/>
+          <rect x="26" y="51" width="46" height="2.5" rx="1" fill="rgba(168,200,216,.25)"/>
+          <text x="100" y="48" font-size="16" fill="rgba(0,229,192,.55)" text-anchor="middle">→</text>
+          <rect x="112" y="12" width="74" height="62" rx="3" fill="#0D1F35" stroke="rgba(0,229,192,.2)" stroke-width=".8"/>
+          <text x="118" y="23" font-family="monospace" font-size="4.5" fill="#00E5C0" opacity=".6">EXTRACTED</text>
+          <rect x="118" y="27" width="62" height="2.5" rx="1" fill="rgba(0,229,192,.4)"/>
+          <rect x="118" y="33" width="52" height="2.5" rx="1" fill="rgba(0,229,192,.3)"/>
+          <rect x="118" y="39" width="58" height="2.5" rx="1" fill="rgba(0,229,192,.22)"/>
+          <rect x="118" y="45" width="44" height="2.5" rx="1" fill="rgba(0,229,192,.16)"/>
+          <text x="118" y="68" font-family="monospace" font-size="4.5" fill="#6A9BB5">→ agents</text>
+          </svg>
+        </div>
+        <div class="modal-title">PDF / TXT Medical Records</div>
+        <div class="modal-desc">Lab reports · radiology text · upload triggers file-only submission flow</div>
+        <div class="badge badge-amber">Enhanced</div>
+      </div>
+
+      <div class="reveal modal-card">
+        <div class="modal-visual">
+          <svg viewBox="0 0 200 86" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="86" fill="#060E1A"/>
+          <rect x="6" y="6" width="80" height="74" rx="3" fill="#0E1E10" stroke="#1A3A1C" stroke-width=".8"/>
+          <path d="M14,20 Q20,17 26,20 Q32,23 38,20 Q44,17 50,20 Q56,23 62,20 Q68,17 74,20" fill="none" stroke="rgba(100,200,120,.6)" stroke-width="1.2"/>
+          <path d="M14,30 Q18,27 24,30 Q30,33 36,29 Q42,26 48,30 Q54,33 60,29 Q66,26 72,30" fill="none" stroke="rgba(100,200,120,.55)" stroke-width="1.2"/>
+          <path d="M14,40 Q22,37 28,41 Q34,45 40,40 Q46,35 52,40 Q58,45 64,40 Q68,37 74,40" fill="none" stroke="rgba(100,200,120,.5)" stroke-width="1.2"/>
+          <path d="M14,50 Q20,47 26,50 Q32,53 38,49 Q44,46 50,50 Q54,53 60,50 Q64,47 70,50" fill="none" stroke="rgba(100,200,120,.45)" stroke-width="1.2"/>
+          <rect x="6" y="6" width="80" height="74" rx="3" fill="rgba(0,229,192,.025)"><animate attributeName="opacity" values="0;.7;0" dur="2.5s" repeatCount="indefinite"/></rect>
+          <text x="98" y="36" font-size="13" fill="rgba(0,229,192,.65)" text-anchor="middle">→</text>
+          <text x="98" y="48" font-family="monospace" font-size="4.5" fill="#6A9BB5" text-anchor="middle">Claude Vision</text>
+          <rect x="112" y="6" width="80" height="74" rx="3" fill="#0D1F35" stroke="rgba(0,229,192,.25)" stroke-width=".8"/>
+          <text x="118" y="18" font-family="monospace" font-size="4.5" fill="#00E5C0" opacity=".7">EXTRACTED</text>
+          <text x="118" y="28" font-family="monospace" font-size="5" fill="#A8C8D8">Patient: M. 58y</text>
+          <text x="118" y="37" font-family="monospace" font-size="5" fill="#A8C8D8">Dx: Hypertension</text>
+          <text x="118" y="46" font-family="monospace" font-size="5" fill="#A8C8D8">Rx: Amlodipine 5mg</text>
+          <text x="118" y="55" font-family="monospace" font-size="5" fill="#A8C8D8">BP: 148/92 mmHg</text>
+          <text x="118" y="72" font-family="monospace" font-size="4" fill="rgba(0,229,192,.5)">→ appended to context</text>
+          </svg>
+        </div>
+        <div class="modal-title">Handwritten OCR</div>
+        <div class="modal-desc">Claude Vision extracts Rx, Dx, dosage, vitals from handwritten clinical notes</div>
+        <div class="badge badge-teal">New</div>
+      </div>
+
+      <div class="reveal modal-card">
+        <div class="modal-visual">
+          <svg viewBox="0 0 200 86" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="86" fill="#060E1A"/>
+          <!-- Left image panel -->
+          <rect x="6" y="8" width="72" height="56" rx="3" fill="#0D1F35" stroke="#1E3A52" stroke-width=".8"/>
+          <ellipse cx="42" cy="36" rx="22" ry="18" fill="rgba(20,60,80,.7)"/>
+          <ellipse cx="34" cy="30" rx="10" ry="11" fill="rgba(0,180,150,.18)" stroke="rgba(0,229,192,.25)" stroke-width=".5"/>
+          <ellipse cx="50" cy="30" rx="10" ry="11" fill="rgba(0,180,150,.18)" stroke="rgba(0,229,192,.25)" stroke-width=".5"/>
+          <text x="9" y="72" font-family="monospace" font-size="4.5" fill="#6A9BB5">Before</text>
+          <!-- Right image panel -->
+          <rect x="122" y="8" width="72" height="56" rx="3" fill="#0D1F35" stroke="rgba(0,229,192,.35)" stroke-width=".8"/>
+          <ellipse cx="158" cy="36" rx="22" ry="18" fill="rgba(20,60,80,.7)"/>
+          <ellipse cx="150" cy="30" rx="10" ry="11" fill="rgba(0,180,150,.18)" stroke="rgba(0,229,192,.25)" stroke-width=".5"/>
+          <ellipse cx="166" cy="30" rx="10" ry="11" fill="rgba(0,180,150,.18)" stroke="rgba(0,229,192,.25)" stroke-width=".5"/>
+          <!-- Highlight difference region on right panel -->
+          <ellipse cx="152" cy="44" rx="9" ry="6" fill="rgba(255,107,107,.35)" stroke="rgba(255,107,107,.7)" stroke-width=".8" stroke-dasharray="2"/>
+          <circle cx="152" cy="44" r="3" fill="rgba(255,107,107,.8)"><animate attributeName="r" values="3;4.5;3" dur="1.8s" repeatCount="indefinite"/></circle>
+          <text x="125" y="72" font-family="monospace" font-size="4.5" fill="#6A9BB5">After</text>
+          <!-- Center arrow -->
+          <text x="100" y="39" font-size="13" fill="rgba(0,229,192,.6)" text-anchor="middle">⇄</text>
+          <text x="100" y="50" font-family="monospace" font-size="4" fill="#6A9BB5" text-anchor="middle">diff</text>
+          <!-- Bottom label -->
+          <rect x="6" y="68" width="188" height="13" rx="2" fill="rgba(0,229,192,.06)" stroke="rgba(0,229,192,.15)" stroke-width=".5"/>
+          <text x="100" y="77" font-family="monospace" font-size="4.5" fill="rgba(0,229,192,.7)" text-anchor="middle">Δ New opacity detected · lower-left · monitor</text>
+          </svg>
+        </div>
+        <div class="modal-title">Multi-Image Compare</div>
+        <div class="modal-desc">2+ images → Claude Vision differential analysis · progression tracking · bilateral · before/after</div>
+        <div class="badge badge-teal">New</div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 11 — IMAGE ANNOTATION ======== -->
+<div class="slide" id="s11">
+  <div class="slide-inner">
+    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-10</div><div class="slide-num">11 / 23</div></div>
+    <div class="section-title reveal">AI Image <em>Annotation</em></div>
+    <p class="section-sub reveal">Claude Vision → structured JSON · 9-region grid · interactive numbered overlays · hover-linked findings list</p>
+    <div style="flex:1;display:grid;grid-template-columns:.95fr 1.05fr;gap:clamp(12px,2vw,24px);align-items:stretch">
+      <!-- Left: simulated annotated X-ray -->
+      <div class="reveal" style="display:flex;flex-direction:column;gap:clamp(6px,1vh,11px)">
+        <div class="ann-img" style="height:clamp(130px,22vh,200px)">
+          <svg viewBox="0 0 320 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">
+            <rect width="320" height="160" fill="#060C14"/>
+            <ellipse cx="160" cy="80" rx="108" ry="66" fill="rgba(15,40,60,.7)"/>
+            <rect x="153" y="20" width="14" height="120" rx="4" fill="rgba(80,130,150,.5)"/>
+            <rect x="155" y="28" width="10" height="7" rx="2" fill="rgba(100,160,180,.4)"/>
+            <rect x="155" y="41" width="10" height="7" rx="2" fill="rgba(100,160,180,.4)"/>
+            <rect x="155" y="54" width="10" height="7" rx="2" fill="rgba(100,160,180,.4)"/>
+            <rect x="155" y="67" width="10" height="7" rx="2" fill="rgba(100,160,180,.4)"/>
+            <rect x="155" y="80" width="10" height="7" rx="2" fill="rgba(100,160,180,.4)"/>
+            <rect x="155" y="93" width="10" height="7" rx="2" fill="rgba(100,160,180,.4)"/>
+            <rect x="155" y="106" width="10" height="7" rx="2" fill="rgba(100,160,180,.4)"/>
+            <path d="M72,34 Q60,54 57,82 Q55,107 72,125 Q96,138 116,128 Q130,118 132,93 Q133,68 125,48 Q115,28 95,27 Z" fill="rgba(20,70,100,.55)" stroke="rgba(60,140,180,.5)" stroke-width="1"/>
+            <path d="M77,58 Q102,73 125,66" fill="none" stroke="rgba(60,140,180,.28)" stroke-width=".7"/>
+            <path d="M248,34 Q260,54 263,82 Q265,107 248,125 Q224,138 204,128 Q190,118 188,93 Q187,68 195,48 Q205,28 225,27 Z" fill="rgba(20,70,100,.55)" stroke="rgba(60,140,180,.5)" stroke-width="1"/>
+            <path d="M243,53 Q218,66 192,60" fill="none" stroke="rgba(60,140,180,.28)" stroke-width=".7"/>
+            <path d="M243,78 Q218,88 192,83" fill="none" stroke="rgba(60,140,180,.28)" stroke-width=".7"/>
+            <path d="M135,56 Q128,43 140,38 Q155,33 160,48 Q165,33 180,38 Q192,43 185,56 Q175,78 160,98 Q145,78 135,56Z" fill="rgba(60,20,20,.7)" stroke="rgba(120,50,50,.6)" stroke-width="1"/>
+            <path d="M67,41 Q95,29 133,35" fill="none" stroke="rgba(80,150,170,.4)" stroke-width="1.1"/>
+            <path d="M60,56 Q95,43 133,49" fill="none" stroke="rgba(80,150,170,.35)" stroke-width="1.1"/>
+            <path d="M57,73 Q95,59 132,65" fill="none" stroke="rgba(80,150,170,.3)" stroke-width="1.1"/>
+            <path d="M253,41 Q225,29 187,35" fill="none" stroke="rgba(80,150,170,.4)" stroke-width="1.1"/>
+            <path d="M260,56 Q225,43 187,49" fill="none" stroke="rgba(80,150,170,.35)" stroke-width="1.1"/>
+            <path d="M263,73 Q225,59 188,65" fill="none" stroke="rgba(80,150,170,.3)" stroke-width="1.1"/>
+            <ellipse cx="86" cy="50" rx="17" ry="13" fill="rgba(255,107,107,.22)" stroke="rgba(255,107,107,.5)" stroke-width=".8" stroke-dasharray="2"/>
+            <path d="M258,58 Q268,73 265,90" fill="none" stroke="rgba(0,229,192,.45)" stroke-width="2.5" stroke-linecap="round"/>
+            <ellipse cx="79" cy="130" rx="19" ry="9" fill="rgba(245,166,35,.2)" stroke="rgba(245,166,35,.45)" stroke-width=".8" stroke-dasharray="2"/>
+            <circle cx="86" cy="50" r="8" fill="rgba(255,107,107,.9)" stroke="white" stroke-width="1"><animate attributeName="r" values="8;10;8" dur="2s" repeatCount="indefinite"/></circle>
+            <text x="86" y="54" font-family="monospace" font-size="8" fill="white" text-anchor="middle" font-weight="bold">1</text>
+            <circle cx="264" cy="74" r="8" fill="rgba(0,229,192,.9)" stroke="white" stroke-width="1"><animate attributeName="r" values="8;10;8" dur="2s" begin=".7s" repeatCount="indefinite"/></circle>
+            <text x="264" y="78" font-family="monospace" font-size="8" fill="#060C14" text-anchor="middle" font-weight="bold">2</text>
+            <circle cx="79" cy="130" r="8" fill="rgba(245,166,35,.9)" stroke="white" stroke-width="1"><animate attributeName="r" values="8;10;8" dur="2s" begin="1.4s" repeatCount="indefinite"/></circle>
+            <text x="79" y="134" font-family="monospace" font-size="8" fill="#060C14" text-anchor="middle" font-weight="bold">3</text>
+            <text x="6" y="10" font-family="monospace" font-size="5.5" fill="rgba(0,229,192,.45)">PA · 120kV · M 58y</text>
+            <text x="6" y="155" font-family="monospace" font-size="5" fill="rgba(0,229,192,.35)">ANNOTATIONS_JSON · Claude Vision</text>
+          </svg>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <div class="ann-item"><div class="ann-bullet" style="background:#FF6B6B"></div>① Upper-Left — Patchy opacity, consolidation (pneumonia vs. atelectasis)</div>
+          <div class="ann-item"><div class="ann-bullet" style="background:#00E5C0"></div>② Mid-Right pleura — Focal pleural thickening, monitor for effusion</div>
+          <div class="ann-item"><div class="ann-bullet" style="background:#F5A623"></div>③ Lower-Left costophrenic — Blunting, lateral decubitus view suggested</div>
+        </div>
+      </div>
+      <!-- Right: technical detail -->
+      <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
+        <div class="reveal stat-card"><div class="stat-num">9</div><div class="stat-label">Annotation region zones (3×3 grid)</div></div>
+        <div class="reveal region-grid" style="height:clamp(72px,11vh,100px)">
+          <div class="region-cell active">UPPER LEFT</div><div class="region-cell">UPPER CTR</div><div class="region-cell">UPPER RIGHT</div>
+          <div class="region-cell">MID LEFT</div><div class="region-cell">MID CTR</div><div class="region-cell active">MID RIGHT</div>
+          <div class="region-cell active">LOWER LEFT</div><div class="region-cell">LOWER CTR</div><div class="region-cell">LOWER RIGHT</div>
+        </div>
+        <div class="reveal" style="padding:clamp(8px,1.2vh,13px);background:rgba(0,229,192,.05);border:1px solid rgba(0,229,192,.2);border-radius:4px;font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.65">
+          <strong style="color:var(--teal)">Structured Output Format:</strong><br>
+          <code style="color:rgba(0,229,192,.8);font-size:12px">ANNOTATIONS_JSON:[{"region":"UPPER-LEFT","finding":"patchy opacity","severity":"moderate"},...]</code><br><br>
+          Parsed with <code>json.loads()</code> · validated against 9-region enum · dot markers rendered with CSS pulse animation · hover on dot highlights matching finding in list
+        </div>
+        <div class="reveal" style="padding:clamp(8px,1.2vh,13px);background:rgba(245,166,35,.05);border:1px solid rgba(245,166,35,.2);border-radius:4px;font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.6">
+          <strong style="color:var(--amber)">vs. Demo A:</strong> Raw image displayed only, no overlay, no findings list. Demo B adds full structured annotation pipeline with Claude Vision JSON output.
+        </div>
+        <div class="reveal" style="display:flex;gap:7px;flex-wrap:wrap">
+          <div class="badge badge-teal">Multi-image compare</div>
+          <div class="badge badge-teal">DICOM native</div>
+          <div class="badge badge-amber">Hover tooltips</div>
+          <div class="badge badge-teal">JSON validated</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 12 — VIDEO CONSULTATION ======= -->
+<div class="slide" id="s12">
+  <div class="slide-inner">
+    <div class="slide-header reveal"><div class="eyebrow">Feature · Video</div><div class="slide-num">12 / 23</div></div>
+    <div class="section-title reveal">Video Frame <em>Consultation</em></div>
+    <p class="section-sub reveal">Real-time webcam consultation — simultaneous speech transcription and automated frame-by-frame visual analysis</p>
+    <div style="flex:1;display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(12px,2vw,24px);align-items:stretch">
+      <div style="display:flex;flex-direction:column;gap:clamp(6px,1vh,11px)">
+        <div class="reveal pipe-step"><div class="pipe-num">01</div><div><div class="pipe-t">getUserMedia() Camera Access</div><div class="pipe-d">Browser requests webcam permission · video stream rendered in modal · live preview displayed to user</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">02</div><div><div class="pipe-t">Automatic Frame Capture</div><div class="pipe-d">canvas.toBlob() captures JPEG every 5 s (FRAME_INTERVAL_MS=5000) · blob → File → POST /api/analyze/file · Claude Vision analyses each frame asynchronously</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">03</div><div><div class="pipe-t">Stop → Bundle Context</div><div class="pipe-d">All frame analyses combined into structured message · passed to AI Interviewer as multimodal context · triggers file-only submission flow if no text typed</div></div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
+        <div class="reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:clamp(6px,1vw,10px)">
+          <div class="stat-card"><div class="stat-num">5 s</div><div class="stat-label">Frame capture interval</div></div>
+          <div class="stat-card"><div class="stat-num">6</div><div class="stat-label">Max frames per session</div></div>
+          <div class="stat-card"><div class="stat-num">3</div><div class="stat-label">Speech lang options</div></div>
+          <div class="stat-card"><div class="stat-num">0</div><div class="stat-label">Extra npm dependencies</div></div>
+        </div>
+        <div class="reveal" style="padding:clamp(8px,1.3vh,14px);background:rgba(0,229,192,.05);border:1px solid rgba(0,229,192,.2);border-radius:4px;font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.65">
+          <strong style="color:var(--teal)">Clinical Value:</strong> Patients with mobility limitations or difficulty typing can describe symptoms verbally while showing affected areas on camera. Frame analyses + transcript provide richer context than text alone.
+        </div>
+        <div class="reveal" style="padding:clamp(8px,1.3vh,14px);background:rgba(0,229,192,.05);border:1px solid rgba(0,229,192,.2);border-radius:4px;font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.65">
+          <strong style="color:var(--teal)">File-Only Submission:</strong> If video or file provided and analysed, typed description is optional. On submit, system auto-generates description from file/frame analyses. Validation: description.length &gt; 15 <strong>OR</strong> hasReadyFile.
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 13 — EMPATHETIC AI =========== -->
+<div class="slide" id="s13">
+  <div class="slide-inner">
+    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-14</div><div class="slide-num">13 / 23</div></div>
+    <div class="section-title reveal">Empathetic <em>AI Interviewer</em></div>
+    <p class="section-sub reveal">SOCRATES clinical framework + warm language conventions + LLM query rewriting for RAG</p>
+    <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,24px);align-items:stretch">
+      <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
+        <div class="reveal rw-card">
+          <div class="rw-lbl">① Clinical Empathy — Before / After</div>
+          <div class="rw-txt rw-before">Generic: "What is the site of your pain? Rate severity 1–10. How long has it lasted?"</div>
+          <div class="rw-arrow">↓ SOCRATES + empathy layer</div>
+          <div class="rw-txt rw-after">"I'm sorry you're dealing with this. Could you help me understand where the discomfort is strongest? Does it spread anywhere — like your arm, jaw, or back?"</div>
+        </div>
+        <div class="reveal rw-card">
+          <div class="rw-lbl">② RAG Query Rewrite — Patient Language → Medical Terms</div>
+          <div class="rw-txt rw-before">"my chest hurts and i feel dizzy when i walk up stairs"</div>
+          <div class="rw-arrow">↓ LLM rewrite → passed to Qdrant</div>
+          <div class="rw-txt rw-after">"stable angina, exertional chest pain, dyspnoea on exertion, cardiac ischaemia, coronary artery disease"</div>
+        </div>
+        <div class="reveal" style="padding:clamp(8px,1.3vh,13px);background:rgba(0,229,192,.05);border:1px solid rgba(0,229,192,.2);border-radius:4px;font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.65">
+          <strong style="color:var(--teal)">Why this matters:</strong> BioLORD-2023 embeddings are trained on controlled medical vocabulary. Bridging patient lay language to SNOMED CT / MeSH terms before vector search dramatically improves retrieval recall from the 47,441-document corpus.
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
+        <div class="reveal" style="padding:clamp(8px,1.3vh,14px);background:var(--bg2);border:1px solid rgba(0,229,192,.15);border-radius:5px">
+          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-bottom:8px">SOCRATES Framework</div>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <div style="display:flex;gap:8px;font-size:clamp(13px,1.3vw,15px)"><span style="color:var(--teal);min-width:18px">S</span><span style="color:var(--muted)">Site — Where exactly is the symptom?</span></div>
+            <div style="display:flex;gap:8px;font-size:clamp(13px,1.3vw,15px)"><span style="color:var(--teal);min-width:18px">O</span><span style="color:var(--muted)">Onset — When did it start? Sudden or gradual?</span></div>
+            <div style="display:flex;gap:8px;font-size:clamp(13px,1.3vw,15px)"><span style="color:var(--teal);min-width:18px">C</span><span style="color:var(--muted)">Character — Sharp, dull, burning, crushing?</span></div>
+            <div style="display:flex;gap:8px;font-size:clamp(13px,1.3vw,15px)"><span style="color:var(--teal);min-width:18px">R</span><span style="color:var(--muted)">Radiation — Does it spread anywhere?</span></div>
+            <div style="display:flex;gap:8px;font-size:clamp(13px,1.3vw,15px)"><span style="color:var(--teal);min-width:18px">A</span><span style="color:var(--muted)">Associated symptoms — Nausea, sweat, fever?</span></div>
+            <div style="display:flex;gap:8px;font-size:clamp(13px,1.3vw,15px)"><span style="color:var(--teal);min-width:18px">T</span><span style="color:var(--muted)">Timing — Constant or intermittent?</span></div>
+            <div style="display:flex;gap:8px;font-size:clamp(13px,1.3vw,15px)"><span style="color:var(--teal);min-width:18px">E</span><span style="color:var(--muted)">Exacerbating/relieving factors?</span></div>
+            <div style="display:flex;gap:8px;font-size:clamp(13px,1.3vw,15px)"><span style="color:var(--teal);min-width:18px">S</span><span style="color:var(--muted)">Severity — Mild / Moderate / Severe</span></div>
+          </div>
+        </div>
+        <div class="reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:clamp(6px,1vw,10px)">
+          <div class="stat-card"><div class="stat-num">8</div><div class="stat-label">SOCRATES dimensions</div></div>
+          <div class="stat-card"><div class="stat-num">3–4</div><div class="stat-label">RAG query variants</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 14 — SAFETY ================== -->
+<div class="slide" id="s14">
+  <div class="slide-inner">
+    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-10</div><div class="slide-num">14 / 23</div></div>
+    <div class="section-title reveal">Safety & <em>Critic Agent</em></div>
+    <p class="section-sub reveal">Hard-coded safety rules in the Critic Agent — three escalation classes covering life-threatening presentations</p>
+    <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,24px);align-items:stretch">
+      <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
+        <div class="reveal safety-item">
+          <div class="sdot" style="background:var(--rose)"></div>
+          <div><div class="st">🚨 Class 1 — Cardiac Emergency</div>
+          <div class="sd">Trigger: chest pain + diaphoresis + arm/jaw radiation OR crushing quality. Critic halts diagnostic chain. Output: "Call emergency services immediately (000/911)" · STEMI exclusion recommended · reasoning flagged as high-risk</div></div>
+        </div>
+        <div class="reveal safety-item">
+          <div class="sdot" style="background:var(--rose)"></div>
+          <div><div class="st">🧠 Class 1 — Stroke Screening (FAST)</div>
+          <div class="sd">Trigger: sudden facial asymmetry + unilateral arm weakness + speech difficulty. Critic appends FAST protocol assessment. Output includes: "Time is brain — do not wait for an appointment. Present to emergency immediately."</div></div>
+        </div>
+        <div class="reveal safety-item">
+          <div class="sdot" style="background:var(--amber)"></div>
+          <div><div class="st">⚠ Class 2 — Drug Interaction Check</div>
+          <div class="sd">If patient history lists current medications, Critic cross-checks Diagnostician's suggested treatments against known interaction profiles (e.g. NSAID + anticoagulant → GI bleeding risk · ACE inhibitor + NSAID → renal risk)</div></div>
+        </div>
+        <div class="reveal safety-item">
+          <div class="sdot" style="background:var(--teal)"></div>
+          <div><div class="st">✓ Class 3 — Reasoning Transparency</div>
+          <div class="sd">Every diagnosis includes Critic verdict: "Reasoning consistent with cited evidence" OR specific objection with line-level reference. Full agent chain exportable for clinical audit.</div></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
+        <div class="reveal" style="padding:clamp(10px,1.5vh,16px);background:var(--bg2);border:1px solid rgba(0,229,192,.15);border-radius:5px">
+          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px">Critic Agent Workflow</div>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:clamp(13px,1.3vw,15px)">
+            <div style="padding:5px 8px;background:rgba(0,229,192,.06);border-left:2px solid var(--teal);color:var(--text2)">Receive Diagnostician full output + symptom context</div>
+            <div style="text-align:center;color:rgba(0,229,192,.4)">↓</div>
+            <div style="padding:5px 8px;background:rgba(255,107,107,.06);border-left:2px solid var(--rose);color:var(--text2)">Check hard-coded safety triggers first (O(1) lookup)</div>
+            <div style="text-align:center;color:rgba(0,229,192,.4)">↓</div>
+            <div style="padding:5px 8px;background:rgba(0,229,192,.06);border-left:2px solid var(--teal);color:var(--text2)">Verify reasoning chain against cited evidence passages</div>
+            <div style="text-align:center;color:rgba(0,229,192,.4)">↓</div>
+            <div style="padding:5px 8px;background:rgba(0,229,192,.06);border-left:2px solid var(--teal);color:var(--text2)">Issue verdict + optional objection with specific reference</div>
+          </div>
+        </div>
+        <div class="reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:clamp(6px,1vw,10px)">
+          <div class="stat-card"><div class="stat-num">3</div><div class="stat-label">Safety rule classes</div></div>
+          <div class="stat-card"><div class="stat-num">0</div><div class="stat-label">Unchecked outputs</div></div>
+        </div>
+        <div class="reveal" style="padding:clamp(8px,1.2vh,13px);background:rgba(255,107,107,.05);border:1px solid rgba(255,107,107,.2);border-radius:4px;font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.6">
+          <strong style="color:var(--rose)">Safety-first design:</strong> Hard-coded rules are evaluated before any LLM inference. No safety check can be bypassed by prompt injection or unusual input phrasing — pattern matching on symptom keywords is pre-LLM.
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 15 — DUAL AUTH =============== -->
+<div class="slide" id="s15">
+  <div class="slide-inner">
+    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-9</div><div class="slide-num">15 / 23</div></div>
+    <div class="section-title reveal">Dual Auth <em>Roles</em></div>
+    <p class="section-sub reveal">JWT-based authentication with role claims — Patient and Provider access to distinct UI views and API endpoints</p>
+    <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,24px);align-items:stretch">
+      <div class="reveal agent-card" style="border-top:3px solid var(--teal)">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+          <div style="font-size:clamp(28px,4vw,44px)">🧑‍⚕️</div>
+          <div><div class="agent-name">Patient</div><div class="badge badge-teal" style="margin-top:4px">Default Role</div></div>
+        </div>
+        <div class="agent-feat">Submit symptom descriptions and upload medical files (6 modalities)</div>
+        <div class="agent-feat">Chat with AI Interviewer · receive empathetic, SOCRATES-guided questioning</div>
+        <div class="agent-feat">View Results: diagnosis · reasoning · literature citations · annotated images</div>
+        <div class="agent-feat">Access personal session history · export as PDF or JSON</div>
+        <div class="agent-feat">Manage linked patient profiles for self and family members</div>
+        <div class="agent-feat">Switch UI language between EN / 中文 / 日本語 at any time</div>
+        <div style="margin-top:auto;padding-top:8px;border-top:1px solid rgba(0,229,192,.1)">
+          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted)">Accessible endpoints: <span style="color:var(--teal)">/api/session/* · /api/patients/* · /api/analyze/*</span></div>
+        </div>
+      </div>
+      <div class="reveal agent-card" style="border-top:3px solid var(--amber)">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+          <div style="font-size:clamp(28px,4vw,44px)">👨‍💼</div>
+          <div><div class="agent-name">Provider</div><div class="badge badge-amber" style="margin-top:4px">Clinical Role</div></div>
+        </div>
+        <div class="agent-feat">Access all patient sessions across the platform (not just own)</div>
+        <div class="agent-feat">Review full agent reasoning chains including Critic objections</div>
+        <div class="agent-feat">View annotated diagnostic images from any session</div>
+        <div class="agent-feat">Export any session as PDF for clinical record integration</div>
+        <div class="agent-feat">Monitor RAG citation quality and agent confidence scores</div>
+        <div class="agent-feat">Protected routes: JWT role claim "provider" required server-side</div>
+        <div style="margin-top:auto;padding-top:8px;border-top:1px solid rgba(245,166,35,.1)">
+          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted)">Additional endpoints: <span style="color:var(--amber)">/api/provider/sessions · /api/provider/analytics</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="reveal" style="margin-top:clamp(8px,1.2vh,14px);padding:clamp(8px,1.2vh,13px);background:rgba(0,229,192,.05);border:1px solid rgba(0,229,192,.2);border-radius:4px;font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.6">
+      <strong style="color:var(--teal)">Implementation:</strong> FastAPI OAuth2PasswordBearer · JWT signed with HS256 · role field in token payload · dependency injection <code>get_current_user(role="provider")</code> guards provider endpoints · bcrypt password hashing
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 16 — i18n ==================== -->
+<div class="slide" id="s16">
+  <div class="slide-inner">
+    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-12</div><div class="slide-num">16 / 23</div></div>
+    <div class="section-title reveal">Multilingual <em>Support</em></div>
+    <p class="section-sub reveal">Full react-i18next internationalisation — UI, agent responses, and audio file analysis in EN / ZH / JA</p>
+    <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,24px);align-items:stretch">
+      <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
+        <div class="reveal" style="display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(6px,1vw,12px)">
+          <div class="card" style="text-align:center"><div style="font-size:clamp(28px,4vw,44px)">🇬🇧</div><div style="font-family:var(--serif);font-size:clamp(14px,1.8vw,20px);color:var(--text)">English</div><div style="font-size:clamp(11px,1.1vw,13px);color:var(--muted);letter-spacing:.14em">en-US · en-AU</div></div>
+          <div class="card" style="text-align:center"><div style="font-size:clamp(28px,4vw,44px)">🇨🇳</div><div style="font-family:var(--serif);font-size:clamp(14px,1.8vw,20px);color:var(--text)">中文</div><div style="font-size:clamp(11px,1.1vw,13px);color:var(--muted);letter-spacing:.14em">zh-CN</div></div>
+          <div class="card" style="text-align:center"><div style="font-size:clamp(28px,4vw,44px)">🇯🇵</div><div style="font-family:var(--serif);font-size:clamp(14px,1.8vw,20px);color:var(--text)">日本語</div><div style="font-size:clamp(11px,1.1vw,13px);color:var(--muted);letter-spacing:.14em">ja-JP</div></div>
+        </div>
+        <div class="reveal" style="padding:clamp(8px,1.3vh,14px);background:var(--bg2);border:1px solid rgba(0,229,192,.15);border-radius:5px">
+          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:7px">Translation Coverage</div>
+          <div class="mbar-wrap" style="margin-bottom:6px"><div class="mbar-label">UI Labels & Placeholders <span>100%</span></div><div class="mbar-track"><div class="mbar-fill" style="width:100%"></div></div></div>
+          <div class="mbar-wrap" style="margin-bottom:6px"><div class="mbar-label">Error Messages & Disclaimers <span>100%</span></div><div class="mbar-track"><div class="mbar-fill" style="width:100%"></div></div></div>
+          <div class="mbar-wrap" style="margin-bottom:6px"><div class="mbar-label">Body Parts & Duration Options <span>100%</span></div><div class="mbar-track"><div class="mbar-fill" style="width:100%"></div></div></div>
+          <div class="mbar-wrap"><div class="mbar-label">Voice Transcription Language <span>3 langs</span></div><div class="mbar-track"><div class="mbar-fill" style="width:100%"></div></div></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
+        <div class="reveal pipe-step"><div class="pipe-num">Tech</div><div><div class="pipe-t">react-i18next + i18next</div><div class="pipe-d">JSON locale files in /src/locales/{lang}/ · useTranslation() hook throughout · returnObjects for array fields (body parts, durations) · language persisted in localStorage</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">Audio</div><div><div class="pipe-t">Speech Language Auto-Detection</div><div class="pipe-d">navigator.language read on mount → matched to supported lang code → passed to SpeechRecognition.lang and /api/analyze/file?lang= · user can override via language selector</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">UI</div><div><div class="pipe-t">Seamless Switching</div><div class="pipe-d">Language toggle in navbar → entire UI re-renders with t() keys · no page reload · session language preference stored · affects all pages including Results and History</div></div></div>
+        <div class="reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:clamp(6px,1vw,10px)">
+          <div class="stat-card"><div class="stat-num">3</div><div class="stat-label">Supported languages</div></div>
+          <div class="stat-card"><div class="stat-num">200+</div><div class="stat-label">Translated strings</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 17 — SESSION & EXPORT ======== -->
+<div class="slide" id="s17">
+  <div class="slide-inner">
+    <div class="slide-header reveal"><div class="eyebrow">Feature · Data Persistence</div><div class="slide-num">17 / 23</div></div>
+    <div class="section-title reveal">Session <em>Management</em></div>
+    <p class="section-sub reveal">Automatic session persistence · full history access · one-click PDF/JSON export for clinical integration</p>
+    <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,24px);align-items:stretch">
+      <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
+        <div class="reveal pipe-step"><div class="pipe-num">SQLite</div><div><div class="pipe-t">Four-Table Schema</div><div class="pipe-d">users(id, username, role, hashed_pw) · sessions(id, patient_id, created_at, symptoms) · messages(id, session_id, role, content, timestamp) · uploads(id, session_id, filename, analysis)</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">Auto</div><div><div class="pipe-t">Zero-Effort Persistence</div><div class="pipe-d">Every session, message, and upload saved automatically on creation · no manual save required · History page populates from database on load · patient profile links maintained across sessions</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">Export</div><div><div class="pipe-t">PDF + JSON Clinical Export</div><div class="pipe-d">GET /api/session/{id}/export/pdf → formatted clinical report with diagnosis, reasoning, citations, and uploaded images · /export/json → structured data for EHR integration</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">Upload</div><div><div class="pipe-t">File Association</div><div class="pipe-d">Uploaded files linked to session via session_id FK · analysis text stored in DB · /api/sessions/{id}/uploads returns all files with analyses · available in Results → Media tab</div></div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
+        <div class="reveal" style="background:var(--bg2);border:1px solid rgba(0,229,192,.15);border-radius:5px;padding:clamp(10px,1.5vh,16px)">
+          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px">Results Page — 4 Tabs</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;gap:8px;align-items:center"><div style="width:8px;height:8px;background:var(--teal);border-radius:50%;flex-shrink:0"></div><div style="font-size:clamp(13px,1.3vw,15px);color:var(--text2)"><strong>Diagnosis</strong> — ranked differential · probability · Critic verdict</div></div>
+            <div style="display:flex;gap:8px;align-items:center"><div style="width:8px;height:8px;background:var(--amber);border-radius:50%;flex-shrink:0"></div><div style="font-size:clamp(13px,1.3vw,15px);color:var(--text2)"><strong>Reasoning</strong> — full agent chain · Interviewer → Diagnostician → Critic</div></div>
+            <div style="display:flex;gap:8px;align-items:center"><div style="width:8px;height:8px;background:var(--rose);border-radius:50%;flex-shrink:0"></div><div style="font-size:clamp(13px,1.3vw,15px);color:var(--text2)"><strong>Literature</strong> — PubMed citations · title · authors · year · relevance</div></div>
+            <div style="display:flex;gap:8px;align-items:center"><div style="width:8px;height:8px;background:rgba(0,229,192,.5);border-radius:50%;flex-shrink:0"></div><div style="font-size:clamp(13px,1.3vw,15px);color:var(--text2)"><strong>Media</strong> — uploaded files · annotated images with overlay dots</div></div>
+          </div>
+        </div>
+        <div class="reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:clamp(6px,1vw,10px)">
+          <div class="stat-card"><div class="stat-num">4</div><div class="stat-label">DB tables</div></div>
+          <div class="stat-card"><div class="stat-num">2</div><div class="stat-label">Export formats</div></div>
+        </div>
+        <div class="reveal" style="padding:clamp(8px,1.2vh,13px);background:rgba(0,229,192,.05);border:1px solid rgba(0,229,192,.2);border-radius:4px;font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.6">
+          <strong style="color:var(--teal)">Patient Profile Linking:</strong> Saved profiles auto-populate the medical history field. All sessions linked to patient_id FK. Provider can filter sessions by patient across the platform.
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 18 — PERFORMANCE ============= -->
+<div class="slide" id="s18">
+  <div class="slide-inner">
+    <div class="slide-header reveal"><div class="eyebrow">Evaluation</div><div class="slide-num">18 / 23</div></div>
+    <div class="section-title reveal">System <em>Performance</em></div>
+    <p class="section-sub reveal">Quantitative comparison across all major system dimensions — Demo A baseline vs current implementation</p>
+    <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,28px);align-items:stretch">
+      <div class="reveal">
+        <table class="ctable">
+          <thead><tr><th>Metric</th><th>Demo A Baseline</th><th>Current System</th></tr></thead>
+          <tbody>
+            <tr><td>Knowledge Corpus</td><td class="bad">~5,000 docs</td><td class="good">47,441 docs (+848%)</td></tr>
+            <tr><td>Embedding Model</td><td class="bad">all-MiniLM 384d</td><td class="good">BioLORD-2023 768d</td></tr>
+            <tr><td>Search Strategy</td><td class="bad">Single cosine</td><td class="good">Dense+BM25+RRF</td></tr>
+            <tr><td>Query Variants</td><td class="bad">1 raw input</td><td class="good">3–4 LLM-rewritten</td></tr>
+            <tr><td>Recall Threshold</td><td class="mid">0.25 (strict)</td><td class="good">0.15 (+recall)</td></tr>
+            <tr><td>Input Modalities</td><td class="bad">1 (text)</td><td class="good">6 (text·img·DICOM·vid·pdf·ocr)</td></tr>
+            <tr><td>Auth Roles</td><td class="bad">None</td><td class="good">Patient + Provider (JWT)</td></tr>
+            <tr><td>UI Languages</td><td class="bad">EN only</td><td class="good">EN / ZH / JA</td></tr>
+            <tr><td>Image Annotation</td><td class="bad">None</td><td class="good">9-region JSON overlay</td></tr>
+            <tr><td>Safety Rules</td><td class="bad">None</td><td class="good">3 classes (Cardiac·Stroke·Drug)</td></tr>
+            <tr><td>Story Points Total</td><td class="mid">13 SP</td><td class="good">48 SP (+35)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- Charts -->
+      <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
+        <div class="reveal" style="background:var(--bg2);border:1px solid rgba(0,229,192,.12);border-radius:6px;padding:clamp(10px,1.5vh,16px)">
+          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);letter-spacing:.15em;text-transform:uppercase;margin-bottom:8px">Key Improvement Ratios</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div class="mbar-wrap"><div class="mbar-label">Knowledge Base Size <span>9.4× larger</span></div><div class="mbar-track"><div class="mbar-fill" style="width:94%"></div></div></div>
+            <div class="mbar-wrap"><div class="mbar-label">Embedding Dimensions <span>2× denser</span></div><div class="mbar-track"><div class="mbar-fill" style="width:50%"></div></div></div>
+            <div class="mbar-wrap"><div class="mbar-label">Query Coverage <span>3–4× more</span></div><div class="mbar-track"><div class="mbar-fill" style="width:80%"></div></div></div>
+            <div class="mbar-wrap"><div class="mbar-label">Input Modalities <span>6× more</span></div><div class="mbar-track"><div class="mbar-fill" style="width:75%"></div></div></div>
+            <div class="mbar-wrap"><div class="mbar-label">Story Points <span>+270%</span></div><div class="mbar-track"><div class="mbar-fill" style="width:90%"></div></div></div>
+          </div>
+        </div>
+        <!-- Grouped bar chart -->
+        <div class="reveal" style="background:var(--bg2);border:1px solid rgba(0,229,192,.12);border-radius:6px;padding:clamp(10px,1.5vh,16px)">
+          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);letter-spacing:.15em;text-transform:uppercase;margin-bottom:4px">Scope Growth (Story Points)</div>
+          <svg viewBox="0 0 280 110" style="width:100%">
+            <line x1="36" y1="8" x2="36" y2="88" stroke="rgba(0,229,192,.2)" stroke-width=".6"/>
+            <line x1="36" y1="88" x2="270" y2="88" stroke="rgba(0,229,192,.2)" stroke-width=".6"/>
+            <text x="32" y="12" text-anchor="end" font-family="monospace" font-size="6" fill="#6A9BB5">50</text>
+            <text x="32" y="44" text-anchor="end" font-family="monospace" font-size="6" fill="#6A9BB5">25</text>
+            <text x="32" y="88" text-anchor="end" font-family="monospace" font-size="6" fill="#6A9BB5">0</text>
+            <line x1="36" y1="44" x2="270" y2="44" stroke="rgba(0,229,192,.06)" stroke-width=".5" stroke-dasharray="2"/>
+            <!-- Sprint 1 bar: 13 SP -->
+            <rect x="55" y="65" width="48" height="23" rx="2" fill="rgba(255,107,107,.6)" class="bar-v" style="transition-delay:.1s"/>
+            <text x="79" y="61" text-anchor="middle" font-family="monospace" font-size="7" fill="var(--rose)" font-weight="bold">13</text>
+            <text x="79" y="100" text-anchor="middle" font-family="monospace" font-size="6" fill="#6A9BB5">Sprint 1</text>
+            <!-- Sprint 2 bar: 35 SP -->
+            <rect x="120" y="26" width="48" height="62" rx="2" fill="var(--teal)" class="bar-v" style="transition-delay:.25s"/>
+            <text x="144" y="22" text-anchor="middle" font-family="monospace" font-size="7" fill="var(--teal)" font-weight="bold">35</text>
+            <text x="144" y="100" text-anchor="middle" font-family="monospace" font-size="6" fill="#6A9BB5">Sprint 2</text>
+            <!-- Total bar: 48 SP -->
+            <rect x="185" y="11" width="48" height="77" rx="2" fill="rgba(0,229,192,.4)" stroke="var(--teal)" stroke-width=".8" class="bar-v" style="transition-delay:.4s"/>
+            <text x="209" y="7" text-anchor="middle" font-family="monospace" font-size="7" fill="var(--teal)" font-weight="bold">48</text>
+            <text x="209" y="100" text-anchor="middle" font-family="monospace" font-size="6" fill="var(--teal)">Total</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 19 — TECH STACK ============== -->
+<div class="slide" id="s19">
+  <div class="slide-inner">
+    <div class="slide-header reveal"><div class="eyebrow">Implementation</div><div class="slide-num">19 / 23</div></div>
+    <div class="section-title reveal">Technical <em>Stack</em></div>
+    <p class="section-sub reveal">Technology choices justified by clinical AI requirements — performance, biomedical specificity, and zero external dependencies</p>
+    <div style="flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(8px,1.2vw,16px)">
+      <div class="reveal card">
+        <div style="font-size:clamp(13px,1.3vw,15px);color:var(--teal);letter-spacing:.18em;text-transform:uppercase;margin-bottom:8px">Frontend</div>
+        <div class="feat-row"><div class="feat-icon">⚛</div><div><div class="feat-t">React + Vite</div><div class="feat-d">Component-based UI · Fast HMR · Production bundle optimisation</div></div></div>
+        <div class="feat-row"><div class="feat-icon">🌐</div><div><div class="feat-t">react-i18next</div><div class="feat-d">3-language support · JSON locale files · Runtime switching</div></div></div>
+        <div class="feat-row"><div class="feat-icon">📷</div><div><div class="feat-t">getUserMedia + Canvas</div><div class="feat-d">Webcam frame capture · toBlob() JPEG · No extra library</div></div></div>
+        <div class="feat-row" style="border:none"><div class="feat-icon">🎨</div><div><div class="feat-t">Tailwind CSS + shadcn/ui</div><div class="feat-d">Utility-first · Component library · Dark mode native</div></div></div>
+      </div>
+      <div class="reveal card">
+        <div style="font-size:clamp(13px,1.3vw,15px);color:var(--teal);letter-spacing:.18em;text-transform:uppercase;margin-bottom:8px">Backend</div>
+        <div class="feat-row"><div class="feat-icon">⚡</div><div><div class="feat-t">FastAPI + Uvicorn</div><div class="feat-d">Async Python · Type-safe endpoints · Auto-generated OpenAPI docs</div></div></div>
+        <div class="feat-row"><div class="feat-icon">🔐</div><div><div class="feat-t">JWT + bcrypt</div><div class="feat-d">HS256-signed tokens · Role claims · Password hashing</div></div></div>
+        <div class="feat-row"><div class="feat-icon">🗄</div><div><div class="feat-t">SQLite</div><div class="feat-d">Zero-config persistence · 4 tables · FK relationships</div></div></div>
+        <div class="feat-row"><div class="feat-icon">🩻</div><div><div class="feat-t">pydicom</div><div class="feat-d">DICOM file parsing · Pixel array extraction · HU normalisation</div></div></div>
+        <div class="feat-row" style="border:none"><div class="feat-icon">🤖</div><div><div class="feat-t">Anthropic SDK (claude-sonnet-4-6)</div><div class="feat-d">3-agent orchestration · Vision · Structured JSON output</div></div></div>
+      </div>
+      <div class="reveal card">
+        <div style="font-size:clamp(13px,1.3vw,15px);color:var(--teal);letter-spacing:.18em;text-transform:uppercase;margin-bottom:8px">Knowledge / AI</div>
+        <div class="feat-row"><div class="feat-icon">🔍</div><div><div class="feat-t">Qdrant (embedded)</div><div class="feat-d">Dense + Sparse hybrid · In-process · No network hop · RRF fusion</div></div></div>
+        <div class="feat-row"><div class="feat-icon">🧬</div><div><div class="feat-t">BioLORD-2023</div><div class="feat-d">Biomedical ontology training · SNOMED CT · MeSH · UMLS · 768d</div></div></div>
+        <div class="feat-row"><div class="feat-icon">📊</div><div><div class="feat-t">BM25 Sparse Encoder</div><div class="feat-d">Keyword matching · Complements dense vectors · Qdrant native</div></div></div>
+        <div class="feat-row"><div class="feat-icon">📰</div><div><div class="feat-t">PubMed Corpus</div><div class="feat-d">47,441 abstracts · Clinical guidelines · Ingested via Qdrant Python client</div></div></div>
+        <div class="feat-row" style="border:none"><div class="feat-icon">🏥</div><div><div class="feat-t">SpeechRecognition (Python)</div><div class="feat-d">Audio transcription fallback · Google Speech API bridge</div></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 20 — DESIGN PRINCIPLES ======= -->
+<div class="slide" id="s20">
+  <div class="slide-inner">
+    <div class="slide-header reveal"><div class="eyebrow">Engineering Quality</div><div class="slide-num">20 / 23</div></div>
+    <div class="section-title reveal">Design <em>Principles</em></div>
+    <p class="section-sub reveal">Architectural decisions that ensure clinical-grade reliability, safety, and extensibility</p>
+    <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(10px,1.5vw,20px)">
+      <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
+        <div class="reveal pipe-step"><div class="pipe-num">01</div><div><div class="pipe-t">Safety-First — Pre-LLM Rules</div><div class="pipe-d">Hard-coded safety triggers evaluated <em>before</em> any LLM call. Pattern matching on symptom keywords is O(1) and cannot be bypassed by prompt injection or unusual phrasing.</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">02</div><div><div class="pipe-t">Grounded Outputs — No Fabrication</div><div class="pipe-d">Every diagnostic claim must be supported by a retrieved PubMed passage. Diagnostician is explicitly instructed: "Do not claim something not supported by the retrieved evidence."</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">03</div><div><div class="pipe-t">Agent Separation of Concerns</div><div class="pipe-d">Interviewer, Diagnostician, and Critic have distinct system prompts with no cross-contamination. Each agent receives only the information it needs — minimising prompt injection surface.</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">04</div><div><div class="pipe-t">Full Audit Trail</div><div class="pipe-d">Every agent's complete reasoning chain stored in SQLite. Provider can review, export, and dispute any AI output. Supports clinical accountability and educational use.</div></div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
+        <div class="reveal pipe-step"><div class="pipe-num">05</div><div><div class="pipe-t">Multimodal Unification</div><div class="pipe-d">All 6 input modalities normalise to a text context string before agent processing. DICOM→JPEG, audio→transcript, video→frame analyses — uniform interface regardless of input type.</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">06</div><div><div class="pipe-t">Zero-Config Persistence</div><div class="pipe-d">SQLite with FK constraints — no separate DB server required. Qdrant in embedded mode — no Qdrant server. Both run in-process alongside FastAPI for simple single-server deployment.</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">07</div><div><div class="pipe-t">Graceful Degradation</div><div class="pipe-d">If speech recognition unavailable (no browser support), text input remains. If RAG returns zero results above threshold, agent defaults to LLM-only with explicit "no evidence found" caveat.</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">08</div><div><div class="pipe-t">Structured JSON Throughout</div><div class="pipe-d">Claude instructed to output structured JSON for annotations, diagnoses, and agent verdicts. Eliminates fragile regex parsing — json.loads() with schema validation on all AI outputs.</div></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 21 — LIMITATIONS ============= -->
+<div class="slide" id="s21">
+  <div class="slide-inner">
+    <div class="slide-header reveal"><div class="eyebrow">Honest Evaluation</div><div class="slide-num">21 / 23</div></div>
+    <div class="section-title reveal">Limitations & <em>Future Work</em></div>
+    <p class="section-sub reveal">Known constraints of the current implementation and planned directions for continued research</p>
+    <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,24px);align-items:stretch">
+      <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
+        <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px">Current Limitations</div>
+        <div class="reveal safety-item"><div class="sdot" style="background:var(--rose)"></div><div><div class="st">No Formal Clinical Validation</div><div class="sd">Diagnostic accuracy not yet benchmarked against standardised clinical case sets (MedQA, USMLE). Safety rules are heuristic-based, not clinically audited. Not for medical use.</div></div></div>
+        <div class="reveal safety-item"><div class="sdot" style="background:var(--rose)"></div><div><div class="st">Single-Node Deployment</div><div class="sd">SQLite and Qdrant embedded — suitable for demo but not horizontally scalable. No load balancing, rate limiting, or multi-tenant isolation.</div></div></div>
+        <div class="reveal safety-item"><div class="sdot" style="background:var(--amber)"></div><div><div class="st">Corpus Currency</div><div class="sd">PubMed snapshot at ingestion time — medical knowledge not continuously updated. New research published after ingest date not retrievable.</div></div></div>
+        <div class="reveal safety-item"><div class="sdot" style="background:var(--amber)"></div><div><div class="st">LLM Latency</div><div class="sd">3-agent chain with RAG adds ~8–15 s per diagnostic turn depending on context length. Streaming partially mitigates perceived latency.</div></div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
+        <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px">Future Directions</div>
+        <div class="reveal pipe-step"><div class="pipe-num">①</div><div><div class="pipe-t">Formal Evaluation — MedQA Benchmark</div><div class="pipe-d">LLM-as-judge scoring across diagnostic accuracy, empathy, hallucination rate, citation relevance. Benchmark on 50+ clinical case vignettes from MedQA dataset.</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">②</div><div><div class="pipe-t">Reasoning Visualisation Graph</div><div class="pipe-d">Interactive D3.js node-link diagram showing agent conversation flow, evidence retrieval nodes, and diagnostic branches with confidence scores.</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">③</div><div><div class="pipe-t">Production Deployment</div><div class="pipe-d">Docker Compose (frontend + FastAPI + Qdrant server + PostgreSQL) · HTTPS · OAuth2 · rate limiting · horizontal scaling via stateless agent design.</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">④</div><div><div class="pipe-t">Continual RAG Update</div><div class="pipe-d">Scheduled PubMed delta ingest · new publications automatically embedded and indexed · knowledge currency maintained without full re-ingest.</div></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 22 — CONTRIBUTION SUMMARY ==== -->
+<div class="slide" id="s22">
+  <div class="slide-inner">
+    <div class="slide-header reveal"><div class="eyebrow">Research Contribution</div><div class="slide-num">22 / 23</div></div>
+    <div class="section-title reveal">Key <em>Contributions</em></div>
+    <p class="section-sub reveal">What MediChain contributes to the state of practice in AI-assisted clinical decision support</p>
+    <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(10px,1.5vw,20px);align-items:stretch">
+      <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
+        <div class="reveal" style="padding:clamp(10px,1.5vh,18px);background:var(--bg2);border:1px solid rgba(0,229,192,.2);border-radius:6px;border-left:3px solid var(--teal)">
+          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--teal);letter-spacing:.18em;text-transform:uppercase;margin-bottom:6px">Contribution 1</div>
+          <div style="font-family:var(--serif);font-size:clamp(14px,1.8vw,20px);color:var(--text);margin-bottom:5px">Biomedical Hybrid RAG Pipeline</div>
+          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.6">Demonstrate that combining LLM query rewriting, BioLORD-2023 dense embeddings, BM25 sparse retrieval, and Reciprocal Rank Fusion over a 47,441-document PubMed corpus significantly improves medical concept recall over single-vector approaches.</div>
+        </div>
+        <div class="reveal" style="padding:clamp(10px,1.5vh,18px);background:var(--bg2);border:1px solid rgba(245,166,35,.2);border-radius:6px;border-left:3px solid var(--amber)">
+          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--amber);letter-spacing:.18em;text-transform:uppercase;margin-bottom:6px">Contribution 2</div>
+          <div style="font-family:var(--serif);font-size:clamp(14px,1.8vw,20px);color:var(--text);margin-bottom:5px">Multi-Agent Clinical Safety Framework</div>
+          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.6">Propose a three-agent architecture where Critic serves as a pre-output safety verifier with hard-coded escalation rules evaluated pre-LLM. Separates patient interaction, diagnostic reasoning, and safety verification into independently auditable components.</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
+        <div class="reveal" style="padding:clamp(10px,1.5vh,18px);background:var(--bg2);border:1px solid rgba(255,107,107,.2);border-radius:6px;border-left:3px solid var(--rose)">
+          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--rose);letter-spacing:.18em;text-transform:uppercase;margin-bottom:6px">Contribution 3</div>
+          <div style="font-family:var(--serif);font-size:clamp(14px,1.8vw,20px);color:var(--text);margin-bottom:5px">Multimodal Clinical Input Unification</div>
+          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.6">Implement a unified preprocessing pipeline accepting 6 clinical input modalities (text, image, DICOM, audio, video, handwritten) and normalising all to structured text context before agent processing — enabling richer symptom capture than text-only systems.</div>
+        </div>
+        <div class="reveal" style="padding:clamp(10px,1.5vh,18px);background:var(--bg2);border:1px solid rgba(0,229,192,.2);border-radius:6px;border-left:3px solid rgba(0,229,192,.5)">
+          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--teal);letter-spacing:.18em;text-transform:uppercase;margin-bottom:6px">Contribution 4</div>
+          <div style="font-family:var(--serif);font-size:clamp(14px,1.8vw,20px);color:var(--text);margin-bottom:5px">Empathetic AI Interviewer Design</div>
+          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.6">Apply SOCRATES clinical framework within an LLM-driven conversational agent augmented with warm language conventions. Show that empathetic framing is compatible with rigorous symptom elicitation — addressing a gap in prior clinical AI dialogue systems.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 23 — THANK YOU =============== -->
+<div class="slide" id="s23">
+  <div class="orb" style="position:absolute;width:clamp(300px,50vw,640px);height:clamp(300px,50vw,640px);border-radius:50%;background:radial-gradient(circle,rgba(0,229,192,.08) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:0;animation:breathe 8s ease-in-out infinite"></div>
+  <div style="position:relative;z-index:1;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:clamp(24px,4vh,56px) clamp(32px,8vw,120px);gap:clamp(10px,1.8vh,22px)">
+    <div class="reveal eyebrow">COMP9900 · Team 9900-W18C-CAKE · UNSW Sydney</div>
+    <div class="reveal" style="font-family:var(--serif);font-size:clamp(60px,9.5vw,130px);color:var(--text);line-height:.88;letter-spacing:-3px">Thank <em style="color:var(--teal);font-style:italic">You</em></div>
+    <div class="reveal" style="width:clamp(50px,7vw,90px);height:1px;background:var(--teal);opacity:.5"></div>
+    <p class="reveal" style="font-size:clamp(11px,1.3vw,15px);color:var(--muted);letter-spacing:.06em;max-width:52ch;line-height:1.75">Questions & Feedback Welcome<br>MediChain — Empathetic, Grounded, Multi-Agent Clinical AI</p>
+    <div class="reveal" style="font-size:clamp(9px,1.1vw,13px);color:var(--muted);letter-spacing:.14em;line-height:2">
+      <span style="color:var(--teal)">Zeyi Xu</span> · <span style="color:var(--teal)">Yaowen Zhang</span> · <span style="color:var(--teal)">Jikun Lyu</span><br>
+      <span style="color:var(--teal)">Qinfeng Xiang</span> · <span style="color:var(--teal)">Shaoran Liu</span> · <span style="color:var(--teal)">Ziru Chen</span>
+    </div>
+    <div class="reveal" style="display:flex;gap:clamp(14px,2.5vw,30px);flex-wrap:wrap;justify-content:center;margin-top:4px">
+      <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);letter-spacing:.16em;text-transform:uppercase">48 SP · 14 Stories <span style="color:var(--teal)">Delivered</span></div>
+      <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);letter-spacing:.16em;text-transform:uppercase">47,441 <span style="color:var(--teal)">Knowledge Docs</span></div>
+      <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);letter-spacing:.16em;text-transform:uppercase">6 <span style="color:var(--teal)">Input Modalities</span></div>
+      <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);letter-spacing:.16em;text-transform:uppercase">3 <span style="color:var(--teal)">Languages</span></div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+</div><!-- /deck -->
+<div id="nav-dots"></div>
+<button id="fs-btn" onclick="toggleFullscreen()" title="Fullscreen (F)" style="position:fixed;bottom:clamp(12px,2vh,20px);right:clamp(14px,2vw,22px);z-index:200;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:var(--muted);font-size:15px;width:30px;height:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s" onmouseover="this.style.color='var(--teal)';this.style.borderColor='rgba(0,229,192,.4)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='rgba(255,255,255,.15)'">⛶</button>
+
+<script>
+/* === NAVIGATION ============================================== */
+const slides = document.querySelectorAll('.slide');
+const dotsEl = document.getElementById('nav-dots');
+let cur = 0;
+
+slides.forEach((_, i) => {
+  const d = document.createElement('div');
+  d.className = 'nav-dot' + (i === 0 ? ' active' : '');
+  d.addEventListener('click', () => goto(i));
+  dotsEl.appendChild(d);
+});
+
+function goto(n) {
+  if (n < 0 || n >= slides.length) return;
+  slides[cur].classList.remove('active');
+  dotsEl.children[cur].classList.remove('active');
+  cur = n;
+  slides[cur].classList.add('active');
+  dotsEl.children[cur].classList.add('active');
+}
+
+document.addEventListener('keydown', e => {
+  if (['ArrowRight','ArrowDown',' '].includes(e.key)) { e.preventDefault(); goto(cur+1); }
+  if (['ArrowLeft','ArrowUp'].includes(e.key)) { e.preventDefault(); goto(cur-1); }
+  if (e.key === 'Home') goto(0);
+  if (e.key === 'End') goto(slides.length-1);
+  if (e.key.toLowerCase() === 'e') toggleEdit();
+  if (e.key.toLowerCase() === 'f') toggleFullscreen();
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveToStorage(); }
+});
+
+/* === FULLSCREEN ============================================== */
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen();
+  }
+}
+document.addEventListener('fullscreenchange', () => {
+  const btn = document.getElementById('fs-btn');
+  if (btn) btn.textContent = document.fullscreenElement ? '⛶' : '⛶';
+});
+
+let tx = 0;
+document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
+document.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - tx;
+  if (Math.abs(dx) > 50) dx < 0 ? goto(cur+1) : goto(cur-1);
+}, { passive: true });
+
+/* === INLINE EDIT ============================================ */
+let editing = false;
+const EDIT_SEL = '.section-title,.section-sub,.stat-num,.stat-label,.pipe-t,.pipe-d,.agent-name,.agent-feat,.feat-t,.feat-d,.st,.sd,.rw-txt,.plan-t,.plan-d,.plan-sp,.sval,.slbl,.story-name,.arch-ct,.arch-cd,.modal-title,.modal-desc,.mbar-label,.ann-item';
+
+function toggleEdit() {
+  editing = !editing;
+  document.querySelectorAll(EDIT_SEL).forEach(el => { el.contentEditable = editing ? 'true' : 'false'; });
+  document.querySelector('.edit-hint').textContent = editing ? 'Editing ON — click text · Ctrl+S save' : 'E = edit · Ctrl+S = save';
+}
+
+function saveToStorage() {
+  localStorage.setItem('mc-final', document.getElementById('deck').innerHTML);
+  const m = Object.assign(document.createElement('div'), {
+    textContent: 'Saved ✓',
+    style: 'position:fixed;top:12px;right:12px;z-index:999;font-family:monospace;font-size:10px;letter-spacing:.14em;color:var(--teal);background:rgba(0,229,192,.1);border:1px solid rgba(0,229,192,.3);padding:5px 12px;border-radius:3px;transition:opacity .5s;opacity:1'
+  });
+  document.body.appendChild(m);
+  setTimeout(() => { m.style.opacity = '0'; setTimeout(() => m.remove(), 500); }, 1800);
+}
+
+const saved = localStorage.getItem('mc-final');
+if (saved) document.getElementById('deck').innerHTML = saved;
+</script>
+</body>
+</html>

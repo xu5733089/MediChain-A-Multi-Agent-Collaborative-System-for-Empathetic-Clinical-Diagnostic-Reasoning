@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, useMemo } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AmbientBlobs, ECGLine, IllustFlower, IllustLeaf, ParticleField } from "../components/illustrations";
 import { AgentBadge, SevBadge, TypingDots } from "../components/ui";
@@ -26,74 +26,9 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [pendingAttachments, setPendingAttachments] = useState([]);
   const [safetyAlert, setSafetyAlert] = useState(null);
-  const [micRecording, setMicRecording] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
   const fileInputRef = useRef(null);
   // Single ref object — avoids stale-closure issues across restarts
-  const micSR = useRef({ active: false, text: "", rec: null });
-
-  const micSupported = useMemo(() =>
-    typeof window !== "undefined" && !!(window.SpeechRecognition || window.webkitSpeechRecognition),
-  []);
-
-  function launchMic() {
-    const s = micSR.current;
-    if (!s.active) return;
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const rec = new SR();
-    rec.lang = "en-US";
-    rec.continuous = true;
-    rec.interimResults = false;
-
-    rec.onresult = e => {
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        if (e.results[i].isFinal) s.text += e.results[i][0].transcript + " ";
-      }
-    };
-
-    rec.onerror = e => {
-      // "aborted" fires when stop() is called — ignore it, onend handles finalization
-      if (e.error === "aborted" || e.error === "no-speech" || e.error === "audio-capture") return;
-      s.rec = null;
-      if (s.active) setTimeout(launchMic, 250);
-      else setMicRecording(false);
-    };
-
-    rec.onend = () => {
-      s.rec = null;
-      if (s.active) {
-        // Delay prevents rapid-restart rejection by Chrome
-        setTimeout(launchMic, 150);
-      } else {
-        setMicRecording(false);
-        if (s.text.trim()) setInput(prev => (prev ? prev + " " : "") + s.text.trim());
-        s.text = "";
-      }
-    };
-
-    try { rec.start(); s.rec = rec; }
-    catch (_) { if (s.active) setTimeout(launchMic, 300); }
-  }
-
-  function startMic() {
-    micSR.current = { active: true, text: "", rec: null };
-    setMicRecording(true);
-    launchMic();
-  }
-
-  function stopMic() {
-    const s = micSR.current;
-    s.active = false;
-    if (s.rec) {
-      s.rec.stop(); // onend handles finalization
-    } else {
-      setMicRecording(false);
-      if (s.text.trim()) setInput(prev => (prev ? prev + " " : "") + s.text.trim());
-      s.text = "";
-    }
-  }
-
-  useEffect(() => () => { micSR.current.active = false; micSR.current.rec?.abort(); }, []);
   const msgEnd = useRef(null);
   const logEnd = useRef(null);
 
@@ -473,26 +408,13 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
                 >
                   {uploading ? "…" : "📎"}
                 </Button>
-                {micSupported && (
-                  <Button
-                    onClick={micRecording ? stopMic : startMic}
-                    variant={micRecording ? "danger" : "outline"}
-                    size="icon"
-                    disabled={!sid || loading}
-                    title={micRecording ? t("chat.stop_recording") : t("chat.record_speech")}
-                    className="shrink-0"
-                    style={{ borderRadius: 999 }}
-                  >
-                    {micRecording ? "⏹" : "🎙"}
-                  </Button>
-                )}
                 <CameraCapture
                   api={api}
                   onCapture={onCameraCapture}
                   onClose={() => setCameraOpen(false)}
                   disabled={!sid || loading || phase !== "interviewing"}
                 />
-                <Input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()} placeholder={micRecording ? t("chat.listening") : t("chat.placeholder")} disabled={loading} style={{ flex: 1, fontSize: 15, fontFamily: "var(--body)", borderRadius: 999 }} />
+                <Input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()} placeholder={t("chat.placeholder")} disabled={loading} style={{ flex: 1, fontSize: 15, fontFamily: "var(--body)", borderRadius: 999 }} />
                 <Button
                   onClick={send}
                   disabled={!input.trim() || loading}
