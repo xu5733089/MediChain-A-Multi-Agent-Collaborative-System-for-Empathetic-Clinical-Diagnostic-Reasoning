@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import { useTranslation } from "react-i18next";
 import { AmbientBlobs, ECGLine, IllustBranch, IllustLeaf } from "../components/illustrations";
 import { AgentBadge, Banner, InkDivider, SevBadge } from "../components/ui";
@@ -324,9 +325,9 @@ export default function ResultsPage({ api, result, onNew, onHistory, onFlow }) {
                     </span>
                   </div>
                   {tab === "diagnosis" && <DifferentialChart diagnosis={diagnosis} />}
-                  <p style={{ fontFamily: "var(--body)", fontSize: 15.5, color: "var(--ink2)", lineHeight: 1.9, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                    {tab === "diagnosis" ? diagnosis : review}
-                  </p>
+                  <div className="md-body">
+                    <ReactMarkdown>{tab === "diagnosis" ? diagnosis : review}</ReactMarkdown>
+                  </div>
                 </>
               )}
               {tab === "cot" && (
