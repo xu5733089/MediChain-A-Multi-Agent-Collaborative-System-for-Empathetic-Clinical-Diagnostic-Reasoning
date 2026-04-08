@@ -48,7 +48,7 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 24 }}>
             <div style={{ flex: 1, minWidth: 300 }}>
               <div className="eyebrow hero-eyebrow">{t("input.eyebrow")}</div>
-              <h1 style={{ fontFamily: "var(--serif)", fontSize: "clamp(48px,5.5vw,76px)", fontWeight: 400, color: "var(--ink)", lineHeight: 0.9, letterSpacing: -2, marginBottom: 20 }}>
+              <h1 style={{ fontFamily: "var(--serif)", fontSize: "clamp(48px,5.5vw,76px)", fontWeight: 400, color: "var(--ink)", lineHeight: 0.9, letterSpacing: -2, marginBottom: 20, paddingBottom: "0.18em" }}>
                 <span className="hero-line1">{t("input.title_line1")}</span>
                 <span className="grad-heading hero-line2">{t("input.title_line2")}</span>
               </h1>
