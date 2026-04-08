@@ -1274,7 +1274,7 @@ body:hover .edit-hint{opacity:.6}
             <tr><td>Auth Roles</td><td class="bad">None</td><td class="good">Patient + Provider (JWT)</td></tr>
             <tr><td>UI Languages</td><td class="bad">EN only</td><td class="good">EN / ZH / JA</td></tr>
             <tr><td>Image Annotation</td><td class="bad">None</td><td class="good">9-region JSON overlay</td></tr>
-            <tr><td>Safety Rules</td><td class="bad">None</td><td class="good">3 classes (Cardiac·Stroke·Drug)</td></tr>
+            <tr><td>Safety Rules</td><td class="bad">None</td><td class="good">Rule-based checks + LLM classifier</td></tr>
             <tr><td>Story Points Total</td><td class="mid">13 SP</td><td class="good">48 SP (+35)</td></tr>
           </tbody>
         </table>
@@ -1397,9 +1397,9 @@ body:hover .edit-hint{opacity:.6}
       <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
         <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px">Future Directions</div>
         <div class="reveal pipe-step"><div class="pipe-num">①</div><div><div class="pipe-t">Formal Evaluation — MedQA Benchmark</div><div class="pipe-d">We plan to evaluate the system on MedQA case vignettes, covering diagnostic accuracy, empathy, hallucination rate, and citation relevance.</div></div></div>
-        <div class="reveal pipe-step"><div class="pipe-num">②</div><div><div class="pipe-t">Reasoning Visualisation Graph</div><div class="pipe-d">We plan to add an interactive graph to show agent dialogue flow, evidence retrieval, and diagnostic branches with confidence scores.</div></div></div>
-        <div class="reveal pipe-step"><div class="pipe-num">③</div><div><div class="pipe-t">Production Deployment</div><div class="pipe-d">Future deployment could use Docker Compose, HTTPS, OAuth2, rate limiting, and a more scalable backend architecture.</div></div></div>
-        <div class="reveal pipe-step"><div class="pipe-num">④</div><div><div class="pipe-t">Continual RAG Update</div><div class="pipe-d">We also plan to support scheduled PubMed updates, so new publications can be embedded and indexed without a full re-ingest.</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">②</div><div><div class="pipe-t">Production Deployment</div><div class="pipe-d">Future deployment could use Docker Compose, HTTPS, OAuth2, rate limiting, and a more scalable backend architecture.</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">③</div><div><div class="pipe-t">Continual RAG Update</div><div class="pipe-d">We also plan to support scheduled PubMed updates, so new publications can be embedded and indexed without a full re-ingest.</div></div></div>
+        <div class="reveal pipe-step"><div class="pipe-num">④</div><div><div class="pipe-t">Reasoning Visualisation Graph</div><div class="pipe-d">We plan to add an interactive graph to show agent dialogue flow, evidence retrieval, and diagnostic branches with confidence scores.</div></div></div>
       </div>
     </div>
   </div>
@@ -1422,7 +1422,7 @@ body:hover .edit-hint{opacity:.6}
         <div class="reveal" style="padding:clamp(10px,1.5vh,18px);background:var(--bg2);border:1px solid rgba(245,166,35,.2);border-radius:6px;border-left:3px solid var(--amber)">
           <div style="font-size:clamp(13px,1.3vw,15px);color:var(--amber);letter-spacing:.18em;text-transform:uppercase;margin-bottom:6px">Contribution 2</div>
           <div style="font-family:var(--serif);font-size:clamp(14px,1.8vw,20px);color:var(--text);margin-bottom:5px">Multi-Agent Clinical Safety Framework</div>
-          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.6">We propose a three-agent architecture in which the Critic acts as a safety verifier. This separates interaction, diagnosis, and safety checking into auditable components.</div>
+          <div style="font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.6">We use a three-agent clinical reasoning system, supported by a two-layer Safety engine (rules + LLM) for risk grading. The Critic reviews diagnosis safety and evidence, and all safety events are logged for audit.</div>
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
