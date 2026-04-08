@@ -254,7 +254,7 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
   }[phase];
 
   return (
-    <div style={{ height: "100vh", background: "var(--paper)", display: "flex", flexDirection: "column", overflow: "hidden", paddingTop: 56, position: "relative", zIndex: 1 }}>
+    <div style={{ position: "fixed", top: 56, left: 0, right: 0, bottom: 0, background: "var(--paper)", display: "flex", flexDirection: "column", overflow: "hidden", zIndex: 1 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", height: 44, borderBottom: "1px solid rgba(22,15,6,0.09)", background: "var(--paper2)", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <Button onClick={onBack} variant="outline" size="xs">{t("common.back")}</Button>
