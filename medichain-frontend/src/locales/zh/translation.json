@@ -86,9 +86,9 @@
   },
   "input": {
     "eyebrow": "问诊登记",
-    "title_line1": "描述您的",
-    "title_line2": "症状",
-    "subtitle": "三位专业 AI 智能体——问诊员、诊断师和评审员——协作构建全面的临床诊断图像。",
+    "title_line1": "告诉我们",
+    "title_line2": "您的感受",
+    "subtitle": "三位专业 AI 智能体进行结构化问诊，生成基于 RAG 的鉴别诊断，并对结果进行同行评审——富有同理心、以证据为基础、全程可审计。",
     "agents_online": "3 个智能体在线",
     "eval_btn": "📊 医学问答评估 →",
     "profile_linked": "已关联档案",

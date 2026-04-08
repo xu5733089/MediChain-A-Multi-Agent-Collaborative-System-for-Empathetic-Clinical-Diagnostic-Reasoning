@@ -44,18 +44,18 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
       <IllustLeaf w={110} h={165} style={{ position: "fixed", bottom: "22%", right: "7%", animation: "float1 10s 3s ease-in-out infinite", transform: "rotate(-35deg)", pointerEvents: "none" }} color="var(--amber)" opacity={0.12} />
 
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "36px 28px 0", position: "relative", zIndex: 1 }}>
-        <div className="fade-up" style={{ marginBottom: 40 }}>
+        <div style={{ marginBottom: 40 }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 24 }}>
             <div style={{ flex: 1, minWidth: 300 }}>
-              <div className="eyebrow">{t("input.eyebrow")}</div>
-              <h1 style={{ fontFamily: "var(--serif)", fontSize: "clamp(48px,5.5vw,76px)", fontWeight: 400, color: "var(--ink)", lineHeight: 0.9, letterSpacing: -2, marginBottom: 20 }}>
-                {t("input.title_line1")}<br />
-                <span className="grad-heading">{t("input.title_line2")}</span>
+              <div className="eyebrow hero-eyebrow">{t("input.eyebrow")}</div>
+              <h1 style={{ fontFamily: "var(--serif)", fontSize: "clamp(48px,5.5vw,76px)", fontWeight: 400, color: "var(--ink)", lineHeight: 0.9, letterSpacing: -2, marginBottom: 20, paddingBottom: "0.18em" }}>
+                <span className="hero-line1">{t("input.title_line1")}</span>
+                <span className="grad-heading hero-line2" style={{ paddingBottom: "0.2em" }}>{t("input.title_line2")}</span>
               </h1>
-              <p style={{ fontFamily: "var(--body)", fontSize: 17, color: "var(--ink3)", maxWidth: 520, lineHeight: 1.75 }}>
+              <p className="hero-sub" style={{ fontFamily: "var(--body)", fontSize: 17, color: "var(--ink3)", maxWidth: 520, lineHeight: 1.75 }}>
                 {t("input.subtitle")}
               </p>
-              <div style={{ display: "flex", gap: 12, marginTop: 22, flexWrap: "wrap", alignItems: "center" }}>
+              <div className="hero-badges" style={{ display: "flex", gap: 12, marginTop: 22, flexWrap: "wrap", alignItems: "center" }}>
                 <div className="live-badge">
                   <div className="live-dot" />
                   <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--sage)", letterSpacing: "0.14em" }}>{t("input.agents_online")}</span>
@@ -101,6 +101,24 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
                 className="text-[15px]"
                 style={{ borderColor: valid ? "var(--sage)" : undefined, boxShadow: valid ? "0 0 0 3px var(--sageDim)" : undefined, fontFamily: "var(--body)" }}
               />
+              {/* Symptom quick tags */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+                {["Chest pain", "Headache", "Fever", "Nausea", "Shortness of breath", "Fatigue", "Dizziness", "Back pain", "Abdominal pain", "Palpitations", "Cough", "Sore throat"].map(tag => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, description: f.description ? f.description.trimEnd() + ", " + tag : tag }))}
+                    style={{
+                      fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.05em",
+                      color: "var(--ink3)", background: "var(--paper3)",
+                      border: "1px solid rgba(22,15,6,0.14)", borderRadius: 20,
+                      padding: "3px 10px", cursor: "pointer", transition: "all 0.15s",
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "var(--rosePale)"; e.currentTarget.style.borderColor = "var(--rose)"; e.currentTarget.style.color = "var(--rose)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "var(--paper3)"; e.currentTarget.style.borderColor = "rgba(22,15,6,0.14)"; e.currentTarget.style.color = "var(--ink3)"; }}
+                  >{tag}</button>
+                ))}
+              </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: 9, alignItems: "center" }}>
                 <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: valid ? "var(--sage)" : "var(--ink5)", transition: "color 0.3s" }}>
                   {valid && hasReadyFile && !form.description.trim()

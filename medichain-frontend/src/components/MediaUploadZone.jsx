@@ -132,107 +132,13 @@ function AttachmentChip({ item, onRemove, onOcrResult, api }) {
   );
 }
 
-// ── Microphone recorder using Web Speech API ───────────────
-function MicButton({ onTranscript, disabled, lang }) {
-  const { t } = useTranslation();
-  const [recording, setRecording] = useState(false);
-  const [interim, setInterim] = useState("");
-  const sr = useRef({ active: false, text: "", rec: null });
-  const supported = typeof window !== "undefined" && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
-
-  function launch() {
-    const s = sr.current;
-    if (!s.active) return;
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const rec = new SR();
-    rec.lang = lang || navigator.language || "en-US";
-    rec.continuous = true;
-    rec.interimResults = true;
-
-    rec.onresult = e => {
-      let buf = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        if (e.results[i].isFinal) s.text += e.results[i][0].transcript + " ";
-        else buf += e.results[i][0].transcript;
-      }
-      setInterim(buf);
-    };
-
-    rec.onerror = e => {
-      if (e.error === "aborted" || e.error === "no-speech" || e.error === "audio-capture") return;
-      s.rec = null;
-      if (s.active) setTimeout(launch, 250);
-      else { setRecording(false); setInterim(""); }
-    };
-
-    rec.onend = () => {
-      s.rec = null;
-      setInterim("");
-      if (s.active) {
-        setTimeout(launch, 150);
-      } else {
-        setRecording(false);
-        if (s.text.trim()) onTranscript(s.text.trim());
-        s.text = "";
-      }
-    };
-
-    try { rec.start(); s.rec = rec; }
-    catch (_) { if (s.active) setTimeout(launch, 300); }
-  }
-
-  function start() {
-    sr.current = { active: true, text: "", rec: null };
-    setRecording(true);
-    launch();
-  }
-
-  function stop() {
-    const s = sr.current;
-    s.active = false;
-    if (s.rec) {
-      s.rec.stop();
-    } else {
-      setRecording(false);
-      if (s.text.trim()) onTranscript(s.text.trim());
-      s.text = "";
-    }
-  }
-
-  useEffect(() => () => { sr.current.active = false; sr.current.rec?.abort(); }, []);
-
-  if (!supported) return null;
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <Button
-        type="button"
-        variant={recording ? "danger" : "outline"}
-        size="sm"
-        onClick={recording ? stop : start}
-        disabled={disabled}
-        style={{ gap: 6 }}
-      >
-        <span style={{ fontSize: 15 }}>{recording ? "⏹" : "🎙"}</span>
-        {recording ? t("upload.stop") : t("upload.record")}
-      </Button>
-      {interim && (
-        <p style={{ fontFamily: "var(--body)", fontSize: 12, color: "var(--ink4)", fontStyle: "italic", lineHeight: 1.5 }}>
-          {interim}
-        </p>
-      )}
-    </div>
-  );
-}
 
 // ── Main export ────────────────────────────────────────────
 export default function MediaUploadZone({ api, onUpdate, disabled }) {
   const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [dragging, setDragging] = useState(false);
-  const [audioLang, setAudioLang] = useState(
-    () => AUDIO_LANGS.find(l => navigator.language?.startsWith(l.code.split("-")[0]))?.code || "en-US"
-  );
+  const audioLang = AUDIO_LANGS.find(l => navigator.language?.startsWith(l.code.split("-")[0]))?.code || "en-US";
   const [comparing, setComparing] = useState(false);
   const [compareResult, setCompareResult] = useState(null);
   const fileInputRef = useRef(null);
@@ -293,17 +199,6 @@ export default function MediaUploadZone({ api, onUpdate, disabled }) {
     setCompareResult(null);
   }
 
-  function onMicTranscript(text) {
-    const id = Math.random().toString(36).slice(2);
-    setItems(prev => [...prev, {
-      id, fileName: "Voice recording", fileType: "audio",
-      analysing: false,
-      analysis: `Voice recording transcription:\n\n${text}`,
-      analysisPreview: text,
-      analysisLength: text.length,
-      annotations: [], previewUrl: null, error: null, file: null,
-    }]);
-  }
 
   const readyImages = items.filter(it => it.fileType === "image" && !it.analysing && !it.error && it.file);
 
@@ -352,28 +247,11 @@ export default function MediaUploadZone({ api, onUpdate, disabled }) {
         <p style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", letterSpacing: "0.08em" }}>
           {t("upload.drop_types")} · DICOM
         </p>
+        <p style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--navy)", letterSpacing: "0.08em", marginTop: 6, opacity: 0.7 }}>
+          🔍 Upload 2+ images to enable before/after comparison
+        </p>
       </div>
 
-      {/* Mic + audio language selector */}
-      <div style={{ display: "flex", gap: 8, alignItems: "flex-start", flexWrap: "wrap" }}>
-        <MicButton onTranscript={onMicTranscript} disabled={disabled} lang={audioLang} />
-        <div style={{ display: "flex", gap: 4, alignItems: "center", paddingTop: 2 }}>
-          {AUDIO_LANGS.map(l => (
-            <button
-              key={l.code}
-              onClick={() => setAudioLang(l.code)}
-              style={{
-                fontFamily: "var(--mono)", fontSize: 10, padding: "4px 8px", borderRadius: 6,
-                border: `1.5px solid ${audioLang === l.code ? "var(--navy)" : "rgba(22,15,6,0.18)"}`,
-                background: audioLang === l.code ? "var(--navyPale)" : "transparent",
-                color: audioLang === l.code ? "var(--navy)" : "var(--ink4)",
-                cursor: "pointer", fontWeight: audioLang === l.code ? 600 : 400,
-              }}
-            >{l.label}</button>
-          ))}
-          <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)" }}>audio lang</span>
-        </div>
-      </div>
 
       {/* Attachment chips */}
       {items.length > 0 && (
@@ -396,20 +274,27 @@ export default function MediaUploadZone({ api, onUpdate, disabled }) {
         </div>
       )}
 
-      {/* Multi-image compare */}
-      {readyImages.length >= 2 && (
+      {/* Multi-image compare — shown as soon as 1 image is ready */}
+      {readyImages.length >= 1 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={runCompare}
-            disabled={comparing || disabled}
-            style={{ gap: 6 }}
-          >
-            <span style={{ fontSize: 14 }}>🔍</span>
-            {comparing ? "Comparing…" : `Compare ${readyImages.length} images`}
-          </Button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={runCompare}
+              disabled={readyImages.length < 2 || comparing || disabled}
+              style={{ gap: 6, flex: 1 }}
+            >
+              <span style={{ fontSize: 14 }}>🔍</span>
+              {comparing ? "Comparing…" : readyImages.length >= 2 ? `Compare ${readyImages.length} images` : "Compare images"}
+            </Button>
+            {readyImages.length < 2 && (
+              <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>
+                +{2 - readyImages.length} more image needed
+              </span>
+            )}
+          </div>
           {compareResult && (
             <div style={{
               background: "var(--navyPale)", border: "1px solid rgba(22,15,6,0.12)",

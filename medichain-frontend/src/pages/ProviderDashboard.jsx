@@ -42,6 +42,18 @@ function dedupeProviderRows(items) {
   return chosen;
 }
 
+function StatCard({ icon, value, label, color = "var(--rose)" }) {
+  return (
+    <div className="card" style={{ padding: "18px 22px", display: "flex", alignItems: "center", gap: 16 }}>
+      <div style={{ width: 44, height: 44, borderRadius: 12, background: `${color}18`, border: `1px solid ${color}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{icon}</div>
+      <div>
+        <p style={{ fontFamily: "var(--serif)", fontSize: 30, fontWeight: 400, color, lineHeight: 1, letterSpacing: -1 }}>{value}</p>
+        <p style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", letterSpacing: "0.12em", textTransform: "uppercase", marginTop: 3 }}>{label}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function ProviderDashboard({ api }) {
   const { t } = useTranslation();
   const [rows, setRows] = useState([]);
@@ -112,6 +124,22 @@ export default function ProviderDashboard({ api }) {
           </div>
         )}
 
+        {!loading && rows.length > 0 && (() => {
+          const today = new Date().toDateString();
+          const todayCount = rows.filter(r => new Date(r.created_at).toDateString() === today).length;
+          const highRisk = rows.filter(r => (r.severity_level || "").toLowerCase() === "severe").length;
+          const doneCount = rows.filter(r => r.status === "done").length;
+          const uniquePatients = new Set(rows.map(r => r.patient_username || r.patient_id).filter(Boolean)).size;
+          return (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 18 }}>
+              <StatCard icon="📋" value={rows.length} label="Total Sessions" color="var(--rose)" />
+              <StatCard icon="📅" value={todayCount} label="Today" color="var(--navy)" />
+              <StatCard icon="⚠️" value={highRisk} label="Severe Cases" color="var(--amber)" />
+              <StatCard icon="👤" value={uniquePatients} label="Unique Patients" color="var(--sage)" />
+            </div>
+          );
+        })()}
+
         <div className="card" style={{ overflow: "hidden", padding: 0 }}>
           <div style={{ display: "grid", gridTemplateColumns: "2.1fr 0.8fr 0.9fr 1.2fr", gap: 10, padding: "11px 16px", borderBottom: "1px solid rgba(22,15,6,0.1)", background: "var(--paper3)", fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", letterSpacing: "0.1em" }}>
             <div>{t("provider.col_complaint")}</div>
@@ -131,8 +159,11 @@ export default function ProviderDashboard({ api }) {
                   <p style={{ margin: 0, fontFamily: "var(--body)", fontSize: 14, color: "var(--ink2)", lineHeight: 1.5 }}>{r.description || t("provider.no_desc")}</p>
                   <p style={{ margin: "4px 0 0", fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)" }}>{t("provider.patient_label", { name: r.patient_username || "unknown" })}</p>
                 </div>
-                <div style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--ink3)" }}>{r.severity_level || "moderate"}</div>
-                <div style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--ink3)" }}>{r.status || "-"}</div>
+                <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: (r.severity_level || "").toLowerCase() === "severe" ? "var(--rose)" : (r.severity_level || "").toLowerCase() === "mild" ? "var(--sage)" : "var(--amber)", letterSpacing: "0.08em" }}>{(r.severity_level || "moderate").toUpperCase()}</div>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: r.status === "done" ? "var(--sage)" : "var(--amber)", flexShrink: 0 }} />
+                  <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: r.status === "done" ? "var(--sage)" : "var(--amber)", letterSpacing: "0.08em" }}>{(r.status || "active").toUpperCase()}</span>
+                </div>
                 <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--ink5)" }}>{fmtD(r.created_at)}</div>
               </button>
             ))

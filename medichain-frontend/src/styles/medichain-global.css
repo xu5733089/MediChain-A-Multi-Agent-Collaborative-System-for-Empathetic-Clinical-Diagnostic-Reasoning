@@ -125,6 +125,24 @@ body {
 @keyframes dotPulse  { 0%,100%{opacity:0.25;transform:scale(0.65)} 50%{opacity:1;transform:scale(1)} }
 @keyframes inkBloom  { 0%{transform:scale(0) rotate(-15deg);opacity:0} 60%{transform:scale(1.1) rotate(3deg);opacity:1} 100%{transform:scale(1) rotate(0);opacity:1} }
 @keyframes gradShift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+@keyframes blink     { 0%,100%{opacity:1} 50%{opacity:0} }
+
+/* ─── Markdown body ─── */
+.md-body { font-family: var(--body); font-size: 15.5px; color: var(--ink2); line-height: 1.9; word-break: break-word; }
+.md-body h2 { font-family: var(--serif); font-size: 21px; font-weight: 600; color: var(--ink); margin: 1.4em 0 0.5em; padding-bottom: 6px; border-bottom: 1px solid rgba(22,15,6,0.1); }
+.md-body h3 { font-family: var(--serif); font-size: 17px; font-weight: 600; color: var(--ink2); margin: 1.1em 0 0.4em; }
+.md-body p  { margin: 0.55em 0; }
+.md-body strong { font-weight: 700; color: var(--ink); }
+.md-body em { font-style: italic; color: var(--ink3); }
+.md-body ul, .md-body ol { padding-left: 1.5em; margin: 0.5em 0; display: flex; flex-direction: column; gap: 4px; }
+.md-body li { margin: 0; }
+.md-body code { font-family: var(--mono); font-size: 12.5px; background: rgba(22,15,6,0.06); border-radius: 4px; padding: 1px 6px; color: var(--rose); }
+.md-body blockquote { border-left: 3px solid var(--rose); padding: 6px 14px; margin: 10px 0; background: var(--rosePale); border-radius: 0 6px 6px 0; color: var(--ink3); }
+.md-body hr { border: none; border-top: 1px dashed rgba(22,15,6,0.14); margin: 1.2em 0; }
+
+/* ─── Page transition ─── */
+.page-fade { animation: pageFadeIn 0.28s ease both; }
+@keyframes pageFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes glowPulse { 0%,100%{box-shadow:0 0 0 0 rgba(184,56,48,0.18)} 50%{box-shadow:0 0 0 14px rgba(184,56,48,0)} }
 @keyframes borderFlow{ 0%{background-position:0 0} 100%{background-position:300% 0} }
 @keyframes stampIn   { 0%{transform:scale(1.8) rotate(-8deg);opacity:0} 60%{transform:scale(0.96) rotate(1deg);opacity:1} 100%{transform:scale(1) rotate(0);opacity:1} }
@@ -303,7 +321,21 @@ input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.22); box-shad
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   background-clip: text;
   animation: gradShift 6s ease infinite;
+  padding-bottom: 0.2em;
+  display: inline-block;
 }
+
+/* ─── Hero title animations ─── */
+@keyframes heroLine   { from { opacity:0; transform:translateY(22px); } to { opacity:1; transform:translateY(0); } }
+@keyframes heroSlideL { from { opacity:0; transform:translateX(-16px); } to { opacity:1; transform:translateX(0); } }
+@keyframes heroSub    { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+@keyframes subtitleReveal { from { clip-path: inset(0 100% 0 0); opacity:0; } to { clip-path: inset(0 0% 0 0); opacity:1; } }
+
+.hero-eyebrow { animation: heroSlideL 0.5s cubic-bezier(0.22,1,0.36,1) 0.05s both; }
+.hero-line1   { animation: heroLine   0.65s cubic-bezier(0.22,1,0.36,1) 0.15s both; display:block; }
+.hero-line2   { animation: heroLine   0.65s cubic-bezier(0.22,1,0.36,1) 0.3s  both; display:block; }
+.hero-sub     { animation: subtitleReveal 0.9s cubic-bezier(0.22,1,0.36,1) 0.55s both; }
+.hero-badges  { animation: heroSub    0.5s ease 0.85s both; }
 
 /* ─── Gold rule ─── */
 .gold-rule {

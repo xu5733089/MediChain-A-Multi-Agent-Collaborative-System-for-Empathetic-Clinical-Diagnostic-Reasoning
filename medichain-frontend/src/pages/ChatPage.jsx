@@ -1,4 +1,20 @@
-import { useCallback, useEffect, useRef, useState, useMemo } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+const SOCRATES_DIMS = [
+  { key: "S", label: "Site",      keywords: ["where", "location", "site", "located", "part of your body", "which area"] },
+  { key: "O", label: "Onset",     keywords: ["when", "start", "onset", "began", "how long", "first notice"] },
+  { key: "C", label: "Character", keywords: ["describe", "character", "feel like", "sharp", "dull", "burning", "aching", "crushing", "pressure", "what does"] },
+  { key: "R", label: "Radiation", keywords: ["spread", "radiat", "arm", "jaw", "back", "shoulder", "neck", "anywhere else", "move"] },
+  { key: "A", label: "Associated", keywords: ["associated", "other symptom", "nausea", "fever", "sweat", "vomit", "shortness", "dizz", "alongside"] },
+  { key: "T", label: "Timing",    keywords: ["constant", "come and go", "intermittent", "how often", "timing", "always there", "episode", "continuous"] },
+  { key: "E", label: "Factors",   keywords: ["worse", "better", "reliev", "exacerbat", "trigger", "aggravat", "rest", "exercise", "eating", "stress", "position"] },
+  { key: "S2", label: "Severity", keywords: ["severe", "mild", "moderate", "rate", "scale", "how bad", "affect your", "daily", "impact"] },
+];
+
+function detectSocrates(msgs) {
+  const aiText = msgs.filter(m => m.role === "ai").map(m => (m.text || "").toLowerCase()).join(" ");
+  return new Set(SOCRATES_DIMS.filter(d => d.keywords.some(kw => aiText.includes(kw))).map(d => d.key));
+}
 import { useTranslation } from "react-i18next";
 import { AmbientBlobs, ECGLine, IllustFlower, IllustLeaf, ParticleField } from "../components/illustrations";
 import { AgentBadge, SevBadge, TypingDots } from "../components/ui";
@@ -26,76 +42,33 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [pendingAttachments, setPendingAttachments] = useState([]);
   const [safetyAlert, setSafetyAlert] = useState(null);
-  const [micRecording, setMicRecording] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
+  const [streamingMsg, setStreamingMsg] = useState(null); // { displayed, full, time }
   const fileInputRef = useRef(null);
+  const streamRef = useRef(null);
   // Single ref object — avoids stale-closure issues across restarts
-  const micSR = useRef({ active: false, text: "", rec: null });
-
-  const micSupported = useMemo(() =>
-    typeof window !== "undefined" && !!(window.SpeechRecognition || window.webkitSpeechRecognition),
-  []);
-
-  function launchMic() {
-    const s = micSR.current;
-    if (!s.active) return;
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const rec = new SR();
-    rec.lang = "en-US";
-    rec.continuous = true;
-    rec.interimResults = false;
-
-    rec.onresult = e => {
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        if (e.results[i].isFinal) s.text += e.results[i][0].transcript + " ";
-      }
-    };
-
-    rec.onerror = e => {
-      // "aborted" fires when stop() is called — ignore it, onend handles finalization
-      if (e.error === "aborted" || e.error === "no-speech" || e.error === "audio-capture") return;
-      s.rec = null;
-      if (s.active) setTimeout(launchMic, 250);
-      else setMicRecording(false);
-    };
-
-    rec.onend = () => {
-      s.rec = null;
-      if (s.active) {
-        // Delay prevents rapid-restart rejection by Chrome
-        setTimeout(launchMic, 150);
-      } else {
-        setMicRecording(false);
-        if (s.text.trim()) setInput(prev => (prev ? prev + " " : "") + s.text.trim());
-        s.text = "";
-      }
-    };
-
-    try { rec.start(); s.rec = rec; }
-    catch (_) { if (s.active) setTimeout(launchMic, 300); }
-  }
-
-  function startMic() {
-    micSR.current = { active: true, text: "", rec: null };
-    setMicRecording(true);
-    launchMic();
-  }
-
-  function stopMic() {
-    const s = micSR.current;
-    s.active = false;
-    if (s.rec) {
-      s.rec.stop(); // onend handles finalization
-    } else {
-      setMicRecording(false);
-      if (s.text.trim()) setInput(prev => (prev ? prev + " " : "") + s.text.trim());
-      s.text = "";
-    }
-  }
-
-  useEffect(() => () => { micSR.current.active = false; micSR.current.rec?.abort(); }, []);
   const msgEnd = useRef(null);
   const logEnd = useRef(null);
+
+  // cleanup streaming on unmount
+  useEffect(() => () => { if (streamRef.current) clearInterval(streamRef.current); }, []);
+
+  const pushAiMsg = useCallback((text, time = new Date()) => {
+    if (streamRef.current) clearInterval(streamRef.current);
+    let i = 0;
+    setStreamingMsg({ displayed: "", full: text, time });
+    streamRef.current = setInterval(() => {
+      i += 4;
+      if (i >= text.length) {
+        clearInterval(streamRef.current);
+        streamRef.current = null;
+        setStreamingMsg(null);
+        setMsgs(p => [...p, { role: "ai", agent: "interviewer", text, time }]);
+      } else {
+        setStreamingMsg(s => s ? { ...s, displayed: text.slice(0, i) } : null);
+      }
+    }, 16);
+  }, []);
 
   useEffect(() => { msgEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
   useEffect(() => { logEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [logs]);
@@ -123,7 +96,8 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
       } catch {
         setUploadedFiles([]);
       }
-      setMsgs([{ role: "ai", agent: "interviewer", text: d.reply, time: new Date() }]);
+      setMsgs([]);
+      pushAiMsg(d.reply);
       addLog("interviewer", "Session opened. Structured history-taking active.");
     } catch (e) {
       addLog("interviewer", `Connection error: ${e.message}`);
@@ -162,7 +136,7 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
         URL.revokeObjectURL(uploadImageUrl);
         setUploadImageUrl(null);
       }
-      setMsgs(p => [...p, { role: "ai", agent: "interviewer", text: d.reply, time: new Date() }]);
+      pushAiMsg(d.reply);
       addLog("interviewer", d.trigger_diagnose ? "Sufficient history collected. Initiating multi-agent pipeline." : "Continuing structured intake.");
       if (d.trigger_diagnose) {
         setPhase("analyzing");
@@ -280,7 +254,7 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
   }[phase];
 
   return (
-    <div style={{ height: "100vh", background: "var(--paper)", display: "flex", flexDirection: "column", overflow: "hidden", paddingTop: 56, position: "relative", zIndex: 1 }}>
+    <div style={{ position: "fixed", top: 56, left: 0, right: 0, bottom: 0, background: "var(--paper)", display: "flex", flexDirection: "column", overflow: "hidden", zIndex: 1 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", height: 44, borderBottom: "1px solid rgba(22,15,6,0.09)", background: "var(--paper2)", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <Button onClick={onBack} variant="outline" size="xs">{t("common.back")}</Button>
@@ -299,6 +273,29 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
             <span style={{ fontFamily: "var(--body)", fontSize: 14, fontStyle: "italic", color: "var(--ink2)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{symptoms.description}</span>
             <SevBadge n={symptoms.severity_level || symptoms.severity || "moderate"} />
           </div>
+          {phase === "interviewing" && (() => {
+            const covered = detectSocrates(msgs);
+            const coveredCount = covered.size;
+            return (
+              <div style={{ padding: "7px 18px", borderBottom: "1px solid rgba(22,15,6,0.06)", background: "var(--paper2)", flexShrink: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)", letterSpacing: "0.12em", flexShrink: 0 }}>SOCRATES</span>
+                  <div style={{ display: "flex", gap: 5, flex: 1 }}>
+                    {SOCRATES_DIMS.map(dim => {
+                      const done = covered.has(dim.key);
+                      return (
+                        <div key={dim.key} title={dim.label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                          <div style={{ width: "100%", height: 4, borderRadius: 2, background: done ? "var(--sage)" : "rgba(22,15,6,0.1)", transition: "background 0.4s ease" }} />
+                          <span style={{ fontFamily: "var(--mono)", fontSize: 7, color: done ? "var(--sage)" : "var(--ink5)", letterSpacing: "0.05em", transition: "color 0.4s ease" }}>{dim.key === "S2" ? "Sev" : dim.key}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: coveredCount >= 6 ? "var(--sage)" : "var(--ink5)", flexShrink: 0 }}>{coveredCount}/8</span>
+                </div>
+              </div>
+            );
+          })()}
 
           {safetyAlert?.final_risk === "high" && (
             <div style={{ padding: "10px 18px 0", background: "var(--paper2)", flexShrink: 0 }}>
@@ -349,7 +346,16 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
                 </div>
               );
             })}
-            {loading && phase === "interviewing" && (
+            {streamingMsg && (
+              <div style={{ display: "flex", gap: 10, alignItems: "flex-end", marginBottom: 16 }}>
+                <div style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg,var(--sagePale),var(--sageDim))", border: "1.5px solid var(--sage)40", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0, boxShadow: "0 2px 8px rgba(46,104,56,0.15)" }}>🩺</div>
+                <div style={{ maxWidth: "78%" }}>
+                  <p style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--sage)", marginBottom: 4, letterSpacing: "0.12em" }}>INTERVIEWER · {fmtT(streamingMsg.time)}</p>
+                  <div className="bubble-ai">{streamingMsg.displayed}<span style={{ display: "inline-block", width: 2, height: "1em", background: "var(--sage)", marginLeft: 2, verticalAlign: "text-bottom", animation: "blink 0.8s step-end infinite" }} /></div>
+                </div>
+              </div>
+            )}
+            {loading && !streamingMsg && phase === "interviewing" && (
               <div style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
                 <div style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg,var(--sagePale),var(--sageDim))", border: "1.5px solid var(--sage)40", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🩺</div>
                 <div className="bubble-ai"><TypingDots /></div>
@@ -473,26 +479,13 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
                 >
                   {uploading ? "…" : "📎"}
                 </Button>
-                {micSupported && (
-                  <Button
-                    onClick={micRecording ? stopMic : startMic}
-                    variant={micRecording ? "danger" : "outline"}
-                    size="icon"
-                    disabled={!sid || loading}
-                    title={micRecording ? t("chat.stop_recording") : t("chat.record_speech")}
-                    className="shrink-0"
-                    style={{ borderRadius: 999 }}
-                  >
-                    {micRecording ? "⏹" : "🎙"}
-                  </Button>
-                )}
                 <CameraCapture
                   api={api}
                   onCapture={onCameraCapture}
                   onClose={() => setCameraOpen(false)}
                   disabled={!sid || loading || phase !== "interviewing"}
                 />
-                <Input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()} placeholder={micRecording ? t("chat.listening") : t("chat.placeholder")} disabled={loading} style={{ flex: 1, fontSize: 15, fontFamily: "var(--body)", borderRadius: 999 }} />
+                <Input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()} placeholder={t("chat.placeholder")} disabled={loading} style={{ flex: 1, fontSize: 15, fontFamily: "var(--body)", borderRadius: 999 }} />
                 <Button
                   onClick={send}
                   disabled={!input.trim() || loading}

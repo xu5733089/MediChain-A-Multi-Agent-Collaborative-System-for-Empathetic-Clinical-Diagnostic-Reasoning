@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import { useTranslation } from "react-i18next";
 import { AmbientBlobs, ECGLine, IllustBranch, IllustLeaf } from "../components/illustrations";
 import { AgentBadge, Banner, InkDivider, SevBadge } from "../components/ui";
@@ -191,6 +192,56 @@ function AnnotatedMediaCard({ item }) {
   );
 }
 
+// Parse "1. **Condition** — Confidence: HIGH\n   Supporting..." into structured list
+function parseDifferential(text) {
+  const lines = (text || "").split("\n");
+  const items = [];
+  const confidenceMap = { HIGH: 80, MEDIUM: 50, LOW: 20 };
+  const colorMap = { HIGH: "var(--sage)", MEDIUM: "var(--amber)", LOW: "var(--rose)" };
+  for (const line of lines) {
+    const m = line.match(/^\d+\.\s+\*\*(.+?)\*\*\s*[—-]\s*Confidence:\s*(HIGH|MEDIUM|LOW)/i);
+    if (m) {
+      const level = m[2].toUpperCase();
+      items.push({ condition: m[1].trim(), level, pct: confidenceMap[level] || 30, color: colorMap[level] || "var(--ink5)" });
+    }
+  }
+  return items;
+}
+
+function DifferentialChart({ diagnosis }) {
+  const items = parseDifferential(diagnosis);
+  const [animated, setAnimated] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setAnimated(true), 60);
+    return () => clearTimeout(t);
+  }, []);
+  if (!items.length) return null;
+  return (
+    <div style={{ marginBottom: 24, padding: "18px 20px", background: "var(--paper3)", borderRadius: 10, border: "1px solid rgba(22,15,6,0.08)" }}>
+      <p style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 14 }}>Differential · Confidence</p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {items.map((item, i) => (
+          <div key={i}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
+              <span style={{ fontFamily: "var(--body)", fontSize: 13.5, fontWeight: 500, color: "var(--ink2)" }}>{item.condition}</span>
+              <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: item.color, letterSpacing: "0.08em" }}>{item.level}</span>
+            </div>
+            <div style={{ height: 7, borderRadius: 4, background: "rgba(22,15,6,0.08)", overflow: "hidden" }}>
+              <div style={{
+                height: "100%", borderRadius: 4, background: item.color,
+                width: animated ? `${item.pct}%` : "0%",
+                transition: "width 0.9s cubic-bezier(0.25,0.46,0.45,0.94)",
+                transitionDelay: `${i * 0.13}s`,
+                opacity: 0.85,
+              }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function ResultsPage({ api, result, onNew, onHistory, onFlow }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState("diagnosis");
@@ -273,9 +324,10 @@ export default function ResultsPage({ api, result, onNew, onHistory, onFlow }) {
                       {tab === "diagnosis" ? t("results.diagnosis_sub") : t("results.review_sub")}
                     </span>
                   </div>
-                  <p style={{ fontFamily: "var(--body)", fontSize: 15.5, color: "var(--ink2)", lineHeight: 1.9, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                    {tab === "diagnosis" ? diagnosis : review}
-                  </p>
+                  {tab === "diagnosis" && <DifferentialChart diagnosis={diagnosis} />}
+                  <div className="md-body">
+                    <ReactMarkdown>{tab === "diagnosis" ? diagnosis : review}</ReactMarkdown>
+                  </div>
                 </>
               )}
               {tab === "cot" && (
@@ -292,21 +344,68 @@ export default function ResultsPage({ api, result, onNew, onHistory, onFlow }) {
                   {!hasCot && <p style={{ fontFamily: "var(--body)", fontSize: 14, color: "var(--ink4)", fontStyle: "italic" }}>{t("results.cot_empty")}</p>}
                 </>
               )}
-              {tab === "refs" && refs.map((r, i) => (
-                <div key={i} className="lift" style={{ padding: "14px 18px", background: "var(--paper3)", borderRadius: 4, marginBottom: 10, border: "1px solid rgba(22,15,6,0.08)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 16, marginBottom: 6 }}>
-                    <div style={{ display: "flex", gap: 10 }}>
-                      <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--rose)", flexShrink: 0, fontWeight: 500 }}>[{String(i + 1).padStart(2, "0")}]</span>
-                      <p style={{ fontFamily: "var(--serif)", fontSize: 15, color: "var(--ink)", lineHeight: 1.5 }}>{r.title}</p>
+              {tab === "refs" && (
+                <>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, paddingBottom: 14, borderBottom: "1px dashed rgba(22,15,6,0.09)" }}>
+                    <span style={{ fontSize: 20 }}>📚</span>
+                    <div>
+                      <p style={{ fontFamily: "var(--serif)", fontSize: 17, fontWeight: 600, color: "var(--ink)" }}>Medical Literature References</p>
+                      <p style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--ink4)", fontStyle: "italic" }}>{refs.length} source{refs.length !== 1 ? "s" : ""} retrieved · ranked by relevance</p>
                     </div>
-                    <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", flexShrink: 0 }}>{r.score}</span>
                   </div>
-                  <p style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--ink4)", marginBottom: 6, paddingLeft: 26, fontStyle: "italic" }}>
-                    {r.source || "Unknown source"} · {r.focus || "Unknown focus"} · {r.qtype || "N/A"} · QID: {r.qid || "N/A"}
-                  </p>
-                  <a href={r.url} target="_blank" rel="noreferrer" style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--rose)", textDecoration: "none", paddingLeft: 26, fontWeight: 600 }}>{t("results.ref_open")}</a>
-                </div>
-              ))}
+                  {refs.map((r, i) => {
+                    const scorePct = Math.round((r.score || 0) * 100);
+                    const scoreColor = scorePct >= 70 ? "var(--sage)" : scorePct >= 40 ? "var(--amber)" : "var(--ink4)";
+                    return (
+                      <div key={i} className="lift" style={{ marginBottom: 14, background: "var(--paper3)", borderRadius: 10, border: "1px solid rgba(22,15,6,0.09)", overflow: "hidden" }}>
+                        {/* Top bar: index + relevance score */}
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 18px 8px", borderBottom: "1px solid rgba(22,15,6,0.06)" }}>
+                          <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--rose)", letterSpacing: "0.12em", fontWeight: 600 }}>REF {String(i + 1).padStart(2, "0")}</span>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <div style={{ width: 64, height: 4, borderRadius: 2, background: "rgba(22,15,6,0.1)", overflow: "hidden" }}>
+                              <div style={{ height: "100%", width: `${scorePct}%`, background: scoreColor, borderRadius: 2, transition: "width 0.6s ease" }} />
+                            </div>
+                            <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: scoreColor, letterSpacing: "0.08em" }}>{scorePct}% relevance</span>
+                          </div>
+                        </div>
+                        {/* Body */}
+                        <div style={{ padding: "12px 18px 14px" }}>
+                          <p style={{ fontFamily: "var(--serif)", fontSize: 15.5, color: "var(--ink)", lineHeight: 1.55, marginBottom: 6 }}>{r.title}</p>
+                          {(r.authors || r.year) && (
+                            <p style={{ fontFamily: "var(--body)", fontSize: 12, color: "var(--ink4)", fontStyle: "italic", marginBottom: 8 }}>
+                              {r.authors && <span>{r.authors}</span>}
+                              {r.authors && r.year && <span> · </span>}
+                              {r.year && <span>{r.year}</span>}
+                            </p>
+                          )}
+                          {r.excerpt && (
+                            <p style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--ink3)", lineHeight: 1.65, marginBottom: 10 }}>
+                              {r.excerpt}
+                            </p>
+                          )}
+                          {/* Tags + button row */}
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                            {r.source && <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", background: "rgba(22,15,6,0.06)", borderRadius: 4, padding: "2px 7px", letterSpacing: "0.06em" }}>{r.source}</span>}
+                            {r.focus && <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", background: "rgba(22,15,6,0.06)", borderRadius: 4, padding: "2px 7px", letterSpacing: "0.06em" }}>{r.focus}</span>}
+                            {r.qtype && r.qtype !== "N/A" && <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", background: "rgba(22,15,6,0.06)", borderRadius: 4, padding: "2px 7px", letterSpacing: "0.06em" }}>{r.qtype}</span>}
+                            <div style={{ flex: 1 }} />
+                            {r.url && (
+                              <a href={r.url} target="_blank" rel="noreferrer" style={{
+                                fontFamily: "var(--mono)", fontSize: 11, color: "var(--paper)", background: "var(--rose)",
+                                textDecoration: "none", borderRadius: 6, padding: "5px 12px", letterSpacing: "0.08em",
+                                fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 5,
+                              }}>↗ PubMed</a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {refs.length === 0 && (
+                    <p style={{ fontFamily: "var(--body)", fontSize: 14, color: "var(--ink4)", fontStyle: "italic" }}>No literature references retrieved for this session.</p>
+                  )}
+                </>
+              )}
               {tab === "media" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
                   {mediaItems.map((item, i) => (
