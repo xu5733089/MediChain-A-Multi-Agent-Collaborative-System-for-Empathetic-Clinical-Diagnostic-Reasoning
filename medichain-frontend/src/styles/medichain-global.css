@@ -323,6 +323,18 @@ input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.22); box-shad
   animation: gradShift 6s ease infinite;
 }
 
+/* ─── Hero title animations ─── */
+@keyframes heroLine   { from { opacity:0; transform:translateY(22px); } to { opacity:1; transform:translateY(0); } }
+@keyframes heroSlideL { from { opacity:0; transform:translateX(-16px); } to { opacity:1; transform:translateX(0); } }
+@keyframes heroSub    { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+@keyframes subtitleReveal { from { clip-path: inset(0 100% 0 0); opacity:0; } to { clip-path: inset(0 0% 0 0); opacity:1; } }
+
+.hero-eyebrow { animation: heroSlideL 0.5s cubic-bezier(0.22,1,0.36,1) 0.05s both; }
+.hero-line1   { animation: heroLine   0.65s cubic-bezier(0.22,1,0.36,1) 0.15s both; display:block; }
+.hero-line2   { animation: heroLine   0.65s cubic-bezier(0.22,1,0.36,1) 0.3s  both; display:block; }
+.hero-sub     { animation: subtitleReveal 0.9s cubic-bezier(0.22,1,0.36,1) 0.55s both; }
+.hero-badges  { animation: heroSub    0.5s ease 0.85s both; }
+
 /* ─── Gold rule ─── */
 .gold-rule {
   height: 2px; margin: 0;
