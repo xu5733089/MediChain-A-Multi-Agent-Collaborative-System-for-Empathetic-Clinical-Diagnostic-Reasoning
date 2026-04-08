@@ -76,5 +76,7 @@ export function makeApi(token) {
     evalRun: b => post("/api/eval/run", b),
     evalHist: () => get("/api/eval/history"),
     exportUrl: (id, t) => `${BACKEND}/api/session/${id}/export/${t}`,
+    ragStatus: () => get("/api/rag/status"),
+    ragIngest: (b = {}) => post("/api/rag/ingest", b),
   };
 }
