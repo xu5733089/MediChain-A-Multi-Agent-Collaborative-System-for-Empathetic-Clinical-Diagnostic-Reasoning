@@ -191,6 +191,50 @@ function AnnotatedMediaCard({ item }) {
   );
 }
 
+// Parse "1. **Condition** — Confidence: HIGH\n   Supporting..." into structured list
+function parseDifferential(text) {
+  const lines = (text || "").split("\n");
+  const items = [];
+  const confidenceMap = { HIGH: 80, MEDIUM: 50, LOW: 20 };
+  const colorMap = { HIGH: "var(--sage)", MEDIUM: "var(--amber)", LOW: "var(--rose)" };
+  for (const line of lines) {
+    const m = line.match(/^\d+\.\s+\*\*(.+?)\*\*\s*[—-]\s*Confidence:\s*(HIGH|MEDIUM|LOW)/i);
+    if (m) {
+      const level = m[2].toUpperCase();
+      items.push({ condition: m[1].trim(), level, pct: confidenceMap[level] || 30, color: colorMap[level] || "var(--ink5)" });
+    }
+  }
+  return items;
+}
+
+function DifferentialChart({ diagnosis }) {
+  const items = parseDifferential(diagnosis);
+  if (!items.length) return null;
+  return (
+    <div style={{ marginBottom: 24, padding: "18px 20px", background: "var(--paper3)", borderRadius: 10, border: "1px solid rgba(22,15,6,0.08)" }}>
+      <p style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 14 }}>Differential · Confidence</p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {items.map((item, i) => (
+          <div key={i}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
+              <span style={{ fontFamily: "var(--body)", fontSize: 13.5, fontWeight: 500, color: "var(--ink2)" }}>{item.condition}</span>
+              <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: item.color, letterSpacing: "0.08em" }}>{item.level}</span>
+            </div>
+            <div style={{ height: 7, borderRadius: 4, background: "rgba(22,15,6,0.08)", overflow: "hidden" }}>
+              <div style={{
+                height: "100%", borderRadius: 4, background: item.color,
+                width: `${item.pct}%`,
+                transition: "width 0.8s cubic-bezier(0.25,0.46,0.45,0.94)",
+                opacity: 0.85,
+              }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function ResultsPage({ api, result, onNew, onHistory, onFlow }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState("diagnosis");
@@ -273,6 +317,7 @@ export default function ResultsPage({ api, result, onNew, onHistory, onFlow }) {
                       {tab === "diagnosis" ? t("results.diagnosis_sub") : t("results.review_sub")}
                     </span>
                   </div>
+                  {tab === "diagnosis" && <DifferentialChart diagnosis={diagnosis} />}
                   <p style={{ fontFamily: "var(--body)", fontSize: 15.5, color: "var(--ink2)", lineHeight: 1.9, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
                     {tab === "diagnosis" ? diagnosis : review}
                   </p>

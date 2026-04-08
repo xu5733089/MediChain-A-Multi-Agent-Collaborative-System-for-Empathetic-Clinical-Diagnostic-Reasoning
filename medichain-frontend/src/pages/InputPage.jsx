@@ -101,6 +101,24 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
                 className="text-[15px]"
                 style={{ borderColor: valid ? "var(--sage)" : undefined, boxShadow: valid ? "0 0 0 3px var(--sageDim)" : undefined, fontFamily: "var(--body)" }}
               />
+              {/* Symptom quick tags */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+                {["Chest pain", "Headache", "Fever", "Nausea", "Shortness of breath", "Fatigue", "Dizziness", "Back pain", "Abdominal pain", "Palpitations", "Cough", "Sore throat"].map(tag => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, description: f.description ? f.description.trimEnd() + ", " + tag : tag }))}
+                    style={{
+                      fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.05em",
+                      color: "var(--ink3)", background: "var(--paper3)",
+                      border: "1px solid rgba(22,15,6,0.14)", borderRadius: 20,
+                      padding: "3px 10px", cursor: "pointer", transition: "all 0.15s",
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "var(--rosePale)"; e.currentTarget.style.borderColor = "var(--rose)"; e.currentTarget.style.color = "var(--rose)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "var(--paper3)"; e.currentTarget.style.borderColor = "rgba(22,15,6,0.14)"; e.currentTarget.style.color = "var(--ink3)"; }}
+                  >{tag}</button>
+                ))}
+              </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: 9, alignItems: "center" }}>
                 <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: valid ? "var(--sage)" : "var(--ink5)", transition: "color 0.3s" }}>
                   {valid && hasReadyFile && !form.description.trim()
