@@ -50,7 +50,7 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
               <div className="eyebrow hero-eyebrow">{t("input.eyebrow")}</div>
               <h1 style={{ fontFamily: "var(--serif)", fontSize: "clamp(48px,5.5vw,76px)", fontWeight: 400, color: "var(--ink)", lineHeight: 0.9, letterSpacing: -2, marginBottom: 20, paddingBottom: "0.18em" }}>
                 <span className="hero-line1">{t("input.title_line1")}</span>
-                <span className="grad-heading hero-line2">{t("input.title_line2")}</span>
+                <span className="grad-heading hero-line2" style={{ paddingBottom: "0.2em" }}>{t("input.title_line2")}</span>
               </h1>
               <p className="hero-sub" style={{ fontFamily: "var(--body)", fontSize: 17, color: "var(--ink3)", maxWidth: 520, lineHeight: 1.75 }}>
                 {t("input.subtitle")}
