@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { flushSync } from "react-dom";
 import {
   Caduceus,
   IllustWreath,
@@ -66,16 +67,16 @@ function AppInner() {
           } />
           <Route path="/input" element={isProvider
             ? <Navigate to="/provider" replace />
-            : <InputPage api={api} onSubmit={f => { setSymp(f); go("chat"); }} onEval={() => go("eval")} selectedPatient={selPat} onClearPatient={() => setSelPat(null)}/>
+            : <InputPage api={api} onSubmit={f => { flushSync(() => setSymp(f)); go("chat"); }} onEval={() => go("eval")} selectedPatient={selPat} onClearPatient={() => setSelPat(null)}/>
           } />
           <Route path="/patients" element={auth.user
             ? (isProvider
               ? <Navigate to="/provider" replace />
-              : <PatientsPage api={api} onStartConsult={p => { setSelPat(p); go("input"); }}/>)
+              : <PatientsPage api={api} onStartConsult={p => { flushSync(() => setSelPat(p)); go("input"); }}/>)
             : <AuthPage api={api} onLogin={(t, u) => { auth.login(t, u); navigate(u?.role === "provider" ? "/provider" : "/patients"); }} onSkip={() => go("input")}/>
           } />
           <Route path="/chat" element={symptoms
-            ? <ChatPage api={api} symptoms={symptoms} onBack={() => go("input")} onComplete={r => { setResult(r); go("result"); }}/>
+            ? <ChatPage api={api} symptoms={symptoms} onBack={() => go("input")} onComplete={r => { flushSync(() => setResult(r)); go("result"); }}/>
             : <Navigate to="/input" replace />
           } />
           <Route path="/result" element={result

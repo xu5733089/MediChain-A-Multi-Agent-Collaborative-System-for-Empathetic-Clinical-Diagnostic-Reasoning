@@ -129,7 +129,7 @@ function AnnotatedMediaCard({ item }) {
                         position: "absolute", bottom: 28, left: "50%", transform: "translateX(-50%)",
                         background: "rgba(22,15,6,0.88)", color: "#fff",
                         fontFamily: "var(--body)", fontSize: 11, lineHeight: 1.4,
-                        padding: "6px 10px", borderRadius: 6, whiteSpace: "nowrap",
+                        padding: "6px 10px", borderRadius: 6,
                         maxWidth: 200, whiteSpace: "normal",
                         boxShadow: "0 4px 14px rgba(0,0,0,0.25)", zIndex: 20,
                       }}>
