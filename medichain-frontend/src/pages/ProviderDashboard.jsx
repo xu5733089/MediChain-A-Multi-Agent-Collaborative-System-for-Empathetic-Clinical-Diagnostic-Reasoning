@@ -62,6 +62,8 @@ export default function ProviderDashboard({ api }) {
   const [selected, setSelected] = useState(null);
   const [detail, setDetail] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [ingesting, setIngesting] = useState(false);
+  const [ingestResult, setIngestResult] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -154,8 +156,32 @@ export default function ProviderDashboard({ api }) {
               {loading ? t("provider.loading") : t("provider.count", { count: rows.length })}
             </p>
           </div>
-          <Button onClick={load} variant="outline" size="sm">{t("provider.refresh")}</Button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Button onClick={async () => {
+              setIngesting(true); setIngestResult(null);
+              try {
+                const res = await api.ragIngest({});
+                setIngestResult(res);
+              } catch (e) { setIngestResult({ error: e.message }); }
+              setIngesting(false);
+            }} variant="outline" size="sm" disabled={ingesting}>
+              {ingesting ? "Ingesting PubMed…" : "Update RAG Knowledge"}
+            </Button>
+            <Button onClick={load} variant="outline" size="sm">{t("provider.refresh")}</Button>
+          </div>
         </div>
+
+        {ingestResult && (
+          <div className="card" style={{ padding: "12px 16px", marginBottom: 12, background: ingestResult.error ? "var(--rosePale)" : "var(--paper2)" }}>
+            {ingestResult.error ? (
+              <p style={{ margin: 0, fontFamily: "var(--body)", fontSize: 13, color: "var(--rose)" }}>Ingestion failed: {ingestResult.error}</p>
+            ) : (
+              <p style={{ margin: 0, fontFamily: "var(--body)", fontSize: 13, color: "var(--ink3)" }}>
+                Added <strong>{ingestResult.total_added}</strong> articles from {ingestResult.terms_processed} search terms. DB size: {ingestResult.initial_db_size} → <strong>{ingestResult.final_db_size}</strong>
+              </p>
+            )}
+          </div>
+        )}
 
         {!loading && rows.length > 0 && (() => {
           const today = new Date().toDateString();

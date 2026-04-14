@@ -38,13 +38,28 @@ app.add_middleware(CORSMiddleware,
 
 init_db()
 
-# ── 启动时打印 RAG 库状态 ──────────────────────────────────
+# ── 启动时打印 RAG 库状态 + 可选自动抓取 ──────────────────────
 _rag_size = get_collection_size()
 print(f"\n{'='*50}")
 print(f"  MediChain RAG Knowledge Base")
 print(f"  Documents loaded: {_rag_size}")
-print(f"  Status: {'✅ Ready' if _rag_size > 0 else '⚠️  Empty — run POST /api/rag/ingest to populate'}")
+if _rag_size > 0:
+    print(f"  Status: ✅ Ready")
+else:
+    print(f"  Status: ⚠️  Empty")
+print(f"  ─────────────────────────────────────")
+print(f"  Quick commands:")
+print(f"    python ingest.py              # full ingest (78 terms, ~1000+ articles)")
+print(f"    python ingest.py --status     # check DB size")
+print(f"    AUTO_INGEST=1 uvicorn main:app  # auto-ingest on startup")
 print(f"{'='*50}\n")
+
+# 环境变量 AUTO_INGEST=1 → 启动时自动抓取 PubMed 文章
+if os.getenv("AUTO_INGEST", "").strip() in ("1", "true", "yes"):
+    from ingest import run_ingestion, DEFAULT_TERMS as _INGEST_TERMS
+    print("🔄 AUTO_INGEST enabled — starting PubMed ingestion...")
+    run_ingestion(_INGEST_TERMS, per_term=15)
+    print()
 
 UPLOAD_ROOT = Path(__file__).parent / "uploads"
 ALLOWED_UPLOAD_TYPES = {
@@ -639,12 +654,13 @@ def rag_status():
     return {"document_count":size,"status":"ready" if size>0 else "empty"}
 
 @app.post("/api/rag/ingest")
-def rag_ingest(body: IngestRequest):
+async def rag_ingest(body: IngestRequest, user=Depends(require_user)):
     """
     按需从 PubMed 抓取最新文章并写入 RAG 向量库。
-    面向所有用户开放，无需认证。
-    返回每个搜索词的抓取结果 + 总计。
+    仅限 provider 角色用户。
     """
+    if user.get("role") != "provider":
+        raise HTTPException(403, "Only providers can trigger ingestion")
     import time as _time
 
     terms = body.terms if body.terms else DEFAULT_TERMS
