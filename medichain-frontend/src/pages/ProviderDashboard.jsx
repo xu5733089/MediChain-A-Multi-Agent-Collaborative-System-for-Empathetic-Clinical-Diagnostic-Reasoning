@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import { useTranslation } from "react-i18next";
 import { AmbientBlobs } from "../components/illustrations";
 import { Button } from "../components/ui/button";
@@ -83,6 +84,64 @@ export default function ProviderDashboard({ api }) {
     } catch { setDetail(null); setMessages([]); }
   }
 
+  function renderSafetyMessage(content) {
+    try {
+      const payload = JSON.parse(content || "{}");
+      const level = (payload.final_risk || payload.risk_level || "low").toLowerCase();
+      const levelColor =
+        level === "high" ? "var(--rose)"
+          : level === "medium" ? "var(--amber)"
+            : "var(--sage)";
+      const warning = (payload.warning || "").trim();
+      const message = (payload.message || "").trim();
+
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", letterSpacing: "0.1em" }}>
+              Risk Level
+            </span>
+            <span
+              style={{
+                fontFamily: "var(--mono)",
+                fontSize: 10,
+                letterSpacing: "0.08em",
+                color: levelColor,
+                background: "rgba(22,15,6,0.06)",
+                border: "1px solid rgba(22,15,6,0.1)",
+                borderRadius: 999,
+                padding: "2px 8px",
+              }}
+            >
+              {level.toUpperCase()}
+            </span>
+          </div>
+          {!!warning && (
+            <p style={{ margin: 0, fontFamily: "var(--body)", fontSize: 13, color: "var(--rose)", lineHeight: 1.6 }}>
+              ⚠ {warning}
+            </p>
+          )}
+          {!!message && (
+            <p style={{ margin: 0, fontFamily: "var(--body)", fontSize: 13, color: "var(--ink3)", lineHeight: 1.6 }}>
+              {message}
+            </p>
+          )}
+          {!warning && !message && (
+            <p style={{ margin: 0, fontFamily: "var(--body)", fontSize: 13, color: "var(--ink4)", lineHeight: 1.6 }}>
+              No additional safety warning for this turn.
+            </p>
+          )}
+        </div>
+      );
+    } catch {
+      return (
+        <p style={{ margin: "5px 0 0", fontFamily: "var(--body)", fontSize: 13, color: "var(--ink3)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+          {content}
+        </p>
+      );
+    }
+  }
+
   return (
     <div style={{ minHeight: "100vh", background: "var(--paper)", paddingTop: 72, paddingBottom: 40, position: "relative", zIndex: 1 }}>
       <AmbientBlobs />
@@ -128,46 +187,60 @@ export default function ProviderDashboard({ api }) {
             <div style={{ padding: 18, fontFamily: "var(--body)", color: "var(--ink4)" }}>{t("provider.empty")}</div>
           ) : (
             rows.map((r) => (
-              <button key={r.id} onClick={() => openSession(r.id)} style={{ width: "100%", textAlign: "left", border: "none", background: selected === r.id ? "var(--rosePale)" : "var(--paper)", borderBottom: "1px solid rgba(22,15,6,0.08)", padding: "12px 16px", cursor: "pointer", display: "grid", gridTemplateColumns: "2.1fr 0.8fr 0.9fr 1.2fr", gap: 10 }}>
-                <div>
-                  <p style={{ margin: 0, fontFamily: "var(--body)", fontSize: 14, color: "var(--ink2)", lineHeight: 1.5 }}>{r.description || t("provider.no_desc")}</p>
-                  <p style={{ margin: "4px 0 0", fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)" }}>{t("provider.patient_label", { name: r.patient_username || "unknown" })}</p>
-                </div>
-                <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: (r.severity_level || "").toLowerCase() === "severe" ? "var(--rose)" : (r.severity_level || "").toLowerCase() === "mild" ? "var(--sage)" : "var(--amber)", letterSpacing: "0.08em" }}>{(r.severity_level || "moderate").toUpperCase()}</div>
-                <div style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: r.status === "done" ? "var(--sage)" : "var(--amber)", flexShrink: 0 }} />
-                  <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: r.status === "done" ? "var(--sage)" : "var(--amber)", letterSpacing: "0.08em" }}>{(r.status || "active").toUpperCase()}</span>
-                </div>
-                <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--ink5)" }}>{fmtD(r.created_at)}</div>
-              </button>
+              <div key={r.id}>
+                <button onClick={() => openSession(r.id)} style={{ width: "100%", textAlign: "left", border: "none", background: selected === r.id ? "var(--rosePale)" : "var(--paper)", borderBottom: selected === r.id ? "none" : "1px solid rgba(22,15,6,0.08)", padding: "12px 16px", cursor: "pointer", display: "grid", gridTemplateColumns: "2.1fr 0.8fr 0.9fr 1.2fr", gap: 10 }}>
+                  <div>
+                    <p style={{ margin: 0, fontFamily: "var(--body)", fontSize: 14, color: "var(--ink2)", lineHeight: 1.5 }}>{r.description || t("provider.no_desc")}</p>
+                    <p style={{ margin: "4px 0 0", fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)" }}>{t("provider.patient_label", { name: r.patient_username || "unknown" })}</p>
+                  </div>
+                  <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: (r.severity_level || "").toLowerCase() === "severe" ? "var(--rose)" : (r.severity_level || "").toLowerCase() === "mild" ? "var(--sage)" : "var(--amber)", letterSpacing: "0.08em" }}>{(r.severity_level || "moderate").toUpperCase()}</div>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: "50%", background: r.status === "done" ? "var(--sage)" : "var(--amber)", flexShrink: 0 }} />
+                    <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: r.status === "done" ? "var(--sage)" : "var(--amber)", letterSpacing: "0.08em" }}>{(r.status || "active").toUpperCase()}</span>
+                  </div>
+                  <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--ink5)" }}>{fmtD(r.created_at)}</div>
+                </button>
+
+                {selected === r.id && (
+                  <div style={{ background: "var(--paper2)", borderTop: "1px solid rgba(22,15,6,0.06)", borderBottom: "1px solid rgba(22,15,6,0.08)", padding: "14px 16px" }}>
+                    <p style={{ margin: 0, fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", letterSpacing: "0.1em" }}>
+                      {t("provider.detail_title", { id: selected.slice(0, 8).toUpperCase() })}
+                    </p>
+                    {detail && (
+                      <p style={{ margin: "8px 0 12px", fontFamily: "var(--body)", fontSize: 14, color: "var(--ink3)", whiteSpace: "pre-wrap" }}>
+                        {(detail.symptoms && detail.symptoms.description) || "-"}
+                      </p>
+                    )}
+                    <div style={{ maxHeight: 260, overflow: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
+                      {messages.map((m) => (
+                        <div key={m.id} style={{ border: "1px solid rgba(22,15,6,0.12)", borderRadius: 6, padding: "8px 10px", background: "var(--paper)" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                            <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)", letterSpacing: "0.1em" }}>{m.role === "agent" ? (m.agent_type || "agent") : m.role}</span>
+                            <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)" }}>{fmtD(m.created_at)}</span>
+                          </div>
+                          <div style={{ marginTop: 5 }}>
+                            {m.role === "agent" && m.agent_type === "safety" ? (
+                              renderSafetyMessage(m.content)
+                            ) : (m.role === "agent" || m.role === "user") ? (
+                              <div className="md-body" style={{ fontSize: 13 }}>
+                                <ReactMarkdown>{m.content || ""}</ReactMarkdown>
+                              </div>
+                            ) : (
+                              <p style={{ margin: 0, fontFamily: "var(--body)", fontSize: 13, color: "var(--ink3)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                                {m.content}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      {!messages.length && <p style={{ margin: 0, fontFamily: "var(--body)", fontSize: 13, color: "var(--ink4)" }}>{t("provider.no_messages")}</p>}
+                    </div>
+                  </div>
+                )}
+              </div>
             ))
           )}
         </div>
-
-        {selected && (
-          <div className="card" style={{ marginTop: 16, padding: "14px 16px" }}>
-            <p style={{ margin: 0, fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", letterSpacing: "0.1em" }}>
-              {t("provider.detail_title", { id: selected.slice(0, 8).toUpperCase() })}
-            </p>
-            {detail && (
-              <p style={{ margin: "8px 0 12px", fontFamily: "var(--body)", fontSize: 14, color: "var(--ink3)", whiteSpace: "pre-wrap" }}>
-                {(detail.symptoms && detail.symptoms.description) || "-"}
-              </p>
-            )}
-            <div style={{ maxHeight: 260, overflow: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
-              {messages.map((m) => (
-                <div key={m.id} style={{ border: "1px solid rgba(22,15,6,0.12)", borderRadius: 6, padding: "8px 10px", background: "var(--paper2)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-                    <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)", letterSpacing: "0.1em" }}>{m.role === "agent" ? (m.agent_type || "agent") : m.role}</span>
-                    <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)" }}>{fmtD(m.created_at)}</span>
-                  </div>
-                  <p style={{ margin: "5px 0 0", fontFamily: "var(--body)", fontSize: 13, color: "var(--ink3)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{m.content}</p>
-                </div>
-              ))}
-              {!messages.length && <p style={{ margin: 0, fontFamily: "var(--body)", fontSize: 13, color: "var(--ink4)" }}>{t("provider.no_messages")}</p>}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

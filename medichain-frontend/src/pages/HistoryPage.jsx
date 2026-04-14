@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import { useTranslation } from "react-i18next";
 import { AmbientBlobs, ECGLine, IllustFlower, IllustLeaf } from "../components/illustrations";
 import { Button } from "../components/ui/button";
@@ -11,6 +12,8 @@ export default function HistoryPage({ api, onNew }) {
   const [sel, setSel] = useState(null);
   const [detail, setDetail] = useState(null);
   const [detailMessages, setDetailMessages] = useState([]);
+  const [showFullDiagnosis, setShowFullDiagnosis] = useState(false);
+  const DIAGNOSIS_PREVIEW_LIMIT = 450;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -28,9 +31,11 @@ export default function HistoryPage({ api, onNew }) {
       setSel(null);
       setDetail(null);
       setDetailMessages([]);
+      setShowFullDiagnosis(false);
       return;
     }
     setSel(id);
+    setShowFullDiagnosis(false);
     try {
       const [session, messages] = await Promise.all([
         api.session(id),
@@ -39,6 +44,70 @@ export default function HistoryPage({ api, onNew }) {
       setDetail(session);
       setDetailMessages(Array.isArray(messages) ? messages : []);
     } catch {}
+  }
+
+  const diagnosisText = detail?.diagnosis || "";
+  const diagnosisNeedsCollapse = diagnosisText.length > DIAGNOSIS_PREVIEW_LIMIT;
+  const diagnosisToRender = showFullDiagnosis || !diagnosisNeedsCollapse
+    ? diagnosisText
+    : `${diagnosisText.slice(0, DIAGNOSIS_PREVIEW_LIMIT)}\n…`;
+
+  function renderSafetyMessage(content) {
+    try {
+      const payload = JSON.parse(content || "{}");
+      const level = (payload.final_risk || payload.risk_level || "low").toLowerCase();
+      const levelColor =
+        level === "high" ? "var(--rose)"
+          : level === "medium" ? "var(--amber)"
+            : "var(--sage)";
+      const warning = (payload.warning || "").trim();
+      const message = (payload.message || "").trim();
+
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", letterSpacing: "0.1em" }}>
+              Risk Level
+            </span>
+            <span
+              style={{
+                fontFamily: "var(--mono)",
+                fontSize: 10,
+                letterSpacing: "0.08em",
+                color: levelColor,
+                background: "rgba(22,15,6,0.06)",
+                border: "1px solid rgba(22,15,6,0.1)",
+                borderRadius: 999,
+                padding: "2px 8px",
+              }}
+            >
+              {level.toUpperCase()}
+            </span>
+          </div>
+          {!!warning && (
+            <p style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--rose)", lineHeight: 1.6, margin: 0 }}>
+              ⚠ {warning}
+            </p>
+          )}
+          {!!message && (
+            <p style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--ink3)", lineHeight: 1.6, margin: 0 }}>
+              {message}
+            </p>
+          )}
+          {!warning && !message && (
+            <p style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--ink4)", lineHeight: 1.6, margin: 0 }}>
+              No additional safety warning for this turn.
+            </p>
+          )}
+        </div>
+      );
+    } catch {
+      return (
+        <p style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--ink3)", lineHeight: 1.65, whiteSpace: "pre-wrap", margin: 0 }}>
+          {content}
+        </p>
+      );
+    }
   }
 
   return (
@@ -99,9 +168,20 @@ export default function HistoryPage({ api, onNew }) {
                             <Button onClick={() => window.open(api.exportUrl(s.id, "json"), "_blank")} variant="outline" size="xs">JSON</Button>
                           </div>
                         )}
-                        <p style={{ fontFamily: "var(--body)", fontSize: 14, color: "var(--ink3)", lineHeight: 1.84 }}>
-                          {detail.diagnosis?.slice(0, 450)}{detail.diagnosis?.length > 450 ? "\n…" : ""}
-                        </p>
+                        <div className="md-body" style={{ fontSize: 14 }}>
+                          <ReactMarkdown>{diagnosisToRender}</ReactMarkdown>
+                        </div>
+                        {diagnosisNeedsCollapse && (
+                          <div style={{ marginTop: 8 }}>
+                            <Button
+                              onClick={() => setShowFullDiagnosis(v => !v)}
+                              variant="outline"
+                              size="xs"
+                            >
+                              {showFullDiagnosis ? "收起全文" : "展开全文"}
+                            </Button>
+                          </div>
+                        )}
                         <div style={{ marginTop: 14, borderTop: "1px dashed rgba(22,15,6,0.16)", paddingTop: 12 }}>
                           <p style={{ fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.12em", color: "var(--ink5)", marginBottom: 9 }}>
                             {t("history.timeline")}
@@ -128,9 +208,17 @@ export default function HistoryPage({ api, onNew }) {
                                     </span>
                                   )}
                                 </div>
-                                <p style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--ink3)", lineHeight: 1.65 }}>
-                                  {m.content}
-                                </p>
+                                {m.role === "agent" && m.agent_type === "safety" ? (
+                                  renderSafetyMessage(m.content)
+                                ) : (m.role === "agent" || m.role === "user") ? (
+                                  <div className="md-body" style={{ fontSize: 13 }}>
+                                    <ReactMarkdown>{m.content || ""}</ReactMarkdown>
+                                  </div>
+                                ) : (
+                                  <p style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--ink3)", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>
+                                    {m.content}
+                                  </p>
+                                )}
                               </div>
                             ))}
                           </div>
