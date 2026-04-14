@@ -554,41 +554,133 @@ def session_update(sid, **kwargs):
         c.execute(f"UPDATE sessions SET {', '.join(sets)}, updated_at=? WHERE id=?", vals)
         c.commit()
 
-def sessions_list(user_id=None):
+def _normalize_filter_value(value: Optional[str]) -> Optional[str]:
+    v = (value or "").strip()
+    return v if v else None
+
+
+def sessions_list(
+    user_id=None,
+    status: Optional[str] = None,
+    severity_level: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    q: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+):
+    status = _normalize_filter_value(status)
+    severity_level = _normalize_filter_value(severity_level)
+    date_from = _normalize_filter_value(date_from)
+    date_to = _normalize_filter_value(date_to)
+    q = (_normalize_filter_value(q) or "").lower()
+    limit = max(1, min(int(limit or 50), 200))
+    offset = max(0, int(offset or 0))
+
+    where = []
+    vals = []
+    if user_id:
+        where.append("user_id=?")
+        vals.append(user_id)
+    if status:
+        where.append("status=?")
+        vals.append(status)
+    if severity_level:
+        where.append("severity_level=?")
+        vals.append(severity_level)
+    if date_from:
+        where.append("created_at>=?")
+        vals.append(date_from)
+    if date_to:
+        where.append("created_at<=?")
+        vals.append(date_to)
+
+    where_sql = f"WHERE {' AND '.join(where)}" if where else ""
+    sql = f"""SELECT id,status,created_at,symptoms,patient_id,severity_level
+              FROM sessions
+              {where_sql}
+              ORDER BY created_at DESC"""
     with get_db() as c:
-        if user_id:
-            rows = c.execute("SELECT id,status,created_at,symptoms,patient_id FROM sessions WHERE user_id=? ORDER BY created_at DESC", (user_id,)).fetchall()
-        else:
-            rows = c.execute("SELECT id,status,created_at,symptoms,patient_id FROM sessions ORDER BY created_at DESC").fetchall()
-    return [{"id":d["id"],"status":d["status"],"created_at":d["created_at"],
-             "patient_id":d["patient_id"],
-             "description":json.loads(d["symptoms"]).get("description","")[:60]} for d in map(dict,rows)]
+        rows = [dict(r) for r in c.execute(sql, tuple(vals)).fetchall()]
+
+    out = []
+    for d in rows:
+        symptoms = json.loads(d.get("symptoms") or "{}")
+        description = symptoms.get("description", "")
+        if q and q not in description.lower():
+            continue
+        out.append({
+            "id": d["id"],
+            "status": d["status"],
+            "created_at": d["created_at"],
+            "patient_id": d["patient_id"],
+            "severity_level": d.get("severity_level") or symptoms.get("severity_level") or severity_to_level(symptoms.get("severity")),
+            "description": description[:60],
+        })
+    return out[offset: offset + limit]
 
 
-def provider_sessions_list():
+def provider_sessions_list(
+    status: Optional[str] = None,
+    severity_level: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    q: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+):
+    status = _normalize_filter_value(status)
+    severity_level = _normalize_filter_value(severity_level)
+    date_from = _normalize_filter_value(date_from)
+    date_to = _normalize_filter_value(date_to)
+    q = (_normalize_filter_value(q) or "").lower()
+    limit = max(1, min(int(limit or 50), 200))
+    offset = max(0, int(offset or 0))
+
+    where = []
+    vals = []
+    if status:
+        where.append("s.status=?")
+        vals.append(status)
+    if severity_level:
+        where.append("s.severity_level=?")
+        vals.append(severity_level)
+    if date_from:
+        where.append("s.created_at>=?")
+        vals.append(date_from)
+    if date_to:
+        where.append("s.created_at<=?")
+        vals.append(date_to)
+    where_sql = f"WHERE {' AND '.join(where)}" if where else ""
+
     with get_db() as c:
         rows = c.execute(
-            """SELECT s.id, s.status, s.created_at, s.patient_id, s.symptoms, s.severity_level,
+            f"""SELECT s.id, s.status, s.created_at, s.patient_id, s.symptoms, s.severity_level,
                       u.username AS patient_username
                FROM sessions s
                LEFT JOIN users u ON s.user_id = u.id
-               ORDER BY s.created_at DESC"""
+               {where_sql}
+               ORDER BY s.created_at DESC""",
+            tuple(vals),
         ).fetchall()
 
     out = []
     for row in rows:
         d = dict(row)
         symptoms = json.loads(d.get("symptoms") or "{}")
+        description = symptoms.get("description", "")
+        if q and q not in description.lower():
+            continue
         out.append({
             "id": d["id"],
             "status": d.get("status"),
             "created_at": d.get("created_at"),
             "patient_id": d.get("patient_id"),
             "patient_username": d.get("patient_username"),
-            "description": symptoms.get("description", "")[:120],
+            "description": description[:120],
             "severity_level": d.get("severity_level") or symptoms.get("severity_level") or severity_to_level(symptoms.get("severity")),
         })
-    return out
+    return out[offset: offset + limit]
 
 
 def _is_provider(user):
@@ -1249,17 +1341,60 @@ def get_session(session_id: str, user=Depends(get_current_user)):
     return sess
 
 @app.get("/api/sessions")
-def list_sessions(user=Depends(require_user)):
+def list_sessions(
+    status: Optional[str] = Query(default=None),
+    severity_level: Optional[str] = Query(default=None),
+    q: Optional[str] = Query(default=None),
+    from_date: Optional[str] = Query(default=None, alias="from"),
+    to: Optional[str] = Query(default=None),
+    limit: int = Query(default=50),
+    offset: int = Query(default=0),
+    user=Depends(require_user),
+):
     if _is_provider(user):
-        return sessions_list()
-    return sessions_list(user["id"])
+        return sessions_list(
+            status=status,
+            severity_level=severity_level,
+            q=q,
+            date_from=from_date,
+            date_to=to,
+            limit=limit,
+            offset=offset,
+        )
+    return sessions_list(
+        user["id"],
+        status=status,
+        severity_level=severity_level,
+        q=q,
+        date_from=from_date,
+        date_to=to,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @app.get("/api/provider/sessions")
-def provider_sessions(user=Depends(require_user)):
+def provider_sessions(
+    status: Optional[str] = Query(default=None),
+    severity_level: Optional[str] = Query(default=None),
+    q: Optional[str] = Query(default=None),
+    from_date: Optional[str] = Query(default=None, alias="from"),
+    to: Optional[str] = Query(default=None),
+    limit: int = Query(default=50),
+    offset: int = Query(default=0),
+    user=Depends(require_user),
+):
     if not _is_provider(user):
         raise HTTPException(403, "Provider access required")
-    return provider_sessions_list()
+    return provider_sessions_list(
+        status=status,
+        severity_level=severity_level,
+        q=q,
+        date_from=from_date,
+        date_to=to,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @app.post("/api/sessions/{session_id}/messages")

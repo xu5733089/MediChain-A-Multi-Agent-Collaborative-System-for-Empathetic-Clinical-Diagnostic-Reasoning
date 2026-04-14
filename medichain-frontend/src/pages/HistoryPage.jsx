@@ -13,16 +13,24 @@ export default function HistoryPage({ api, onNew }) {
   const [detail, setDetail] = useState(null);
   const [detailMessages, setDetailMessages] = useState([]);
   const [showFullDiagnosis, setShowFullDiagnosis] = useState(false);
+  const [keyword, setKeyword] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const DIAGNOSIS_PREVIEW_LIMIT = 450;
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const rows = await api.sessions();
+      const rows = await api.sessions({
+        status: "done",
+        q: keyword.trim() || undefined,
+        from: dateFrom ? `${dateFrom}T00:00:00` : undefined,
+        to: dateTo ? `${dateTo}T23:59:59` : undefined,
+      });
       setSessions((Array.isArray(rows) ? rows : []).filter(s => s?.status === "done"));
     } catch {}
     setLoading(false);
-  }, [api]);
+  }, [api, keyword, dateFrom, dateTo]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -132,6 +140,16 @@ export default function HistoryPage({ api, onNew }) {
         </div>
         <div className="gold-rule" />
         <ECGLine style={{ opacity: 0.32, marginBottom: 22 }} />
+        <div className="card" style={{ marginBottom: 14, padding: "12px 14px", display: "grid", gridTemplateColumns: "1.6fr 1fr 1fr", gap: 10 }}>
+          <input
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            placeholder="Search complaint..."
+            style={{ height: 34, border: "1px solid rgba(22,15,6,0.14)", borderRadius: 6, background: "var(--paper)", padding: "0 10px", fontFamily: "var(--body)", fontSize: 13 }}
+          />
+          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={{ height: 34, border: "1px solid rgba(22,15,6,0.14)", borderRadius: 6, background: "var(--paper)", padding: "0 10px", fontFamily: "var(--body)", fontSize: 13 }} />
+          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={{ height: 34, border: "1px solid rgba(22,15,6,0.14)", borderRadius: 6, background: "var(--paper)", padding: "0 10px", fontFamily: "var(--body)", fontSize: 13 }} />
+        </div>
 
         {loading
           ? <div style={{ textAlign: "center", padding: 80, fontFamily: "var(--body)", fontStyle: "italic", color: "var(--ink4)", fontSize: 17 }}>{t("history.loading")}</div>

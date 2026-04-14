@@ -34,6 +34,13 @@ export function makeApi(token) {
     if (!r.ok) throw new Error(`${r.status}`);
     return r.json();
   };
+  const withQuery = (path, params = {}) => {
+    const entries = Object.entries(params || {}).filter(([, v]) => v !== undefined && v !== null && v !== "");
+    if (!entries.length) return path;
+    const qs = new URLSearchParams();
+    entries.forEach(([k, v]) => qs.append(k, String(v)));
+    return `${path}?${qs.toString()}`;
+  };
 
   return {
     register: b => post("/api/auth/register", b),
@@ -46,8 +53,8 @@ export function makeApi(token) {
     start: s => post("/api/session/start", s),
     chat: b => post("/api/session/chat", b),
     diagnose: b => post("/api/session/diagnose", b),
-    sessions: () => get("/api/sessions"),
-    providerSessions: () => get("/api/provider/sessions"),
+    sessions: (filters = {}) => get(withQuery("/api/sessions", filters)),
+    providerSessions: (filters = {}) => get(withQuery("/api/provider/sessions", filters)),
     session: id => get(`/api/session/${id}`),
     sessionMessages: id => get(`/api/sessions/${id}/messages`),
     sessionUploads: id => get(`/api/sessions/${id}/uploads`),

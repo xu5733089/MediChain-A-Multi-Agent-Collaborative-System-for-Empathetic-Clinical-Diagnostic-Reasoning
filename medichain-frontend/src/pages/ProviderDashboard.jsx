@@ -64,15 +64,27 @@ export default function ProviderDashboard({ api }) {
   const [messages, setMessages] = useState([]);
   const [ingesting, setIngesting] = useState(false);
   const [ingestResult, setIngestResult] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [severityFilter, setSeverityFilter] = useState("");
+  const [keyword, setKeyword] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.providerSessions();
+      const filters = {
+        status: statusFilter || undefined,
+        severity_level: severityFilter || undefined,
+        q: keyword.trim() || undefined,
+        from: dateFrom ? `${dateFrom}T00:00:00` : undefined,
+        to: dateTo ? `${dateTo}T23:59:59` : undefined,
+      };
+      const data = await api.providerSessions(filters);
       setRows(dedupeProviderRows(data));
     } catch { setRows([]); }
     setLoading(false);
-  }, [api]);
+  }, [api, statusFilter, severityFilter, keyword, dateFrom, dateTo]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -182,6 +194,28 @@ export default function ProviderDashboard({ api }) {
             )}
           </div>
         )}
+        <div className="card" style={{ marginBottom: 14, padding: "12px 14px", display: "grid", gridTemplateColumns: "1fr 1fr 1.4fr 1fr 1fr", gap: 10 }}>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ height: 34, border: "1px solid rgba(22,15,6,0.14)", borderRadius: 6, background: "var(--paper)", padding: "0 10px", fontFamily: "var(--body)", fontSize: 13 }}>
+            <option value="">All Status</option>
+            <option value="interviewing">Interviewing</option>
+            <option value="analyzing">Analyzing</option>
+            <option value="done">Done</option>
+          </select>
+          <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)} style={{ height: 34, border: "1px solid rgba(22,15,6,0.14)", borderRadius: 6, background: "var(--paper)", padding: "0 10px", fontFamily: "var(--body)", fontSize: 13 }}>
+            <option value="">All Severity</option>
+            <option value="mild">Mild</option>
+            <option value="moderate">Moderate</option>
+            <option value="severe">Severe</option>
+          </select>
+          <input
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            placeholder="Search complaint..."
+            style={{ height: 34, border: "1px solid rgba(22,15,6,0.14)", borderRadius: 6, background: "var(--paper)", padding: "0 10px", fontFamily: "var(--body)", fontSize: 13 }}
+          />
+          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={{ height: 34, border: "1px solid rgba(22,15,6,0.14)", borderRadius: 6, background: "var(--paper)", padding: "0 10px", fontFamily: "var(--body)", fontSize: 13 }} />
+          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={{ height: 34, border: "1px solid rgba(22,15,6,0.14)", borderRadius: 6, background: "var(--paper)", padding: "0 10px", fontFamily: "var(--body)", fontSize: 13 }} />
+        </div>
 
         {!loading && rows.length > 0 && (() => {
           const today = new Date().toDateString();
