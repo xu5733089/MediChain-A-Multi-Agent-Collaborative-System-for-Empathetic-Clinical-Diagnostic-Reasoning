@@ -1,4 +1,6 @@
-export const BACKEND = "http://localhost:8000";
+// Docker 部署时 Nginx 把 /api/* 代理到 backend，所以用空字符串（同域）
+// 本地开发时用环境变量 VITE_BACKEND_URL=http://localhost:8000
+export const BACKEND = import.meta.env.VITE_BACKEND_URL || "";
 
 export function makeApi(token) {
   const h = { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) };

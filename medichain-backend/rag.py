@@ -31,8 +31,16 @@ def _get_client() -> QdrantClient:
     if _client is not None:
         return _client
 
-    DB_DIR.mkdir(exist_ok=True)
-    _client = QdrantClient(path=str(DB_DIR))
+    import os
+    qdrant_host = os.environ.get("QDRANT_HOST")
+    if qdrant_host:
+        # Docker / remote Qdrant
+        qdrant_port = int(os.environ.get("QDRANT_PORT", 6333))
+        _client = QdrantClient(host=qdrant_host, port=qdrant_port)
+    else:
+        # 本地文件模式（开发用）
+        DB_DIR.mkdir(exist_ok=True)
+        _client = QdrantClient(path=str(DB_DIR))
 
     # 若 collection 不存在则创建
     existing = [c.name for c in _client.get_collections().collections]
