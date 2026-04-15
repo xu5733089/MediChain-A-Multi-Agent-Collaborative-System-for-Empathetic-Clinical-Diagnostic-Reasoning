@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { useTranslation } from "react-i18next";
 import { AmbientBlobs } from "../components/illustrations";
@@ -64,6 +64,8 @@ export default function ProviderDashboard({ api }) {
   const [messages, setMessages] = useState([]);
   const [ingesting, setIngesting] = useState(false);
   const [ingestResult, setIngestResult] = useState(null);
+  const [ingestProgress, setIngestProgress] = useState(null); // { current, initial }
+  const pollRef = useRef(null);
   const [statusFilter, setStatusFilter] = useState("");
   const [severityFilter, setSeverityFilter] = useState("");
   const [keyword, setKeyword] = useState("");
@@ -170,27 +172,76 @@ export default function ProviderDashboard({ api }) {
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <Button onClick={async () => {
-              setIngesting(true); setIngestResult(null);
+              setIngesting(true); setIngestResult(null); setIngestProgress(null);
+              // Poll ragStatus every 2s to show live document count
+              try {
+                const initialStatus = await api.ragStatus();
+                const initialCount = initialStatus.document_count || 0;
+                setIngestProgress({ current: initialCount, initial: initialCount });
+                pollRef.current = setInterval(async () => {
+                  try {
+                    const s = await api.ragStatus();
+                    setIngestProgress(p => ({ ...p, current: s.document_count || 0 }));
+                  } catch {}
+                }, 2000);
+              } catch {}
               try {
                 const res = await api.ragIngest({});
                 setIngestResult(res);
               } catch (e) { setIngestResult({ error: e.message }); }
+              clearInterval(pollRef.current);
+              pollRef.current = null;
+              // Final count
+              try { const s = await api.ragStatus(); setIngestProgress(p => p ? { ...p, current: s.document_count } : null); } catch {}
               setIngesting(false);
             }} variant="outline" size="sm" disabled={ingesting}>
-              {ingesting ? "Ingesting PubMed…" : "Update RAG Knowledge"}
+              {ingesting ? "Ingesting…" : "Update RAG Knowledge"}
             </Button>
             <Button onClick={load} variant="outline" size="sm">{t("provider.refresh")}</Button>
           </div>
         </div>
 
-        {ingestResult && (
-          <div className="card" style={{ padding: "12px 16px", marginBottom: 12, background: ingestResult.error ? "var(--rosePale)" : "var(--paper2)" }}>
+        {ingesting && ingestProgress && (
+          <div className="card" style={{ padding: "14px 18px", marginBottom: 12, background: "var(--paper2)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+              <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", letterSpacing: "0.12em" }}>RAG INGEST · LIVE</span>
+              <span style={{ fontFamily: "var(--mono)", fontSize: 12, color: "var(--sage)" }}>
+                {ingestProgress.current.toLocaleString()} docs
+                {ingestProgress.current > ingestProgress.initial && (
+                  <span style={{ color: "var(--sage)", marginLeft: 6 }}>+{(ingestProgress.current - ingestProgress.initial).toLocaleString()} new</span>
+                )}
+              </span>
+            </div>
+            <div style={{ height: 6, borderRadius: 3, background: "rgba(22,15,6,0.08)", overflow: "hidden" }}>
+              <div style={{
+                height: "100%", borderRadius: 3,
+                background: "linear-gradient(90deg, var(--sage), var(--sageDim, #4ade80))",
+                width: ingestProgress.current > ingestProgress.initial
+                  ? `${Math.min(100, ((ingestProgress.current - ingestProgress.initial) / Math.max(1, ingestProgress.initial)) * 400 + 10)}%`
+                  : "8%",
+                transition: "width 1.8s ease",
+                animation: "shimmer 1.8s infinite linear",
+                backgroundSize: "200% 100%",
+              }} />
+            </div>
+            <p style={{ fontFamily: "var(--body)", fontSize: 12, color: "var(--ink5)", marginTop: 7 }}>
+              Fetching PubMed articles and indexing into vector database…
+            </p>
+          </div>
+        )}
+        {!ingesting && ingestResult && (
+          <div className="card" style={{ padding: "12px 16px", marginBottom: 12, background: ingestResult.error ? "var(--rosePale)" : "var(--sagePale)" }}>
             {ingestResult.error ? (
               <p style={{ margin: 0, fontFamily: "var(--body)", fontSize: 13, color: "var(--rose)" }}>Ingestion failed: {ingestResult.error}</p>
             ) : (
-              <p style={{ margin: 0, fontFamily: "var(--body)", fontSize: 13, color: "var(--ink3)" }}>
-                Added <strong>{ingestResult.total_added}</strong> articles from {ingestResult.terms_processed} search terms. DB size: {ingestResult.initial_db_size} → <strong>{ingestResult.final_db_size}</strong>
-              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                <span style={{ fontSize: 18 }}>✅</span>
+                <p style={{ margin: 0, fontFamily: "var(--body)", fontSize: 13, color: "var(--ink3)" }}>
+                  Added <strong style={{ color: "var(--sage)" }}>{ingestResult.total_added.toLocaleString()}</strong> articles
+                  from <strong>{ingestResult.terms_processed}</strong> search terms.
+                  DB size: {ingestResult.initial_db_size.toLocaleString()} → <strong style={{ color: "var(--sage)" }}>{ingestResult.final_db_size.toLocaleString()}</strong>
+                </p>
+              </div>
             )}
           </div>
         )}

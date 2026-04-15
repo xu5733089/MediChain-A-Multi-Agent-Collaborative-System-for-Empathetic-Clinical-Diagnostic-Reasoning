@@ -193,16 +193,27 @@ function AnnotatedMediaCard({ item }) {
 }
 
 // Parse "1. **Condition** — Confidence: HIGH\n   Supporting..." into structured list
+// Also collects the bullet lines immediately following each heading as evidence
 function parseDifferential(text) {
   const lines = (text || "").split("\n");
   const items = [];
   const confidenceMap = { HIGH: 80, MEDIUM: 50, LOW: 20 };
   const colorMap = { HIGH: "var(--sage)", MEDIUM: "var(--amber)", LOW: "var(--rose)" };
-  for (const line of lines) {
-    const m = line.match(/^\d+\.\s+\*\*(.+?)\*\*\s*[—-]\s*Confidence:\s*(HIGH|MEDIUM|LOW)/i);
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^\d+\.\s+\*\*(.+?)\*\*\s*[—-]\s*Confidence:\s*(HIGH|MEDIUM|LOW)/i);
     if (m) {
       const level = m[2].toUpperCase();
-      items.push({ condition: m[1].trim(), level, pct: confidenceMap[level] || 30, color: colorMap[level] || "var(--ink5)" });
+      // Collect supporting bullet lines until next numbered item or blank line
+      const evidence = [];
+      for (let j = i + 1; j < lines.length && j < i + 8; j++) {
+        const l = lines[j].trim();
+        if (!l) continue;
+        if (/^\d+\.\s+\*\*/.test(l)) break;
+        // Strip leading bullets/dashes and markdown bold
+        const clean = l.replace(/^[-•*]\s*/, "").replace(/\*\*/g, "").trim();
+        if (clean.length > 4) evidence.push(clean);
+      }
+      items.push({ condition: m[1].trim(), level, pct: confidenceMap[level] || 30, color: colorMap[level] || "var(--ink5)", evidence });
     }
   }
   return items;
@@ -211,6 +222,7 @@ function parseDifferential(text) {
 function DifferentialChart({ diagnosis }) {
   const items = parseDifferential(diagnosis);
   const [animated, setAnimated] = useState(false);
+  const [expanded, setExpanded] = useState(null);
   useEffect(() => {
     const t = setTimeout(() => setAnimated(true), 60);
     return () => clearTimeout(t);
@@ -222,8 +234,16 @@ function DifferentialChart({ diagnosis }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {items.map((item, i) => (
           <div key={i}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
-              <span style={{ fontFamily: "var(--body)", fontSize: 13.5, fontWeight: 500, color: "var(--ink2)" }}>{item.condition}</span>
+            <div
+              style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4, cursor: item.evidence.length ? "pointer" : "default" }}
+              onClick={() => item.evidence.length && setExpanded(expanded === i ? null : i)}
+            >
+              <span style={{ fontFamily: "var(--body)", fontSize: 13.5, fontWeight: 500, color: "var(--ink2)", display: "flex", alignItems: "center", gap: 6 }}>
+                {item.condition}
+                {item.evidence.length > 0 && (
+                  <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: item.color, opacity: 0.7, transition: "transform 0.2s", display: "inline-block", transform: expanded === i ? "rotate(90deg)" : "rotate(0deg)" }}>▶</span>
+                )}
+              </span>
               <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: item.color, letterSpacing: "0.08em" }}>{item.level}</span>
             </div>
             <div style={{ height: 7, borderRadius: 4, background: "rgba(22,15,6,0.08)", overflow: "hidden" }}>
@@ -235,6 +255,17 @@ function DifferentialChart({ diagnosis }) {
                 opacity: 0.85,
               }} />
             </div>
+            {expanded === i && item.evidence.length > 0 && (
+              <div style={{ marginTop: 8, padding: "10px 14px", background: `${item.color}10`, border: `1px solid ${item.color}30`, borderRadius: 7, display: "flex", flexDirection: "column", gap: 5 }}>
+                <p style={{ fontFamily: "var(--mono)", fontSize: 9, color: item.color, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 4 }}>Supporting Evidence</p>
+                {item.evidence.map((e, j) => (
+                  <div key={j} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                    <span style={{ color: item.color, fontSize: 10, flexShrink: 0, marginTop: 2 }}>▸</span>
+                    <span style={{ fontFamily: "var(--body)", fontSize: 12.5, color: "var(--ink3)", lineHeight: 1.6 }}>{e}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>
