@@ -180,7 +180,7 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
               </div>
 
               {/* Simple params row — above textarea */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 14 }}>
                 {[{ label: t("input.body_label"), key: "bodyPart", opts: bodyParts }, { label: t("input.duration_label"), key: "duration", opts: durations }].map(({ label, key, opts }) => (
                   <div key={key}>
                     <label className="ink-label" style={{ fontSize: 10 }}>{label}</label>
@@ -194,6 +194,22 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
                     </Select>
                   </div>
                 ))}
+                <div>
+                  <label className="ink-label" style={{ fontSize: 10 }}>Timing</label>
+                  <Select
+                    value={socratesAnswers.timing || ""}
+                    onValueChange={v => setSocratesAnswers(a => ({ ...a, timing: v || null }))}
+                  >
+                    <SelectTrigger style={{ fontFamily: "var(--body)", height: 34, fontSize: 13 }}>
+                      <SelectValue placeholder="Select…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SOCRATES_QUICK.find(g => g.key === "timing").opts.map(o => (
+                        <SelectItem key={o} value={o}>{o}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <label className="ink-label">{t("input.complaint_label")}</label>
@@ -317,7 +333,7 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
                   <p style={{ fontFamily: "var(--body)", fontSize: 12, color: "var(--ink4)", marginBottom: 12, lineHeight: 1.6 }}>
                     Answer what you can — the AI will skip these questions.
                   </p>
-                  {SOCRATES_QUICK.map(group => (
+                  {SOCRATES_QUICK.filter(g => g.key !== "timing").map(group => (
                     <ChipGroup
                       key={group.key}
                       group={group}
