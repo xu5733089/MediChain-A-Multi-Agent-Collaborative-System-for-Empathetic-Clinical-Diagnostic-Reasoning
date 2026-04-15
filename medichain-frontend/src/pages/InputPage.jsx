@@ -9,11 +9,97 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Textarea } from "../components/ui/textarea";
 import { SEV } from "../core/constants";
 
+const SOCRATES_QUICK = [
+  {
+    key: "character",
+    label: "Character",
+    emoji: "💬",
+    hint: "What does it feel like?",
+    multi: true,
+    opts: ["Sharp", "Dull", "Burning", "Aching", "Pressure / tight", "Throbbing", "Stabbing", "Cramping"],
+  },
+  {
+    key: "radiation",
+    label: "Radiation",
+    emoji: "📡",
+    hint: "Does it spread anywhere?",
+    multi: false,
+    opts: ["Stays in one place", "Spreads to arm", "Spreads to jaw", "Spreads to back", "Spreads to shoulder", "Spreads to neck", "Spreads to leg"],
+  },
+  {
+    key: "timing",
+    label: "Timing",
+    emoji: "🕐",
+    hint: "How does it come on?",
+    multi: false,
+    opts: ["Constant", "Comes and goes", "Getting worse over time", "Getting better over time", "Only at certain times"],
+  },
+  {
+    key: "associated",
+    label: "Associated symptoms",
+    emoji: "🔗",
+    hint: "Anything else alongside it?",
+    multi: true,
+    opts: ["Nausea", "Vomiting", "Fever / chills", "Sweating", "Dizziness", "Shortness of breath", "Loss of appetite", "Fatigue", "None"],
+  },
+  {
+    key: "factors",
+    label: "Factors",
+    emoji: "⚡",
+    hint: "What makes it better or worse?",
+    multi: true,
+    opts: ["Worse with exercise", "Better with rest", "Worse when eating", "Better after eating", "Worse at night", "Position-dependent", "Stress-related", "Nothing obvious"],
+  },
+];
+
+function ChipGroup({ group, value, onChange }) {
+  const toggle = (opt) => {
+    if (group.multi) {
+      const cur = value || [];
+      onChange(cur.includes(opt) ? cur.filter(x => x !== opt) : [...cur, opt]);
+    } else {
+      onChange(value === opt ? null : opt);
+    }
+  };
+  const isSelected = (opt) => group.multi ? (value || []).includes(opt) : value === opt;
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 7 }}>
+        <span style={{ fontSize: 14 }}>{group.emoji}</span>
+        <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink4)", letterSpacing: "0.1em", textTransform: "uppercase" }}>{group.label}</span>
+        <span style={{ fontFamily: "var(--body)", fontSize: 11, color: "var(--ink5)", fontStyle: "italic" }}>— {group.hint}</span>
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        {group.opts.map(opt => {
+          const sel = isSelected(opt);
+          return (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => toggle(opt)}
+              style={{
+                fontFamily: "var(--body)", fontSize: 12,
+                color: sel ? "var(--sage)" : "var(--ink3)",
+                background: sel ? "var(--sagePale)" : "var(--paper3)",
+                border: sel ? "1.5px solid var(--sage)" : "1px solid rgba(22,15,6,0.14)",
+                borderRadius: 20, padding: "4px 12px", cursor: "pointer",
+                transition: "all 0.15s",
+              }}
+            >{opt}</button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function InputPage({ api, onSubmit, onEval, selectedPatient, onClearPatient }) {
   const { t } = useTranslation();
   const [form, setForm] = useState({ description: "", bodyPart: "General", duration: "1–3 days", severity: 5, notes: selectedPatient?.conditions || "" });
   const [preContext, setPreContext] = useState([]);
   const [preItems, setPreItems] = useState([]);
+  const [socratesOpen, setSocratesOpen] = useState(false);
+  const [socratesAnswers, setSocratesAnswers] = useState({});
   useEffect(() => { if (selectedPatient) setForm(f => ({ ...f, notes: selectedPatient.conditions || "" })); }, [selectedPatient]);
 
   const onMediaUpdate = useCallback((analyses, items) => {
@@ -129,6 +215,48 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
               </div>
             </div>
 
+            <div className="card fade-up s2" style={{ padding: "0" }}>
+              <div className="shine" />
+              <button
+                type="button"
+                onClick={() => setSocratesOpen(v => !v)}
+                style={{
+                  width: "100%", textAlign: "left", background: "none", border: "none",
+                  padding: "18px 30px", cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,var(--sagePale),var(--amberPale))", border: "1px solid var(--sage)30", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>⚡</div>
+                  <div>
+                    <p style={{ fontFamily: "var(--serif)", fontSize: 18, fontWeight: 600, color: "var(--ink)", margin: 0 }}>Quick Clinical Intake</p>
+                    <p style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)", letterSpacing: "0.1em", margin: 0 }}>OPTIONAL · SHORTENS CONSULTATION</p>
+                  </div>
+                  {Object.values(socratesAnswers).some(v => (Array.isArray(v) ? v.length : v)) && (
+                    <Badge variant="sage" className="ml-2 text-[10px]">
+                      {Object.values(socratesAnswers).filter(v => (Array.isArray(v) ? v.length : v)).length}/5 filled
+                    </Badge>
+                  )}
+                </div>
+                <span style={{ fontFamily: "var(--mono)", fontSize: 13, color: "var(--ink5)", transition: "transform 0.25s", display: "inline-block", transform: socratesOpen ? "rotate(90deg)" : "none" }}>▶</span>
+              </button>
+              {socratesOpen && (
+                <div style={{ padding: "4px 30px 22px", borderTop: "1px solid rgba(22,15,6,0.07)" }}>
+                  <p style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--ink4)", marginBottom: 16, lineHeight: 1.6 }}>
+                    Answer what you can — the AI will skip these questions and focus on what it still needs to know.
+                  </p>
+                  {SOCRATES_QUICK.map(group => (
+                    <ChipGroup
+                      key={group.key}
+                      group={group}
+                      value={socratesAnswers[group.key]}
+                      onChange={v => setSocratesAnswers(a => ({ ...a, [group.key]: v }))}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="card fade-up s2" style={{ padding: "22px 30px" }}>
               <div className="shine" />
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
@@ -224,12 +352,22 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
                 if (!valid) return;
                 let description = form.description.trim();
                 if (!description && hasReadyFile) {
-                  // Auto-generate description from file analyses
                   const fileSummaries = preItems
                     .filter(it => !it.analysing && !it.error && it.analysis)
                     .map(it => `[${it.fileName}]: ${it.analysis.slice(0, 300)}`)
                     .join("\n\n");
                   description = `Medical record uploaded for analysis:\n\n${fileSummaries}`;
+                }
+                // Append pre-filled SOCRATES answers so the AI skips those questions
+                const saLines = SOCRATES_QUICK
+                  .map(g => {
+                    const v = socratesAnswers[g.key];
+                    const ans = Array.isArray(v) ? v.join(", ") : v;
+                    return ans ? `${g.label}: ${ans}` : null;
+                  })
+                  .filter(Boolean);
+                if (saLines.length) {
+                  description += `\n\nAdditional details provided by patient:\n${saLines.join("\n")}`;
                 }
                 onSubmit({ ...form, description, patient_id: selectedPatient?.id || null, pre_context: preContext, pre_items: preItems });
               }}
