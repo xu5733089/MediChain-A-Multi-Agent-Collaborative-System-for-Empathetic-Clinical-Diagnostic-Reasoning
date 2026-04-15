@@ -170,7 +170,7 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
           </div>
         )}
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 18 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 18, alignItems: "start" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div className="card fade-up s1" style={{ padding: "26px 30px" }}>
               <div className="shine" />
