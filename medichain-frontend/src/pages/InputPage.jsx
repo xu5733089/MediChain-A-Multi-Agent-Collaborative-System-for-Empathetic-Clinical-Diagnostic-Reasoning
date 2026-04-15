@@ -252,6 +252,27 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
                 ))}
               </div>
             </div>
+
+            <div className="card fade-up s4" style={{ padding: "22px 30px", background: "linear-gradient(135deg, var(--paper2), var(--paper3))" }}>
+              <div className="shine" />
+              <p style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 16 }}>How it works</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                {[
+                  { icon: "🩺", color: "var(--sage)", title: "Interviewer Agent", desc: "Conducts a structured SOCRATES-based history, asking about site, onset, character and more." },
+                  { icon: "🔬", color: "var(--plum,#7c3aed)", title: "Diagnostician Agent", desc: "Cross-references your symptoms with 47,000+ PubMed articles to generate a ranked differential diagnosis." },
+                  { icon: "⚖️", color: "var(--amber)", title: "Critic Agent", desc: "Reviews the diagnosis for safety flags, evidence gaps, and provides a senior-level clinical recommendation." },
+                ].map((step, i) => (
+                  <div key={i} style={{ display: "flex", gap: 14, position: "relative", paddingBottom: i < 2 ? 20 : 0 }}>
+                    {i < 2 && <div style={{ position: "absolute", left: 17, top: 36, bottom: 0, width: 1.5, background: "rgba(22,15,6,0.1)", borderRadius: 1 }} />}
+                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: `${step.color}18`, border: `1.5px solid ${step.color}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{step.icon}</div>
+                    <div style={{ paddingTop: 4 }}>
+                      <p style={{ fontFamily: "var(--serif)", fontSize: 14, fontWeight: 600, color: step.color, marginBottom: 3 }}>{step.title}</p>
+                      <p style={{ fontFamily: "var(--body)", fontSize: 12.5, color: "var(--ink4)", lineHeight: 1.65 }}>{step.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
