@@ -1,5 +1,5 @@
 """
-agents.py — 三智能体协作逻辑（集成 RAG）
+agents.py — WORKFLOW: Three-agent cooperative logic (integrated RAG)
 """
 import os
 import anthropic
@@ -8,7 +8,7 @@ from rag import search, multi_search, format_references_for_prompt
 client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 MODEL = "claude-sonnet-4-20250514"
 
-# ── 智能体 System Prompts ──────────────────────────────────
+# ── Agents System Prompts ──────────────────────────────────
 
 INTERVIEWER_PROMPT = """You are an empathetic, professional AI medical interviewer.
 Your role is to conduct warm, systematic patient history-taking using the SOCRATES framework
@@ -98,7 +98,7 @@ Always respond in this exact format:
 [1-2 sentences on the most critical next steps]"""
 
 
-# ── 智能体调用 ────────────────────────────────────────────
+# ── Agent Invocation ────────────────────────────────────────────
 
 def call_interviewer(messages: list[dict]) -> str:
     """调用 Interviewer Agent"""
@@ -113,8 +113,9 @@ def call_interviewer(messages: list[dict]) -> str:
 
 def _rewrite_query_for_rag(case_text: str) -> str:
     """
-    用 LLM 将患者口语描述重写为医学专业检索词，
-    弥合患者用语与医学文献之间的语义鸿沟。
+    QUERY_REWRITE:
+    Using LLM to rewrite patients' verbal descriptions into medical terminology,
+    bridges the semantic gap between patient language and medical literature.
     """
     try:
         response = client.messages.create(
@@ -134,12 +135,12 @@ def _rewrite_query_for_rag(case_text: str) -> str:
         )
         return response.content[0].text.strip()
     except Exception:
-        return case_text  # fallback: 使用原始文本
+        return case_text  # fallback: Use Origin Context
 
 
 def _build_rag_queries(rag_query: str) -> list[str]:
     """
-    结合 LLM 改写 + 多视角扩展，生成多个检索 query 提高召回率。
+    By combining LLM rewriting and multi-perspective expansion, multiple search queries are generated to improve recall.
     """
     medical = _rewrite_query_for_rag(rag_query)
     queries = [medical, rag_query]
@@ -150,8 +151,8 @@ def _build_rag_queries(rag_query: str) -> list[str]:
 
 def rewrite_image_findings_for_rag(image_analyses: list[str]) -> str:
     """
-    将多模态视觉分析结果通过 LLM 提取医学关键词，
-    用于 RAG 检索，而非粗暴截断。
+    Multimodal module integration: Medical keywords are extracted from 
+    multimodal visual analysis results using LLM for RAG retrieval, rather than being truncated.
     """
     if not image_analyses:
         return ""
@@ -179,8 +180,9 @@ def rewrite_image_findings_for_rag(image_analyses: list[str]) -> str:
 
 def call_diagnostician(case_text: str, rag_query: str) -> tuple[str, list[dict]]:
     """
-    调用 Diagnostician Agent（附 RAG 检索）
-    返回: (诊断文本, 引用文献列表)
+    Invoke the Diagnostician Agent (with RAG search)
+
+    Returns: (Diagnostic text, list of cited references)
     """
     refs = multi_search(_build_rag_queries(rag_query), n_results=6)
     rag_context = format_references_for_prompt(refs)
@@ -205,8 +207,8 @@ Use only relevant retrieved evidence and cite using [Source | Focus | QID]."""
 
 def call_diagnostician_cot(case_text: str, rag_query: str) -> tuple[str, str, list[dict]]:
     """
-    调用 Diagnostician Agent，启用 Extended Thinking (CoT)
-    返回: (诊断文本, 思维链文本, 引用文献列表)
+    Invoke the Diagnostician Agent and enable Extended Thinking (prompt to use CoT).
+    Returns: (Diagnostic text, thought chain text, list of cited references)
     """
     refs = multi_search(_build_rag_queries(rag_query), n_results=6)
     rag_context = format_references_for_prompt(refs)
@@ -262,8 +264,8 @@ Provide your senior consultant review focusing on evidence quality, safety, and 
 
 def call_critic_cot(case_text: str, diagnosis: str) -> tuple[str, str]:
     """
-    调用 Critic Agent，启用 Extended Thinking (CoT)
-    返回: (审查文本, 思维链文本)
+    Invoke the Critic Agent and enable Extended Thinking (CoT).
+    Returns: (Review text, thought chain text)
     """
     prompt = f"""Please review this diagnostic assessment:
 
