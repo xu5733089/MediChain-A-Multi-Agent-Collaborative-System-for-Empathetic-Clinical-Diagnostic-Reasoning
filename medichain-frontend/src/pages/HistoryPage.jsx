@@ -5,7 +5,7 @@ import { AmbientBlobs, ECGLine, IllustFlower, IllustLeaf } from "../components/i
 import { Button } from "../components/ui/button";
 import { fmtD } from "../core/utils";
 
-export default function HistoryPage({ api, onNew }) {
+export default function HistoryPage({ api, onNew, onContinue }) {
   const { t } = useTranslation();
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -181,8 +181,15 @@ export default function HistoryPage({ api, onNew }) {
                     {sel === s.id && detail && (
                       <div className="scale-in" style={{ background: "var(--paper3)", border: "1.5px solid var(--rose)40", borderTop: "none", borderRadius: "0 0 6px 6px", padding: "18px 24px" }}>
                         {detail.status === "done" && (
-                          <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-                            <Button onClick={() => window.open(api.exportUrl(s.id, "pdf"), "_blank")} size="xs">📄 PDF</Button>
+                          <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+                            <Button
+                              size="xs"
+                              onClick={() => onContinue?.({ ...detail, messages: detailMessages })}
+                              style={{ background: "var(--sage)", color: "#fff", borderColor: "var(--sage)" }}
+                            >
+                              ↩ Continue Consultation
+                            </Button>
+                            <Button onClick={() => window.open(api.exportUrl(s.id, "pdf"), "_blank")} variant="outline" size="xs">📄 PDF</Button>
                             <Button onClick={() => window.open(api.exportUrl(s.id, "json"), "_blank")} variant="outline" size="xs">JSON</Button>
                           </div>
                         )}

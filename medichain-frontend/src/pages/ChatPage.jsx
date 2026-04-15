@@ -25,14 +25,15 @@ import { Alert } from "../components/ui/alert";
 import { fmtT } from "../core/utils";
 import CameraCapture from "../components/CameraCapture";
 
-export default function ChatPage({ api, symptoms, onComplete, onBack }) {
+export default function ChatPage({ api, symptoms, onComplete, onBack, resumeSession }) {
   const { t } = useTranslation();
   const [msgs, setMsgs] = useState([]);
   const [logs, setLogs] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [connecting, setConnecting] = useState(!resumeSession); // skeleton screen flag
   const [phase, setPhase] = useState("interviewing");
-  const [sid, setSid] = useState(null);
+  const [sid, setSid] = useState(resumeSession?.id || null);
   const [panel, setPanel] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
@@ -55,6 +56,7 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
 
   const pushAiMsg = useCallback((text, time = new Date()) => {
     if (streamRef.current) clearInterval(streamRef.current);
+    setConnecting(false);
     let i = 0;
     setStreamingMsg({ displayed: "", full: text, time });
     streamRef.current = setInterval(() => {
@@ -77,6 +79,24 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
   }, []);
 
   const init = useCallback(async () => {
+    if (resumeSession) {
+      // Restore from history — no new session needed
+      const restored = (resumeSession.messages || [])
+        .filter(m => m.role === "user" || (m.role === "agent" && m.agent_type !== "safety"))
+        .map(m => ({
+          role: m.role === "agent" ? "ai" : "user",
+          agent: m.agent_type || "interviewer",
+          text: m.content || "",
+          time: m.created_at ? new Date(m.created_at) : new Date(),
+        }));
+      setMsgs(restored);
+      addLog("interviewer", `Resumed session ${resumeSession.id.slice(0, 8).toUpperCase()}. Continue the consultation below.`);
+      try {
+        const files = await api.sessionUploads(resumeSession.id);
+        setUploadedFiles(Array.isArray(files) ? files : []);
+      } catch { setUploadedFiles([]); }
+      return;
+    }
     setLoading(true);
     try {
       const d = await api.start(symptoms);
@@ -103,7 +123,8 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
       addLog("interviewer", `Connection error: ${e.message}`);
     }
     setLoading(false);
-  }, [api, symptoms, addLog]);
+    setConnecting(false);
+  }, [api, symptoms, resumeSession, addLog]);
 
   useEffect(() => { init(); }, [init]);
 
@@ -254,7 +275,30 @@ export default function ChatPage({ api, symptoms, onComplete, onBack }) {
   }[phase];
 
   return (
-    <div style={{ height: "calc(100dvh - 56px)", marginTop: 56, background: "var(--paper)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div style={{ height: "calc(100dvh - 56px)", marginTop: 56, background: "var(--paper)", display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
+      {connecting && (
+        <div style={{
+          position: "absolute", inset: 0, zIndex: 10,
+          background: "var(--paper)",
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 24,
+          animation: "pageFadeIn 0.3s ease both",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 64, height: 64, borderRadius: "50%", background: "linear-gradient(135deg,var(--sagePale),var(--sageDim,#bbf7d0))", border: "2px solid var(--sage)40", fontSize: 28, animation: "glowPulse 2s infinite" }}>🩺</div>
+          <div style={{ textAlign: "center" }}>
+            <p style={{ fontFamily: "var(--serif)", fontSize: 20, fontStyle: "italic", color: "var(--ink3)", marginBottom: 6 }}>Connecting to your care team…</p>
+            <p style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--ink5)", letterSpacing: "0.12em" }}>PREPARING CLINICAL INTERVIEW</p>
+          </div>
+          <ECGLine style={{ maxWidth: 260, opacity: 0.5 }} color="var(--sage)" />
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, width: 280 }}>
+            {[80, 60, 72].map((w, i) => (
+              <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-end", justifyContent: i % 2 === 0 ? "flex-start" : "flex-end" }}>
+                {i % 2 === 0 && <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--sagePale)", border: "1px solid var(--sage)30", flexShrink: 0 }} />}
+                <div style={{ height: 36, borderRadius: 12, background: "var(--paper3)", width: `${w}%`, animation: `shimmer 1.4s ${i * 0.2}s infinite linear`, backgroundImage: "linear-gradient(90deg,var(--paper3) 25%,var(--paper2) 50%,var(--paper3) 75%)", backgroundSize: "200% 100%" }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", height: 44, borderBottom: "1px solid rgba(22,15,6,0.09)", background: "var(--paper2)", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <Button onClick={onBack} variant="outline" size="xs">{t("common.back")}</Button>

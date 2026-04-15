@@ -33,6 +33,7 @@ function AppInner() {
   const [symptoms, setSymp] = useState(null);
   const [result, setResult] = useState(null);
   const [selPat, setSelPat] = useState(null);
+  const [resumeSession, setResumeSession] = useState(null);
   const api = makeApi(auth.token);
   const page = location.pathname.replace(/^\//, "") || "input";
   const isProvider = auth.user?.role === "provider";
@@ -53,7 +54,8 @@ function AppInner() {
 
   const go = (nextPage) => navigate(`/${nextPage}`);
   const goHome = () => go(isProvider ? "provider" : "input");
-  const goNew = () => { setSymp(null); setResult(null); go("input"); };
+  const goNew = () => { setSymp(null); setResult(null); setResumeSession(null); go("input"); };
+  const goResume = (session) => { setResumeSession(session); setSymp(session.symptoms || { description: session.description || "" }); go("chat"); };
   return (
     <>
       <TopNav user={auth.user} onLogout={() => { auth.logout(); go("input"); }} onNav={go} page={page} dark={dark} toggle={toggle}/>
@@ -76,7 +78,7 @@ function AppInner() {
             : <AuthPage api={api} onLogin={(t, u) => { auth.login(t, u); navigate(u?.role === "provider" ? "/provider" : "/patients"); }} onSkip={() => go("input")}/>
           } />
           <Route path="/chat" element={symptoms
-            ? <ChatPage api={api} symptoms={symptoms} onBack={() => go("input")} onComplete={r => { flushSync(() => setResult(r)); go("result"); }}/>
+            ? <ChatPage api={api} symptoms={symptoms} resumeSession={resumeSession} onBack={() => { setResumeSession(null); go(resumeSession ? "history" : "input"); }} onComplete={r => { flushSync(() => setResult(r)); go("result"); }}/>
             : <Navigate to="/input" replace />
           } />
           <Route path="/result" element={result
@@ -87,7 +89,7 @@ function AppInner() {
             ? <FlowPage result={result} onBack={() => go("result")}/>
             : <Navigate to="/input" replace />
           } />
-          <Route path="/history" element={<HistoryPage api={api} onNew={isProvider ? goHome : goNew}/>} />
+          <Route path="/history" element={<HistoryPage api={api} onNew={isProvider ? goHome : goNew} onContinue={goResume}/>} />
           <Route path="/eval" element={<EvalPage api={api}/>} />
           <Route path="*" element={<Navigate to={isProvider ? "/provider" : "/input"} replace />} />
         </Routes>
