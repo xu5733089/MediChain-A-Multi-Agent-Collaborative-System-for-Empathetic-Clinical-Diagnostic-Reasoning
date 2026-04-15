@@ -215,48 +215,6 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
               </div>
             </div>
 
-            <div className="card fade-up s2" style={{ padding: "0" }}>
-              <div className="shine" />
-              <button
-                type="button"
-                onClick={() => setSocratesOpen(v => !v)}
-                style={{
-                  width: "100%", textAlign: "left", background: "none", border: "none",
-                  padding: "18px 30px", cursor: "pointer",
-                  display: "flex", alignItems: "center", justifyContent: "space-between",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,var(--sagePale),var(--amberPale))", border: "1px solid var(--sage)30", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>⚡</div>
-                  <div>
-                    <p style={{ fontFamily: "var(--serif)", fontSize: 18, fontWeight: 600, color: "var(--ink)", margin: 0 }}>Quick Clinical Intake</p>
-                    <p style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)", letterSpacing: "0.1em", margin: 0 }}>OPTIONAL · SHORTENS CONSULTATION</p>
-                  </div>
-                  {Object.values(socratesAnswers).some(v => (Array.isArray(v) ? v.length : v)) && (
-                    <Badge variant="sage" className="ml-2 text-[10px]">
-                      {Object.values(socratesAnswers).filter(v => (Array.isArray(v) ? v.length : v)).length}/5 filled
-                    </Badge>
-                  )}
-                </div>
-                <span style={{ fontFamily: "var(--mono)", fontSize: 13, color: "var(--ink5)", transition: "transform 0.25s", display: "inline-block", transform: socratesOpen ? "rotate(90deg)" : "none" }}>▶</span>
-              </button>
-              {socratesOpen && (
-                <div style={{ padding: "4px 30px 22px", borderTop: "1px solid rgba(22,15,6,0.07)" }}>
-                  <p style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--ink4)", marginBottom: 16, lineHeight: 1.6 }}>
-                    Answer what you can — the AI will skip these questions and focus on what it still needs to know.
-                  </p>
-                  {SOCRATES_QUICK.map(group => (
-                    <ChipGroup
-                      key={group.key}
-                      group={group}
-                      value={socratesAnswers[group.key]}
-                      onChange={v => setSocratesAnswers(a => ({ ...a, [group.key]: v }))}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-
             <div className="card fade-up s2" style={{ padding: "22px 30px" }}>
               <div className="shine" />
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
@@ -332,6 +290,48 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
                   );
                 })}
               </div>
+            </div>
+
+            <div className="card fade-up s3" style={{ padding: "0" }}>
+              <div className="shine" />
+              <button
+                type="button"
+                onClick={() => setSocratesOpen(v => !v)}
+                style={{
+                  width: "100%", textAlign: "left", background: "none", border: "none",
+                  padding: "16px 20px", cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 16 }}>⚡</span>
+                  <div>
+                    <p style={{ fontFamily: "var(--serif)", fontSize: 15, fontWeight: 600, color: "var(--ink)", margin: 0 }}>Quick Clinical Intake</p>
+                    <p style={{ fontFamily: "var(--mono)", fontSize: 8, color: "var(--ink5)", letterSpacing: "0.1em", margin: 0 }}>OPTIONAL · SHORTENS CONSULTATION</p>
+                  </div>
+                  {Object.values(socratesAnswers).some(v => (Array.isArray(v) ? v.length : v)) && (
+                    <Badge variant="sage" className="ml-2 text-[10px]">
+                      {Object.values(socratesAnswers).filter(v => (Array.isArray(v) ? v.length : v)).length}/5
+                    </Badge>
+                  )}
+                </div>
+                <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--ink5)", transition: "transform 0.25s", display: "inline-block", transform: socratesOpen ? "rotate(90deg)" : "none" }}>▶</span>
+              </button>
+              {socratesOpen && (
+                <div style={{ padding: "2px 20px 18px", borderTop: "1px solid rgba(22,15,6,0.07)" }}>
+                  <p style={{ fontFamily: "var(--body)", fontSize: 12, color: "var(--ink4)", marginBottom: 12, lineHeight: 1.6 }}>
+                    Answer what you can — the AI will skip these questions.
+                  </p>
+                  {SOCRATES_QUICK.map(group => (
+                    <ChipGroup
+                      key={group.key}
+                      group={group}
+                      value={socratesAnswers[group.key]}
+                      onChange={v => setSocratesAnswers(a => ({ ...a, [group.key]: v }))}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="card fade-up s3" style={{ padding: "20px 24px" }}>
