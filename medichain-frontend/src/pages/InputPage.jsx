@@ -115,6 +115,7 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
   const [preItems, setPreItems] = useState([]);
   const [socratesOpen, setSocratesOpen] = useState(false);
   const [socratesAnswers, setSocratesAnswers] = useState({});
+  const [consent, setConsent] = useState(false);
   useEffect(() => { if (selectedPatient) setForm(f => ({ ...f, notes: selectedPatient.conditions || "" })); }, [selectedPatient]);
 
   const onMediaUpdate = useCallback((analyses, items) => {
@@ -124,9 +125,9 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
 
   const bodyParts = t("input.body_parts", { returnObjects: true });
   const durations = t("input.durations", { returnObjects: true });
-  // Valid if: description typed, OR at least one fully-analysed file uploaded
+  // Valid if: description typed, OR at least one fully-analysed file uploaded; AND consent given
   const hasReadyFile = preItems.some(it => !it.analysing && !it.error && it.analysis);
-  const valid = form.description.trim().length > 15 || hasReadyFile;
+  const valid = (form.description.trim().length > 15 || hasReadyFile) && consent;
   const s = SEV(form.severity);
   const sevLabel = form.severity >= 7 ? t("common.severe") : form.severity >= 4 ? t("common.moderate") : t("common.mild");
   const sevDesc  = form.severity >= 7 ? t("input.severe_desc") : form.severity >= 4 ? t("input.moderate_desc") : t("input.mild_desc");
@@ -398,13 +399,25 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
                 if (saLines.length) {
                   description += `\n\nAdditional details provided by patient:\n${saLines.join("\n")}`;
                 }
-                onSubmit({ ...form, description, patient_id: selectedPatient?.id || null, pre_context: preContext, pre_items: preItems });
+                onSubmit({ ...form, description, patient_id: selectedPatient?.id || null, pre_context: preContext, pre_items: preItems, consent_to_provider_review: consent });
               }}
               disabled={!valid || preItems.some(it => it.analysing)}
               size="xl" className="fade-up s4 w-full"
             >
               {t("input.begin")}
             </Button>
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 10, marginTop: 14, cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={e => setConsent(e.target.checked)}
+                style={{ marginTop: 3, accentColor: "var(--sage)", width: 16, height: 16, flexShrink: 0 }}
+              />
+              <span style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--ink3)", lineHeight: 1.55 }}>
+                I understand this tool provides AI-assisted information only and does not constitute medical advice.
+                I consent to my anonymised session data being reviewed by a licensed clinician for quality assurance purposes.
+              </span>
+            </label>
           </div>
         </div>
       </div>

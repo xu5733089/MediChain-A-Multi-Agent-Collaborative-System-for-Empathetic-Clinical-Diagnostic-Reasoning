@@ -716,6 +716,7 @@ class SymptomInput(BaseModel):
     notes: str = ""
     patient_id: Optional[str] = None
     pre_context: list[str] = []  # Analyses from pre-consultation media uploads
+    consent_to_provider_review: bool = False
 
 class ChatMessage(BaseModel):
     session_id: str
@@ -1174,10 +1175,11 @@ def start_session(symptoms: SymptomInput, user=Depends(get_current_user)):
     messages = [{"role":"ai","agent":"interviewer","text":reply}]
     now = _now()
     with get_db() as c:
-        c.execute("""INSERT INTO sessions(id,user_id,patient_id,symptoms,messages,history,turns,status,severity_level,created_at,updated_at)
-            VALUES(?,?,?,?,?,?,0,'interviewing',?,?,?)""",
+        c.execute("""INSERT INTO sessions(id,user_id,patient_id,symptoms,messages,history,turns,status,severity_level,consent_to_provider_review,created_at,updated_at)
+            VALUES(?,?,?,?,?,?,0,'interviewing',?,?,?,?)""",
             (sid, uid, symptoms.patient_id,
-             json.dumps(payload), json.dumps(messages), json.dumps(history), severity_level, now, now))
+             json.dumps(payload), json.dumps(messages), json.dumps(history), severity_level,
+             1 if symptoms.consent_to_provider_review else 0, now, now))
         c.commit()
 
     safety = classify_safety(symptoms.description)
@@ -1671,6 +1673,37 @@ def get_session(session_id: str, user=Depends(get_current_user)):
     if sess.get("user_id") and (not user or (not _is_provider(user) and sess["user_id"] != user["id"])):
         raise HTTPException(403, "Forbidden")
     return sess
+
+@app.delete("/api/sessions/{session_id}", status_code=204)
+def delete_session(session_id: str, user=Depends(get_current_user)):
+    """
+    Delete a session and all associated data (messages, uploads).
+    Users may only delete their own sessions; providers may delete any.
+    """
+    sess = session_get(session_id)
+    if not sess:
+        raise HTTPException(status_code=404, detail="Session not found")
+    uid = user["id"] if user else None
+    if not _is_provider(user) and sess.get("user_id") and sess["user_id"] != uid:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    # Delete physical upload files from disk
+    with get_db() as c:
+        rows = c.execute(
+            "SELECT file_path FROM uploads WHERE session_id=?", (session_id,)
+        ).fetchall()
+    for row in rows:
+        try:
+            Path(row["file_path"]).unlink(missing_ok=True)
+        except Exception:
+            pass
+
+    # Delete session row — messages and uploads cascade via FK
+    with get_db() as c:
+        c.execute("PRAGMA foreign_keys = ON")
+        c.execute("DELETE FROM sessions WHERE id=?", (session_id,))
+        c.commit()
+
 
 @app.get("/api/sessions")
 def list_sessions(
