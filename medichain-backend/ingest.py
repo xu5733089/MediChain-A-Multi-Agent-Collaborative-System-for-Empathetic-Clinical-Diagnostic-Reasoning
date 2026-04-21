@@ -1,10 +1,10 @@
 """
-ingest.py — 从 PubMed 抓取医学文献并写入 Qdrant
-用法：
-    python ingest.py                    # 使用默认搜索词
-    python ingest.py --terms "asthma"   # 自定义搜索词
-    python ingest.py --max 200          # 抓取更多文献
-    python ingest.py --status           # 查看当前库大小
+ingest.py — Fetch medical literature from PubMed and write it to Qdrant
+How to use：
+    python ingest.py                    # Default search terms
+    python ingest.py --terms "asthma"   # Custom search terms
+    python ingest.py --max 200          # Retrieve literature using specified parameters
+    python ingest.py --status           # Check the size of Database
 """
 import argparse
 import time
@@ -16,29 +16,29 @@ import json
 
 from rag import add_documents, get_collection_size
 
-# ── 默认搜索词（覆盖 ICD-10 主要临床科室，目标 1000+ 篇文献）────
+# ── Default search terms (covering 78 terms across major clinical departments in ICD-10)────
 DEFAULT_TERMS = [
-    # ── Cardiology 心血管 ──
+    # ── Cardiology ──
     "chest pain cardiac differential diagnosis",
     "hypertension cardiovascular risk management",
     "heart failure diagnosis treatment guidelines",
     "atrial fibrillation anticoagulation management",
     "myocardial infarction acute coronary syndrome",
     "valvular heart disease diagnosis echocardiography",
-    # ── Pulmonology 呼吸 ──
+    # ── Pulmonology ──
     "asthma COPD respiratory diagnosis treatment",
     "pneumonia community acquired diagnosis",
     "pulmonary embolism diagnosis anticoagulation",
     "lung cancer screening diagnosis staging",
     "interstitial lung disease pulmonary fibrosis",
-    # ── Gastroenterology 消化 ──
+    # ── Gastroenterology ──
     "abdominal pain differential diagnosis",
     "gastroesophageal reflux disease GERD treatment",
     "inflammatory bowel disease Crohn ulcerative colitis",
     "liver cirrhosis hepatitis diagnosis management",
     "gallstone cholecystitis pancreatitis diagnosis",
     "colorectal cancer screening colonoscopy",
-    # ── Neurology 神经 ──
+    # ── Neurology ──
     "headache migraine cluster tension diagnosis",
     "stroke cerebrovascular diagnosis thrombolysis",
     "epilepsy seizure diagnosis treatment",
@@ -46,70 +46,70 @@ DEFAULT_TERMS = [
     "Alzheimer dementia cognitive decline diagnosis",
     "multiple sclerosis diagnosis treatment",
     "peripheral neuropathy diagnosis etiology",
-    # ── Endocrinology 内分泌 ──
+    # ── Endocrinology ──
     "diabetes mellitus type 2 diagnosis management",
     "diabetes mellitus type 1 insulin therapy",
     "thyroid disorder hypothyroidism hyperthyroidism",
     "adrenal insufficiency Cushing syndrome diagnosis",
     "obesity metabolic syndrome management",
     "polycystic ovary syndrome PCOS diagnosis",
-    # ── Nephrology 肾脏 ──
+    # ── Nephrology ──
     "chronic kidney disease diagnosis staging",
     "acute kidney injury diagnosis management",
     "urinary tract infection diagnosis treatment",
     "nephrotic syndrome glomerulonephritis",
-    # ── Hematology 血液 ──
+    # ── Hematology ──
     "anemia iron deficiency B12 folate diagnosis",
     "leukemia lymphoma diagnosis treatment",
     "deep vein thrombosis diagnosis anticoagulation",
     "coagulation disorder bleeding diagnosis",
-    # ── Rheumatology 风湿 ──
+    # ── Rheumatology ──
     "rheumatoid arthritis diagnosis treatment",
     "systemic lupus erythematosus diagnosis",
     "gout crystal arthropathy management",
     "osteoarthritis diagnosis joint replacement",
     "back pain musculoskeletal diagnosis",
-    # ── Infectious Disease 感染 ──
+    # ── Infectious Disease ──
     "fever infectious disease differential diagnosis",
     "sepsis diagnosis management antibiotics",
     "HIV AIDS diagnosis antiretroviral therapy",
     "tuberculosis diagnosis treatment",
     "COVID-19 SARS-CoV-2 diagnosis treatment",
     "malaria tropical disease diagnosis",
-    # ── Dermatology 皮肤 ──
+    # ── Dermatology ──
     "skin rash dermatology differential diagnosis",
     "eczema atopic dermatitis treatment",
     "psoriasis diagnosis management biologics",
     "melanoma skin cancer diagnosis staging",
     "hair loss alopecia areata treatment",
-    # ── Psychiatry 精神 ──
+    # ── Psychiatry ──
     "depression major depressive disorder treatment",
     "anxiety disorder generalized panic diagnosis",
     "bipolar disorder diagnosis mood stabilizer",
     "schizophrenia psychosis diagnosis treatment",
     "insomnia sleep disorder diagnosis management",
-    # ── Oncology 肿瘤 ──
+    # ── Oncology ──
     "breast cancer diagnosis staging treatment",
     "prostate cancer screening diagnosis",
     "pancreatic cancer diagnosis management",
     "ovarian cancer diagnosis treatment",
-    # ── Orthopedics 骨科 ──
+    # ── Orthopedics ──
     "fracture orthopedic diagnosis management",
     "osteoporosis bone density diagnosis treatment",
     "spinal stenosis disc herniation diagnosis",
-    # ── Ophthalmology / ENT 五官 ──
+    # ── Ophthalmology / ENT ──
     "glaucoma macular degeneration diagnosis",
     "otitis media sinusitis diagnosis treatment",
     "allergic rhinitis diagnosis management",
-    # ── Pediatrics 儿科 ──
+    # ── Pediatrics ──
     "pediatric fever infection diagnosis",
     "childhood asthma diagnosis management",
     "neonatal jaundice diagnosis treatment",
-    # ── OB/GYN 妇产 ──
+    # ── OB/GYN ──
     "preeclampsia gestational diabetes diagnosis",
     "endometriosis pelvic pain diagnosis",
     "menopause hormone replacement therapy",
-    # ── Emergency 急诊 ──
+    # ── Emergency ──
     "acute abdomen emergency differential diagnosis",
     "anaphylaxis allergic reaction emergency management",
     "traumatic brain injury diagnosis management",
@@ -119,7 +119,7 @@ ENTREZ_BASE = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 
 
 def fetch_pmids(term: str, max_results: int = 20) -> list[str]:
-    """搜索 PubMed，返回 PMID 列表"""
+    """Searching PubMed returns a list of PMIDs."""
     params = urlencode({
         "db": "pubmed",
         "term": f"{term}[Title/Abstract] AND hasabstract[text]",
@@ -138,7 +138,7 @@ def fetch_pmids(term: str, max_results: int = 20) -> list[str]:
 
 
 def fetch_article_details(pmids: list[str]) -> list[dict]:
-    """批量获取文献详情（标题、摘要、作者等）"""
+    """Batch retrieve document details (title, abstract, authors, etc.)"""
     if not pmids:
         return []
 
@@ -157,7 +157,7 @@ def fetch_article_details(pmids: list[str]) -> list[dict]:
         print(f"  ⚠ Fetch failed: {e}")
         return []
 
-    # 简单 XML 解析（避免依赖 lxml）
+    # Simple XML parsing (avoiding reliance on lxml)
     import re
     articles = []
     article_blocks = re.findall(
@@ -179,19 +179,19 @@ def fetch_article_details(pmids: list[str]) -> list[dict]:
             if abstract_block else ""
         )
 
-        # 年份
+        # Year
         year_m = re.search(r"<PubDate>.*?<Year>(\d{4})</Year>", block, re.DOTALL)
         year = year_m.group(1) if year_m else "N/A"
 
-        # 期刊
+        # Journal
         journal = extract("Title") or extract("ISOAbbreviation")
 
-        # 作者（最多3个）
+        # Authors (maximum = 3)
         last_names = re.findall(r"<LastName>(.*?)</LastName>", block)
         authors = ", ".join(last_names[:3]) + (" et al." if len(last_names) > 3 else "")
 
         if not pmid or not abstract or len(abstract) < 80:
-            continue  # 跳过无摘要文献
+            continue  # Skip to literature without abstract
 
         articles.append({
             "id":      f"pmid_{pmid}",
@@ -206,8 +206,8 @@ def fetch_article_details(pmids: list[str]) -> list[dict]:
     return articles
 
 
-def run_ingestion(terms: list[str], per_term: int = 15) -> None:
-    print("\n🔬 MediChain RAG Ingestion Pipeline")
+def run_ingestion(terms: list[str], per_term: int = 35) -> None:
+    print("\n MediChain RAG Ingestion Pipeline")
     print(f"   Model:      BioLORD-2023 (medical domain)")
     print(f"   Database:   ./qdrant_db (Qdrant embedded)")
     print(f"   Terms:      {len(terms)}")
