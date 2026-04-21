@@ -192,6 +192,16 @@ function AnnotatedMediaCard({ item }) {
   );
 }
 
+// Extract bullet items under "## Recommended Investigations"
+function parseInvestigations(text) {
+  const m = (text || "").match(/##\s*Recommended Investigations\s*\n([\s\S]*?)(?=\n##|$)/i);
+  if (!m) return [];
+  return m[1]
+    .split("\n")
+    .map(l => l.replace(/^[-•*]\s*/, "").replace(/\*\*/g, "").trim())
+    .filter(l => l.length > 3);
+}
+
 // Parse "1. **Condition** — Confidence: HIGH\n   Supporting..." into structured list
 // Also collects the bullet lines immediately following each heading as evidence
 function parseDifferential(text) {
@@ -393,6 +403,43 @@ export default function ResultsPage({ api, result, onNew, onHistory, onFlow }) {
                               {top.evidence[0]}
                             </span>
                           )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  {tab === "diagnosis" && (() => {
+                    const investigations = parseInvestigations(diagnosis);
+                    if (!investigations.length) return null;
+                    return (
+                      <div style={{
+                        marginBottom: 22, padding: "18px 22px",
+                        background: "linear-gradient(135deg, rgba(3,105,161,0.07), rgba(3,105,161,0.03))",
+                        border: "1.5px solid rgba(3,105,161,0.25)",
+                        borderRadius: 12,
+                      }}>
+                        <p style={{
+                          fontFamily: "var(--mono)", fontSize: 10,
+                          color: "var(--sky, #0369a1)", letterSpacing: "0.16em",
+                          textTransform: "uppercase", marginBottom: 12, opacity: 0.9,
+                        }}>
+                          Recommended Investigations
+                        </p>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                          {investigations.map((inv, i) => (
+                            <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                              <span style={{
+                                fontFamily: "var(--mono)", fontSize: 10, fontWeight: 700,
+                                color: "var(--sky, #0369a1)", flexShrink: 0, marginTop: 3,
+                                background: "rgba(3,105,161,0.12)", borderRadius: 4,
+                                padding: "1px 6px", letterSpacing: "0.04em",
+                              }}>{String(i + 1).padStart(2, "0")}</span>
+                              <span style={{
+                                fontFamily: "var(--body)", fontSize: 14,
+                                fontWeight: 600, color: "var(--ink)",
+                                lineHeight: 1.55,
+                              }}>{inv}</span>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     );
