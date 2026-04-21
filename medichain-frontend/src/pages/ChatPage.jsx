@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 const AC = {
   safety:       { short: 'Safety',       icon: '🛡', c: '#9a5800', pale: '#fdebd0', right: false },
   interviewer:  { short: 'Interviewer',  icon: '🩺', c: '#2a6235', pale: '#daeedd', right: false },
+  imaging:      { short: 'Imaging',      icon: '🩻', c: '#0369a1', pale: '#e0f2fe', right: false },
   diagnostician:{ short: 'Diagnostician',icon: '🔬', c: '#6d28d9', pale: '#ede9fe', right: true  },
   critic:       { short: 'Critic',       icon: '⚖️', c: '#1a3068', pale: '#dce4f8', right: true  },
 };
