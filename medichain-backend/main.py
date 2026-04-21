@@ -1547,7 +1547,7 @@ async def _diagnose_stream_gen(body: "DiagnoseRequest", user):
         await asyncio.sleep(0.15)
         yield _sse("agent_message",
                    from_agent="diagnostician", to_agent=None,
-                   text="Case received. Querying MedQuAD corpus (Dense + BM25 hybrid search)…",
+                   text="Case received. Querying medical knowledge base (MedQuAD + PubMed, hybrid dense + BM25 search)…",
                    phase="diagnosis")
 
         try:
@@ -1771,7 +1771,8 @@ async def upload_session_file(session_id: str, file: UploadFile = File(...), use
         if file_type == "txt":
             extracted_text = _extract_text_from_txt(stored_path)
         elif file_type == "image":
-            extracted_text = _analyze_medical_image(stored_path)
+            result = _analyze_medical_image(stored_path)
+            extracted_text = result["analysis"]
         else:
             extracted_text = _extract_text_from_pdf(stored_path)
     except Exception as e:

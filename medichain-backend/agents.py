@@ -38,7 +38,7 @@ Rules:
 - Keep each response to 3-5 sentences maximum"""
 
 DIAGNOSTICIAN_PROMPT = """You are an experienced diagnostic physician AI.
-You will receive a patient case and relevant medical QA knowledge retrieved from a local MedQuAD-style RAG index.
+You will receive a patient case and relevant medical knowledge retrieved from a hybrid RAG index combining MedQuAD clinical QA pairs and PubMed peer-reviewed literature (dense + BM25 hybrid search).
 
 IMPORTANT RULES:
 - Use only the retrieved knowledge as evidence. Do not fabricate citations.

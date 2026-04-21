@@ -380,9 +380,9 @@ def multi_search(queries: list[str], n_results: int = 5) -> list[dict]:
 def format_references_for_prompt(refs: list[dict]) -> str:
     """将检索到的文献格式化为 prompt 中使用的字符串"""
     if not refs:
-        return "No relevant medical QA knowledge found in local database."
+        return "No relevant medical literature found in local database."
 
-    lines = ["=== RELEVANT MEDICAL QA KNOWLEDGE (RAG) ==="]
+    lines = ["=== RELEVANT MEDICAL LITERATURE (RAG — MedQuAD + PubMed Hybrid Search) ==="]
     for i, r in enumerate(refs, 1):
         source = r.get("source", "") or "UnknownSource"
         focus = r.get("focus", "") or r.get("title", "Untitled")
