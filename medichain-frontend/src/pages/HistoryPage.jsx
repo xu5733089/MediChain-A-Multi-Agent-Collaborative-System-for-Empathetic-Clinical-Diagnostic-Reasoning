@@ -170,9 +170,24 @@ export default function HistoryPage({ api, onNew, onContinue }) {
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontFamily: "var(--serif)", fontSize: 16, fontStyle: "italic", color: "var(--ink)", marginBottom: 5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.description}</p>
-                          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                             <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)" }}>{fmtD(s.created_at)}</span>
                             <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: s.status === "done" ? "var(--sage)" : "var(--amber)", letterSpacing: "0.1em" }}>● {s.status}</span>
+                            {s.body_part && (
+                              <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)", background: "var(--paper3)", border: "1px solid rgba(22,15,6,0.1)", borderRadius: 4, padding: "1px 6px", letterSpacing: "0.06em" }}>
+                                {s.body_part}
+                              </span>
+                            )}
+                            {s.severity_level != null && (
+                              <span style={{
+                                fontFamily: "var(--mono)", fontSize: 9, letterSpacing: "0.06em", borderRadius: 4, padding: "1px 6px",
+                                color: Number(s.severity_level) >= 7 ? "var(--rose)" : Number(s.severity_level) >= 4 ? "var(--amber)" : "var(--sage)",
+                                background: Number(s.severity_level) >= 7 ? "var(--rosePale)" : Number(s.severity_level) >= 4 ? "var(--amberPale)" : "var(--sagePale)",
+                                border: `1px solid ${Number(s.severity_level) >= 7 ? "var(--rose)" : Number(s.severity_level) >= 4 ? "var(--amber)" : "var(--sage)"}30`,
+                              }}>
+                                Sev {s.severity_level}
+                              </span>
+                            )}
                           </div>
                         </div>
                         <span style={{ fontSize: 20, color: "var(--ink5)", marginLeft: 16, transition: "transform 0.25s", display: "inline-block", transform: sel === s.id ? "rotate(180deg)" : "none" }}>↓</span>
@@ -203,7 +218,7 @@ export default function HistoryPage({ api, onNew, onContinue }) {
                               variant="outline"
                               size="xs"
                             >
-                              {showFullDiagnosis ? "收起全文" : "展开全文"}
+                              {showFullDiagnosis ? "Show less" : "Show full report"}
                             </Button>
                           </div>
                         )}

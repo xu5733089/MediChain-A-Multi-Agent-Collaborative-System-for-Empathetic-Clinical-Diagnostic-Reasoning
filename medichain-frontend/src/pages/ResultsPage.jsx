@@ -319,6 +319,7 @@ export default function ResultsPage({ api, result, onNew, onHistory, onFlow }) {
                 <Button onClick={() => window.open(api.exportUrl(result.sessionId, "pdf"), "_blank")} size="sm">{t("results.pdf")}</Button>
                 <Button onClick={() => window.open(api.exportUrl(result.sessionId, "json"), "_blank")} variant="outline" size="sm">{t("results.json")}</Button>
               </>}
+              <Button onClick={() => window.print()} variant="outline" size="sm">🖨 Print</Button>
               <Button onClick={onFlow} variant="outline" size="sm">{t("results.flow")}</Button>
               <Button onClick={onHistory} variant="outline" size="sm">{t("results.history")}</Button>
               <Button onClick={onNew} variant="secondary" size="sm">{t("results.new")}</Button>
@@ -355,6 +356,47 @@ export default function ResultsPage({ api, result, onNew, onHistory, onFlow }) {
                       {tab === "diagnosis" ? t("results.diagnosis_sub") : t("results.review_sub")}
                     </span>
                   </div>
+                  {tab === "diagnosis" && (() => {
+                    const items = parseDifferential(diagnosis);
+                    const top = items[0];
+                    if (!top) return null;
+                    return (
+                      <div style={{
+                        marginBottom: 28, padding: "28px 30px",
+                        background: `linear-gradient(135deg, ${top.color}12, ${top.color}06)`,
+                        border: `1.5px solid ${top.color}40`,
+                        borderRadius: 14, position: "relative", overflow: "hidden",
+                      }}>
+                        {/* subtle watermark */}
+                        <div style={{ position: "absolute", right: -10, top: -10, fontSize: 100, opacity: 0.04, lineHeight: 1, pointerEvents: "none", userSelect: "none" }}>🔬</div>
+                        <p style={{ fontFamily: "var(--mono)", fontSize: 10, color: top.color, letterSpacing: "0.16em", textTransform: "uppercase", marginBottom: 10, opacity: 0.8 }}>
+                          Primary Diagnosis · Most Likely
+                        </p>
+                        <p style={{
+                          fontFamily: "var(--serif)",
+                          fontSize: "clamp(28px, 4vw, 44px)",
+                          fontWeight: 400, fontStyle: "italic",
+                          color: "var(--ink)", lineHeight: 1.1, letterSpacing: -0.5,
+                          marginBottom: 14,
+                        }}>
+                          {top.condition}
+                        </p>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                          <span style={{
+                            fontFamily: "var(--mono)", fontSize: 11, fontWeight: 700,
+                            color: top.color, background: `${top.color}18`,
+                            border: `1.5px solid ${top.color}50`,
+                            borderRadius: 20, padding: "4px 14px", letterSpacing: "0.1em",
+                          }}>{top.level} CONFIDENCE</span>
+                          {top.evidence[0] && (
+                            <span style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--ink4)", fontStyle: "italic" }}>
+                              {top.evidence[0]}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
                   {tab === "diagnosis" && <DifferentialChart diagnosis={diagnosis} />}
                   <div className="md-body">
                     <ReactMarkdown>{tab === "diagnosis" ? diagnosis : review}</ReactMarkdown>

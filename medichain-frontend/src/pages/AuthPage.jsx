@@ -1,38 +1,31 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AmbientBlobs, Caduceus, ECGLine, IllustFlower, IllustLeaf, ParticleField } from "../components/illustrations";
-import { Banner, FormField, InkDivider } from "../components/ui";
-import { Button } from "../components/ui/button";
+import { gsap } from "gsap";
 
-function RoleCard({ role, icon, title, description, selected, onClick }) {
-  const isProvider = role === "provider";
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        flex: 1,
-        background: selected ? (isProvider ? "linear-gradient(145deg,var(--navy),#1a3a8a)" : "linear-gradient(145deg,var(--rose),var(--roseB))") : "var(--paper2)",
-        border: selected ? "2px solid transparent" : "2px solid rgba(22,15,6,0.11)",
-        borderRadius: 18, padding: "36px 24px 32px", cursor: "pointer",
-        transition: "all 0.22s cubic-bezier(.4,0,.2,1)", textAlign: "center",
-        color: selected ? "#fff" : "var(--ink)",
-        boxShadow: selected ? (isProvider ? "0 8px 32px rgba(22,50,104,0.32)" : "0 8px 32px rgba(184,56,48,0.28)") : "0 2px 12px rgba(22,15,6,0.06)",
-        transform: selected ? "translateY(-3px)" : "translateY(0)",
-        position: "relative", overflow: "hidden",
-      }}
-    >
-      {selected && (
-        <div style={{ position: "absolute", top: 14, right: 14, width: 22, height: 22, borderRadius: "50%", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>✓</div>
-      )}
-      <div style={{ fontSize: 48, marginBottom: 16, lineHeight: 1 }}>{icon}</div>
-      <div style={{ fontFamily: "var(--serif)", fontSize: 22, fontStyle: "italic", fontWeight: 600, marginBottom: 10, lineHeight: 1.2 }}>{title}</div>
-      <div style={{ fontFamily: "var(--body)", fontSize: 14, lineHeight: 1.6, opacity: selected ? 0.88 : 0.6 }}>{description}</div>
-    </button>
-  );
+const WARM_HUES = [35, 22, 45, 12, 52, 28, 40, 350, 340];
+let _hueIdx = 0;
+function nextHue() { _hueIdx = (_hueIdx + 1) % WARM_HUES.length; return WARM_HUES[_hueIdx]; }
+
+function playClick(on) {
+  try {
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const buf = ac.createBuffer(1, Math.floor(ac.sampleRate * 0.14), ac.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) {
+      const t = i / ac.sampleRate;
+      const env = Math.exp(-t * 55);
+      d[i] = env * (Math.random() * 2 - 1) * 0.55
+           + env * Math.sin(2 * Math.PI * (on ? 1100 : 800) * t) * 0.45;
+    }
+    const src = ac.createBufferSource();
+    src.buffer = buf; src.connect(ac.destination); src.start();
+  } catch (_) {}
 }
 
 export default function AuthPage({ api, onLogin, onSkip }) {
   const { t } = useTranslation();
+
+  // Auth state
   const [step, setStep] = useState("role");
   const [selectedRole, setSelectedRole] = useState(null);
   const [mode, setMode] = useState("login");
@@ -41,6 +34,23 @@ export default function AuthPage({ api, onLogin, onSkip }) {
   const [loading, setLoading] = useState(false);
   const [apiErr, setApiErr] = useState("");
   const [ok, setOk] = useState("");
+
+  // Lamp state
+  const [lampOn, setLampOn] = useState(false);
+  const [hue, setHue] = useState(35);
+
+  // Refs
+  const containerRef = useRef(null);
+  const canvasRef = useRef(null);
+  const cardRef = useRef(null);
+  const rafRef = useRef(null);
+  const blinkRef = useRef(null);
+  const lookRef = useRef(null);
+  const nodRef = useRef(null);
+  const dragRef = useRef({ dragging: false, startY: 0, currentDy: 0, triggered: false });
+  const lampOnRef = useRef(false);
+  const hueRef = useRef(35);
+
   const f = k => v => setForm(p => ({ ...p, [k]: v }));
 
   function chooseRole(role) {
@@ -48,10 +58,6 @@ export default function AuthPage({ api, onLogin, onSkip }) {
     setForm(p => ({ ...p, role }));
     setApiErr(""); setErrors({}); setOk("");
   }
-
-  function proceedToAuth() { if (selectedRole) setStep("auth"); }
-
-  function backToRole() { setStep("role"); setApiErr(""); setErrors({}); setOk(""); }
 
   function validate() {
     const e = {};
@@ -85,7 +91,6 @@ export default function AuthPage({ api, onLogin, onSkip }) {
           setApiErr(t("auth.err_not_patient")); setLoading(false); return;
         }
       }
-
       setOk(mode === "login" ? t("auth.success_signin") : t("auth.success_register"));
       setTimeout(() => onLogin(data.token || data.access_token, data.user), 700);
     } catch (e) {
@@ -94,100 +99,613 @@ export default function AuthPage({ api, onLogin, onSkip }) {
     setLoading(false);
   }
 
+  // ── Stars canvas ──────────────────────────────────────────
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    let stars = [];
+
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      stars = Array.from({ length: 140 }, () => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 1.3 + 0.2,
+        base: Math.random() * 0.5 + 0.05,
+        phase: Math.random() * Math.PI * 2,
+        speed: Math.random() * 0.012 + 0.003,
+        warm: Math.random() > 0.6,
+      }));
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const t = Date.now() * 0.001;
+      stars.forEach(s => {
+        const o = s.base * (0.55 + 0.45 * Math.sin(t * s.speed * 60 + s.phase));
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = s.warm ? `rgba(255,220,150,${o})` : `rgba(255,248,235,${o})`;
+        ctx.fill();
+      });
+      rafRef.current = requestAnimationFrame(draw);
+    }
+
+    window.addEventListener("resize", resize);
+    resize();
+    draw();
+    return () => {
+      window.removeEventListener("resize", resize);
+      cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
+
+  // ── GSAP idle animations ──────────────────────────────────
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const shadeGroup = el.querySelector("#ag-shade-group");
+    const cordEnd = el.querySelector("#ag-cord-end");
+
+    if (shadeGroup) {
+      gsap.to(shadeGroup, { rotation: 1.4, transformOrigin: "-10px -28px", duration: 4, ease: "sine.inOut", yoyo: true, repeat: -1 });
+    }
+    if (cordEnd) {
+      gsap.to(cordEnd, { attr: { transform: "translate(113, 231)" }, duration: 4.2, ease: "sine.inOut", yoyo: true, repeat: -1 });
+    }
+
+    // Blink
+    function doBlink() {
+      const bl = el.querySelector("#ag-blink-l");
+      const br = el.querySelector("#ag-blink-r");
+      if (!bl || !br) return;
+      gsap.to([bl, br], {
+        attr: { height: 20, y: -10 }, duration: 0.07, ease: "power2.in",
+        onComplete() {
+          gsap.to([bl, br], {
+            attr: { height: 0 }, duration: 0.09, ease: "power2.out",
+            onComplete: scheduleBlink,
+          });
+        },
+      });
+    }
+    function scheduleBlink() {
+      blinkRef.current = setTimeout(() => {
+        doBlink();
+        if (Math.random() < 0.3) setTimeout(doBlink, 220);
+      }, (1.8 + Math.random() * 3.5) * 1000);
+    }
+    scheduleBlink();
+
+    // Look around
+    function doLook() {
+      const pl = el.querySelector("#ag-pupil-l");
+      const pr = el.querySelector("#ag-pupil-r");
+      if (!pl || !pr) return;
+      const dx = (Math.random() - 0.5) * 7;
+      const dy = (Math.random() - 0.5) * 3;
+      gsap.to([pl, pr], {
+        x: dx, y: dy, duration: 0.35, ease: "power2.out",
+        onComplete() {
+          setTimeout(() => {
+            gsap.to([pl, pr], {
+              x: 0, y: 0, duration: 0.28, ease: "power2.inOut",
+              onComplete: scheduleLook,
+            });
+          }, 600 + Math.random() * 1400);
+        },
+      });
+    }
+    function scheduleLook() {
+      lookRef.current = setTimeout(doLook, (3 + Math.random() * 6) * 1000);
+    }
+    scheduleLook();
+
+    // Nod
+    function scheduleNod() {
+      nodRef.current = setTimeout(() => {
+        if (!shadeGroup) { scheduleNod(); return; }
+        gsap.to(shadeGroup, {
+          rotation: 5, transformOrigin: "-10px -28px",
+          duration: 0.25, ease: "power2.out", yoyo: true, repeat: 1,
+          onComplete: scheduleNod,
+        });
+      }, (8 + Math.random() * 10) * 1000);
+    }
+    scheduleNod();
+
+    return () => {
+      if (shadeGroup) gsap.killTweensOf(shadeGroup);
+      if (cordEnd) gsap.killTweensOf(cordEnd);
+      clearTimeout(blinkRef.current);
+      clearTimeout(lookRef.current);
+      clearTimeout(nodRef.current);
+    };
+  }, []);
+
+  // ── Toggle lamp ───────────────────────────────────────────
+  function toggleLamp() {
+    const newOn = !lampOnRef.current;
+    lampOnRef.current = newOn;
+    setLampOn(newOn);
+    playClick(newOn);
+
+    const el = containerRef.current;
+    if (!el) return;
+
+    let newHue = hueRef.current;
+    if (newOn) {
+      newHue = nextHue();
+      hueRef.current = newHue;
+      setHue(newHue);
+      el.querySelector("#ag-shadeG0")?.setAttribute("stop-color", `hsl(${newHue},22%,26%)`);
+      el.querySelector("#ag-shadeG1")?.setAttribute("stop-color", `hsl(${newHue},14%,20%)`);
+    }
+
+    // Eyes rotate
+    const eyesGroup = el.querySelector("#ag-eyes-group");
+    if (eyesGroup) {
+      gsap.to(eyesGroup, { rotation: newOn ? 0 : 180, transformOrigin: "-9px 14px", duration: 0.6, ease: "back.out(2.4)" });
+    }
+
+    // Iris glow
+    const irisL = el.querySelector("#ag-iris-l");
+    const irisR = el.querySelector("#ag-iris-r");
+    if (irisL && irisR) gsap.to([irisL, irisR], { opacity: newOn ? 0.65 : 0, duration: 0.45 });
+
+    // Mouth
+    const mouth = el.querySelector("#ag-mouth");
+    if (mouth) {
+      gsap.to(mouth, { attr: { d: newOn ? "M -20 28 Q -9 36 2 28" : "M -20 28 Q -9 24 2 28" }, duration: 0.45, ease: "power2.out" });
+    }
+
+    // Eyebrows
+    const browL = el.querySelector("#ag-brow-l");
+    const browR = el.querySelector("#ag-brow-r");
+    if (browL) gsap.to(browL, { attr: { d: newOn ? "M -28 3 Q -21 -2 -14 3" : "M -28 6 Q -21 2 -14 6" }, duration: 0.4 });
+    if (browR) gsap.to(browR, { attr: { d: newOn ? "M -4 3 Q 3 -2 10 3"   : "M -4 6 Q 3 2 10 6"   }, duration: 0.4 });
+
+    // Light cone
+    const lightGroup = el.querySelector("#ag-light-group");
+    const rimGlow = el.querySelector("#ag-rim-glow");
+    if (lightGroup) gsap.to(lightGroup, { opacity: newOn ? 1 : 0, duration: 0.7, ease: newOn ? "power2.out" : "power2.in" });
+    if (rimGlow) gsap.to(rimGlow, { opacity: newOn ? 0.8 : 0, duration: 0.5 });
+
+    // Shade flash + sway
+    const shadeBody = el.querySelector("#ag-shade-body");
+    const shadeGroup = el.querySelector("#ag-shade-group");
+    if (shadeBody) gsap.fromTo(shadeBody, { opacity: newOn ? 0.5 : 1 }, { opacity: 1, duration: 0.3 });
+    if (shadeGroup) {
+      gsap.to(shadeGroup, {
+        rotation: newOn ? 4 : -4, transformOrigin: "-10px -22px",
+        duration: 0.22, ease: "power2.out", yoyo: true, repeat: 3,
+        onComplete: () => gsap.set(shadeGroup, { rotation: 0 }),
+      });
+    }
+
+    // Login card spring
+    const card = cardRef.current;
+    if (card) {
+      if (newOn) {
+        card.style.borderColor = `hsla(${newHue},55%,48%,0.4)`;
+        card.style.boxShadow = `0 0 52px hsla(${newHue},75%,52%,0.16), 0 0 96px hsla(${newHue},75%,40%,0.09)`;
+        gsap.to(card, { opacity: 1, x: 0, scale: 1, duration: 0.78, ease: "back.out(1.85)", pointerEvents: "auto" });
+      } else {
+        gsap.to(card, { opacity: 0, x: 40, scale: 0.92, duration: 0.42, ease: "power2.in", pointerEvents: "none" });
+        card.style.borderColor = "";
+        card.style.boxShadow = "";
+      }
+    }
+  }
+
+  // ── Cord drag ─────────────────────────────────────────────
+  function updateCord(svgDy, el) {
+    const cordPath = el.querySelector("#ag-cord-path");
+    const cordEnd  = el.querySelector("#ag-cord-end");
+    const CORD_START = { x: 120, y: 148 };
+    const CORD_REST  = { x: 113, y: 228 };
+    const ey   = CORD_REST.y + svgDy;
+    const midY = CORD_START.y + (ey - CORD_START.y) * 0.45;
+    const cx   = CORD_START.x - svgDy * 0.05;
+    if (cordPath) cordPath.setAttribute("d", `M ${CORD_START.x} ${CORD_START.y} Q ${cx} ${midY} ${CORD_REST.x} ${ey}`);
+    if (cordEnd) gsap.set(cordEnd, { attr: { transform: `translate(${CORD_REST.x}, ${ey})` } });
+  }
+
+  function onCordPointerDown(e) {
+    dragRef.current = { dragging: true, startY: e.clientY, currentDy: 0, triggered: false };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  }
+
+  function onSvgPointerMove(e) {
+    if (!dragRef.current.dragging) return;
+    const el = containerRef.current;
+    if (!el) return;
+    const svg = el.querySelector("#ag-lamp-svg");
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const scale = 420 / rect.height;
+    const svgDy = Math.max(0, (e.clientY - dragRef.current.startY) * scale);
+    dragRef.current.currentDy = svgDy;
+    updateCord(Math.min(svgDy, 115), el);
+    const cordPath = el.querySelector("#ag-cord-path");
+    if (cordPath) {
+      const t2 = Math.min(svgDy / 115, 1);
+      cordPath.setAttribute("stroke-width", String(2.5 - t2 * 0.9));
+      cordPath.setAttribute("stroke", `hsl(30, ${18 + t2 * 20}%, ${22 + t2 * 18}%)`);
+    }
+  }
+
+  function onSvgPointerUp(e) {
+    if (!dragRef.current.dragging) return;
+    const el = containerRef.current;
+    if (!el) return;
+    const svg = el.querySelector("#ag-lamp-svg");
+    const rect = svg?.getBoundingClientRect();
+    const scale = rect ? 420 / rect.height : 1;
+    dragRef.current.dragging = false;
+
+    if ((e.clientY - dragRef.current.startY) * scale > 52 && !dragRef.current.triggered) {
+      dragRef.current.triggered = true;
+      toggleLamp();
+    }
+
+    const fromDy = Math.min(dragRef.current.currentDy, 115);
+    const proxy = { val: fromDy };
+    gsap.to(proxy, {
+      val: 0, duration: 0.95, ease: "elastic.out(1.1, 0.38)",
+      onUpdate() { updateCord(proxy.val, el); },
+      onComplete() {
+        const cordPath = el?.querySelector("#ag-cord-path");
+        if (cordPath) { cordPath.setAttribute("stroke-width", "2.5"); cordPath.setAttribute("stroke", "#4a3c28"); }
+      },
+    });
+    dragRef.current.currentDy = 0;
+  }
+
+  const lampColor = `hsl(${hue}, 82%, 62%)`;
+  const lampGlow  = `hsla(${hue}, 82%, 58%, 0.20)`;
+  const lampPale  = `hsla(${hue}, 82%, 58%, 0.09)`;
   const isProvider = selectedRole === "provider";
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--paper)", display: "flex", alignItems: "center", justifyContent: "center", padding: "80px 20px 48px", position: "relative", zIndex: 1, overflow: "hidden" }}>
-      <AmbientBlobs />
-      <IllustLeaf w={160} h={240} style={{ position: "fixed", top: "-3%", right: "2%", animation: "float1 8s ease-in-out infinite", pointerEvents: "none" }} color="var(--sage)" opacity={0.22} />
-      <IllustFlower size={130} style={{ position: "fixed", bottom: "6%", left: "2%", animation: "float2 10s ease-in-out infinite", pointerEvents: "none" }} color="var(--rose)" opacity={0.2} />
-      <IllustLeaf w={100} h={150} style={{ position: "fixed", top: "35%", left: "0%", animation: "float3 7s ease-in-out infinite", transform: "rotate(25deg)", pointerEvents: "none" }} color="var(--amber)" opacity={0.16} />
-      <ParticleField count={12} style={{ position: "fixed", inset: 0 }} />
+    <div
+      ref={containerRef}
+      style={{
+        position: "fixed", inset: 0, background: "#130f09",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        overflow: "hidden", zIndex: 0,
+      }}
+    >
+      {/* Stars */}
+      <canvas ref={canvasRef} style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0 }} />
 
-      {step === "role" && (
-        <div style={{ width: "100%", maxWidth: 580, position: "relative", zIndex: 1 }}>
-          <div className="fade-up" style={{ textAlign: "center", marginBottom: 40 }}>
-            <div className="ink-bloom" style={{ display: "inline-flex", width: 80, height: 80, borderRadius: 22, background: "linear-gradient(135deg,var(--paper2),var(--paper3))", border: "2px solid rgba(22,15,6,0.1)", alignItems: "center", justifyContent: "center", marginBottom: 20, boxShadow: "var(--shadow-lg)", animation: "glowPulse 3s ease-in-out infinite", color: "var(--rose)" }}>
-              <Caduceus size={48} />
+      {/* Ambient glow */}
+      <div style={{
+        position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0,
+        background: `radial-gradient(ellipse 50% 55% at 50% 48%, ${lampGlow}, transparent 70%)`,
+        opacity: lampOn ? 1 : 0, transition: "opacity 1.1s ease",
+      }} />
+      <div style={{
+        position: "absolute", bottom: 0, left: 0, right: 0, height: 220,
+        pointerEvents: "none", zIndex: 0,
+        background: `radial-gradient(ellipse 38% 100% at 50% 100%, ${lampGlow}, transparent 80%)`,
+        opacity: lampOn ? 0.7 : 0, transition: "opacity 1.1s ease",
+      }} />
+
+      {/* Logo */}
+      <div style={{ position: "fixed", top: 24, left: 28, display: "flex", alignItems: "center", gap: 10, zIndex: 20 }}>
+        <div style={{ width: 32, height: 32, borderRadius: 9, background: "linear-gradient(135deg,#be3028,#d94038)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", boxShadow: "0 3px 12px rgba(190,48,40,0.45)" }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M12 2v20M8 6c0 0 1-2 4-2s4 2 4 2M7 10c0 0-1 2 1.5 3.5S16 15 16 17s-2 3-4 3-4-1-4-1M17 10c0 0 1 2-1.5 3.5" />
+          </svg>
+        </div>
+        <div>
+          <div style={{ fontFamily: "var(--serif)", fontSize: 16, fontWeight: 700, color: "rgba(240,228,210,0.85)", letterSpacing: -0.3, lineHeight: 1.1 }}>MediChain</div>
+          <div style={{ fontFamily: "var(--mono)", fontSize: 8, color: "rgba(240,228,210,0.32)", letterSpacing: "0.18em" }}>MULTI-AGENT CLINICAL AI</div>
+        </div>
+      </div>
+
+      {/* Scene */}
+      <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+
+        {/* Lamp */}
+        <div style={{
+          position: "relative", width: 260, height: 420, flexShrink: 0,
+          transition: "transform 0.75s cubic-bezier(0.22,1,0.36,1)",
+          transform: lampOn ? "translateX(-220px)" : "translateX(0)",
+          zIndex: 2,
+        }}>
+          <svg
+            id="ag-lamp-svg"
+            width="260" height="420" viewBox="0 0 260 420"
+            style={{ overflow: "visible" }}
+            onPointerMove={onSvgPointerMove}
+            onPointerUp={onSvgPointerUp}
+          >
+            <defs>
+              <linearGradient id="ag-shadeG" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop id="ag-shadeG0" offset="0%"   stopColor={`hsl(${hue},18%,26%)`} />
+                <stop id="ag-shadeG1" offset="100%" stopColor={`hsl(${hue},12%,20%)`} />
+              </linearGradient>
+              <linearGradient id="ag-armG" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%"   stopColor="#271f16" />
+                <stop offset="45%"  stopColor="#3a2e20" />
+                <stop offset="100%" stopColor="#271f16" />
+              </linearGradient>
+              <radialGradient id="ag-coneG" cx="50%" cy="0%" r="90%">
+                <stop offset="0%"   stopColor={lampColor} stopOpacity="0.28" />
+                <stop offset="100%" stopColor={lampColor} stopOpacity="0" />
+              </radialGradient>
+              <filter id="ag-softblur" x="-80%" y="-80%" width="260%" height="260%">
+                <feGaussianBlur stdDeviation="18" />
+              </filter>
+              <filter id="ag-glow4" x="-30%" y="-30%" width="160%" height="160%">
+                <feGaussianBlur stdDeviation="4" result="b" />
+                <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+              </filter>
+            </defs>
+
+            {/* Light cone */}
+            <g id="ag-light-group" opacity="0">
+              <path d="M 98 180 L 22 372 L 238 372 Z" fill="url(#ag-coneG)" />
+              <path d="M 106 180 L 44 348 L 216 348 Z" fill={lampColor} opacity="0.04" />
+              <ellipse cx="130" cy="374" rx="96" ry="13" fill={lampColor} opacity="0.13" filter="url(#ag-softblur)" />
+            </g>
+
+            {/* Base */}
+            <ellipse cx="130" cy="386" rx="64" ry="13" fill="#1a1410" />
+            <rect x="106" y="354" width="48" height="34" rx="9" fill="url(#ag-armG)" />
+            <rect x="106" y="354" width="48" height="7" rx="5" fill="rgba(255,220,140,0.06)" />
+            {/* Pole */}
+            <rect x="122" y="200" width="16" height="160" rx="8" fill="url(#ag-armG)" />
+            {/* Arm joints */}
+            <circle cx="130" cy="200" r="11" fill="#3a2e20" stroke="#4a3c28" strokeWidth="1" />
+            <rect x="122" y="152" width="13" height="62" rx="6.5" fill="url(#ag-armG)" transform="rotate(-20 130 200)" />
+            <circle cx="112" cy="144" r="10" fill="#3a2e20" stroke="#4a3c28" strokeWidth="1" />
+            <rect x="106" y="100" width="13" height="56" rx="6.5" fill="url(#ag-armG)" transform="rotate(12 112 144)" />
+            <circle cx="117" cy="96" r="9" fill="#3a2e20" stroke="#4a3c28" strokeWidth="1" />
+
+            {/* Shade group */}
+            <g id="ag-shade-group" transform="translate(130,118)">
+              <ellipse cx="-10" cy="-22" rx="52" ry="16" fill="#1e1810" opacity="0.9" />
+              <path id="ag-shade-body"
+                d="M -50 -18 C -58 2 -55 22 -48 38 L 30 38 C 37 22 40 2 32 -18 Z"
+                fill="url(#ag-shadeG)" />
+              <ellipse cx="-9" cy="38" rx="40" ry="8" fill="#18140e" opacity="0.95" />
+              <ellipse id="ag-rim-glow" cx="-9" cy="38" rx="32" ry="5" fill={lampColor} opacity="0" filter="url(#ag-glow4)" />
+              <ellipse cx="-9" cy="-18" rx="42" ry="13" fill="#2a2218" />
+              <ellipse cx="-9" cy="-18" rx="40" ry="11" fill="#332a1c" />
+              <path d="M -44 -12 C -47 2 -45 16 -40 28 L -36 28 C -41 16 -43 2 -40 -12 Z" fill="rgba(255,220,140,0.05)" />
+              <line x1="-22" y1="2"  x2="-22" y2="20" stroke="rgba(0,0,0,0.35)" strokeWidth="1.5" />
+              <line x1="-9"  y1="2"  x2="-9"  y2="24" stroke="rgba(0,0,0,0.35)" strokeWidth="1.5" />
+              <line x1="4"   y1="2"  x2="4"   y2="20" stroke="rgba(0,0,0,0.35)" strokeWidth="1.5" />
+              <rect x="-14" y="-34" width="10" height="18" rx="4" fill="#18140e" />
+
+              {/* Eyes (rotate 180° when off) */}
+              <g id="ag-eyes-group" transform="rotate(180, -9, 14)">
+                {/* Left eye */}
+                <g id="ag-eye-l" transform="translate(-21,16)">
+                  <ellipse cx="0" cy="0" rx="8.5" ry="10" fill="#16120c" />
+                  <rect id="ag-blink-l" x="-9" y="-10" width="18" height="0" fill="#332a1c" rx="2" />
+                  <ellipse cx="0" cy="0" rx="6" ry="7.5" fill="#0e0c08" />
+                  <ellipse id="ag-iris-l" cx="0" cy="0" rx="4" ry="5" fill={lampColor} opacity="0" />
+                  <circle id="ag-pupil-l" cx="0" cy="0" r="2.5" fill="#060504" />
+                  <circle cx="2.5" cy="-3" r="2" fill="rgba(255,240,200,0.6)" />
+                  <circle cx="-2" cy="2.5" r="1" fill="rgba(255,240,200,0.2)" />
+                </g>
+                {/* Right eye */}
+                <g id="ag-eye-r" transform="translate(3,16)">
+                  <ellipse cx="0" cy="0" rx="8.5" ry="10" fill="#16120c" />
+                  <rect id="ag-blink-r" x="-9" y="-10" width="18" height="0" fill="#332a1c" rx="2" />
+                  <ellipse cx="0" cy="0" rx="6" ry="7.5" fill="#0e0c08" />
+                  <ellipse id="ag-iris-r" cx="0" cy="0" rx="4" ry="5" fill={lampColor} opacity="0" />
+                  <circle id="ag-pupil-r" cx="0" cy="0" r="2.5" fill="#060504" />
+                  <circle cx="2.5" cy="-3" r="2" fill="rgba(255,240,200,0.6)" />
+                  <circle cx="-2" cy="2.5" r="1" fill="rgba(255,240,200,0.2)" />
+                </g>
+                {/* Brows */}
+                <path id="ag-brow-l" d="M -28 6 Q -21 2 -14 6" stroke="rgba(255,220,140,0.18)" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+                <path id="ag-brow-r" d="M -4 6 Q 3 2 10 6"   stroke="rgba(255,220,140,0.18)" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+                {/* Mouth */}
+                <path id="ag-mouth" d="M -20 28 Q -9 24 2 28" stroke="rgba(255,220,140,0.16)" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+              </g>
+            </g>
+
+            {/* Cord */}
+            <path id="ag-cord-path"
+              d="M 120 148 Q 116 186 113 222"
+              stroke="#4a3c28" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+
+            {/* Cord tassel (draggable) */}
+            <g
+              id="ag-cord-end"
+              transform="translate(113, 228)"
+              style={{ cursor: "grab" }}
+              onPointerDown={onCordPointerDown}
+              onClick={() => { if (Math.abs(dragRef.current.currentDy) < 6) toggleLamp(); }}
+            >
+              <circle cx="0" cy="0" r="11" fill="#3a2e20" stroke="#5a4830" strokeWidth="1.5" />
+              <circle cx="0" cy="0" r="6.5" fill="#2a2018" />
+              <circle cx="-2.5" cy="-3" r="2.5" fill="rgba(255,220,140,0.28)" />
+              <ellipse cx="0" cy="-10.5" rx="4.5" ry="2" fill="none" stroke="#5a4830" strokeWidth="1.5" />
+              <line x1="-3.5" y1="9" x2="-5.5" y2="20" stroke="#5a4830" strokeWidth="1.8" strokeLinecap="round" />
+              <line x1="0"    y1="10" x2="0"   y2="21" stroke="#5a4830" strokeWidth="1.8" strokeLinecap="round" />
+              <line x1="3.5"  y1="9" x2="5.5"  y2="20" stroke="#5a4830" strokeWidth="1.8" strokeLinecap="round" />
+            </g>
+          </svg>
+
+          {/* Hint */}
+          {!lampOn && (
+            <div style={{
+              position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)",
+              fontFamily: "var(--mono)", fontSize: 9, letterSpacing: "0.18em",
+              color: "rgba(240,228,210,0.32)", whiteSpace: "nowrap",
+              animation: "hintFloat 2.8s ease-in-out infinite",
+            }}>
+              ↓ PULL THE CORD
             </div>
-            <h1 style={{ fontFamily: "var(--serif)", fontSize: 40, fontWeight: 400, fontStyle: "italic", color: "var(--ink)", letterSpacing: -0.5, lineHeight: 1.1, marginBottom: 10 }}>
-              {t("auth.welcome")}
-            </h1>
-            <p style={{ fontFamily: "var(--body)", fontSize: 16, color: "var(--ink4)", marginBottom: 4 }}>{t("auth.select_role")}</p>
-            <p style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", letterSpacing: "0.2em" }}>{t("auth.subtitle")}</p>
-            <ECGLine style={{ marginTop: 14, opacity: 0.55 }} />
+          )}
+        </div>
+
+        {/* Login card */}
+        <div
+          ref={cardRef}
+          style={{
+            position: "absolute", left: "50%", width: 360, marginLeft: 60,
+            background: "rgba(255,248,235,0.035)",
+            border: `1.5px solid rgba(240,200,120,0.10)`,
+            borderRadius: 20, padding: "36px 36px 32px",
+            opacity: 0, transform: "translateX(40px) scale(0.92)",
+            pointerEvents: "none",
+            transition: "border-color 0.6s, box-shadow 0.6s",
+          }}
+        >
+          <div style={{ position: "absolute", top: 0, left: "10%", right: "10%", height: 1, background: "linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent)" }} />
+
+          {/* Eyebrow */}
+          <div style={{ fontFamily: "var(--mono)", fontSize: 9, letterSpacing: "0.22em", textTransform: "uppercase", color: "rgba(240,228,210,0.35)", marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
+            Clinical Access
+            <span style={{ flex: "0 0 28px", height: 1.5, background: `linear-gradient(90deg,${lampColor},transparent)`, borderRadius: 1, opacity: 0.7, display: "inline-block" }} />
           </div>
 
-          <div className="fade-up s1" style={{ display: "flex", gap: 18, marginBottom: 24 }}>
-            <RoleCard role="patient" icon=" 😷" title={t("auth.patient")} description={t("auth.patient_desc")} selected={selectedRole === "patient"} onClick={() => chooseRole("patient")} />
-            <RoleCard role="provider" icon="👨‍⚕️" title={t("auth.provider")} description={t("auth.provider_desc")} selected={selectedRole === "provider"} onClick={() => chooseRole("provider")} />
-          </div>
+          {/* Title */}
+          <h1 style={{ fontFamily: "var(--serif)", fontSize: 28, fontWeight: 400, color: "#f0e8d6", letterSpacing: -0.5, lineHeight: 1.15, marginBottom: 20 }}>
+            {mode === "login" ? <>Welcome <em style={{ fontStyle: "italic", color: lampColor }}>Back</em></> : <>Create <em style={{ fontStyle: "italic", color: lampColor }}>Account</em></>}
+          </h1>
 
-          <div className="fade-up s2" style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "center" }}>
-            <Button onClick={proceedToAuth} disabled={!selectedRole} size="xl" className="w-full" style={{ opacity: selectedRole ? 1 : 0.45 }}>
-              {selectedRole
-                ? t("auth.continue_as", { role: selectedRole === "provider" ? t("auth.continue_provider") : t("auth.continue_patient") })
-                : t("auth.select_role")}
-            </Button>
-            <Button onClick={onSkip} variant="outline" size="default">{t("auth.guest")}</Button>
+          {/* Role selector */}
+          {step === "role" && (
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ fontFamily: "var(--mono)", fontSize: 9, letterSpacing: "0.18em", color: "rgba(240,228,210,0.35)", marginBottom: 8, textTransform: "uppercase" }}>Sign in as</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                {[{ r: "patient", icon: "😷", label: "Patient" }, { r: "provider", icon: "👨‍⚕️", label: "Provider" }].map(({ r, icon, label }) => (
+                  <button key={r} onClick={() => { chooseRole(r); setStep("auth"); }}
+                    style={{
+                      flex: 1, background: selectedRole === r ? `hsla(${hue},55%,48%,0.18)` : "rgba(255,248,235,0.04)",
+                      border: `1.5px solid ${selectedRole === r ? lampColor : "rgba(240,200,120,0.12)"}`,
+                      borderRadius: 10, padding: "12px 8px", cursor: "pointer",
+                      color: selectedRole === r ? lampColor : "rgba(240,228,210,0.55)",
+                      fontFamily: "var(--body)", fontSize: 14,
+                      transition: "all 0.18s",
+                    }}>
+                    <div style={{ fontSize: 22, marginBottom: 4 }}>{icon}</div>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {step === "auth" && (
+            <>
+              {/* Role badge + change */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: lampColor, letterSpacing: "0.12em", background: `hsla(${hue},55%,48%,0.12)`, border: `1px solid ${lampColor}30`, borderRadius: 20, padding: "3px 10px" }}>
+                  {isProvider ? "👨‍⚕️ PROVIDER" : "😷 PATIENT"}
+                </span>
+                <button onClick={() => { setStep("role"); setApiErr(""); setErrors({}); setOk(""); }}
+                  style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "var(--body)", fontSize: 12, color: "rgba(240,228,210,0.4)", textDecoration: "underline", padding: 0 }}>
+                  change
+                </button>
+                {/* Mode toggle */}
+                <div style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
+                  {[{ id: "login", l: "Sign In" }, { id: "register", l: "Register" }].map(m => (
+                    <button key={m.id} onClick={() => { setMode(m.id); setErrors({}); setApiErr(""); setOk(""); }}
+                      style={{
+                        fontFamily: "var(--mono)", fontSize: 9, letterSpacing: "0.1em",
+                        background: mode === m.id ? `hsla(${hue},55%,48%,0.18)` : "transparent",
+                        color: mode === m.id ? lampColor : "rgba(240,228,210,0.35)",
+                        border: `1px solid ${mode === m.id ? lampColor + "50" : "transparent"}`,
+                        borderRadius: 6, padding: "3px 8px", cursor: "pointer",
+                      }}>{m.l}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Banners */}
+              {ok && <div style={{ fontFamily: "var(--body)", fontSize: 13, color: "#7ecf8e", background: "rgba(64,160,88,0.12)", border: "1px solid rgba(64,160,88,0.25)", borderRadius: 8, padding: "8px 12px", marginBottom: 12 }}>{ok}</div>}
+              {apiErr && <div style={{ fontFamily: "var(--body)", fontSize: 13, color: "#e07060", background: "rgba(190,48,40,0.12)", border: "1px solid rgba(190,48,40,0.25)", borderRadius: 8, padding: "8px 12px", marginBottom: 12 }}>{apiErr}</div>}
+
+              {/* Fields */}
+              {mode === "register" && (
+                <LampField label="Full Name" type="text" value={form.full_name} onChange={f("full_name")} placeholder={isProvider ? "Dr. Jane Smith" : "Your name"} hue={hue} lampColor={lampColor} lampPale={lampPale} />
+              )}
+              <LampField label="Username" type="text" value={form.username} onChange={f("username")} placeholder="username" error={errors.username} hue={hue} lampColor={lampColor} lampPale={lampPale} />
+              {mode === "register" && (
+                <LampField label="Email" type="email" value={form.email} onChange={f("email")} placeholder="you@example.com" error={errors.email} hue={hue} lampColor={lampColor} lampPale={lampPale} />
+              )}
+              <LampField label="Password" type="password" value={form.password} onChange={f("password")} placeholder="••••••••" error={errors.password} hue={hue} lampColor={lampColor} lampPale={lampPale} />
+              {mode === "register" && (
+                <LampField label="Confirm Password" type="password" value={form.confirm} onChange={f("confirm")} placeholder="••••••••" error={errors.confirm} hue={hue} lampColor={lampColor} lampPale={lampPale} />
+              )}
+
+              <button
+                onClick={submit}
+                disabled={loading || !!ok}
+                style={{
+                  width: "100%", marginTop: 8, padding: 14,
+                  background: lampColor, border: "none", borderRadius: 12,
+                  color: "#1a1208", fontFamily: "var(--body)", fontSize: 17, fontWeight: 600,
+                  cursor: loading || ok ? "not-allowed" : "pointer",
+                  opacity: loading || ok ? 0.6 : 1,
+                  boxShadow: `0 4px 24px ${lampGlow}`,
+                  transition: "transform 0.15s, filter 0.2s",
+                }}
+                onMouseEnter={e => { if (!loading && !ok) { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.filter = "brightness(1.1)"; } }}
+                onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.filter = "none"; }}
+              >
+                {loading ? "Signing in…" : mode === "login" ? "Sign In →" : "Create Account →"}
+              </button>
+            </>
+          )}
+
+          {/* Footer */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 18 }}>
+            <span style={{ fontFamily: "var(--body)", fontSize: 13.5, color: lampColor, opacity: 0.6 }}>Forgot password?</span>
+            <button onClick={onSkip} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "var(--mono)", fontSize: 9, letterSpacing: "0.1em", color: "rgba(240,228,210,0.28)" }}>
+              GUEST MODE
+            </button>
           </div>
         </div>
-      )}
+      </div>
 
-      {step === "auth" && (
-        <div style={{ width: "100%", maxWidth: 460, position: "relative", zIndex: 1 }}>
-          <div className="fade-up" style={{ textAlign: "center", marginBottom: 32 }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: isProvider ? "var(--navyPale)" : "var(--rosePale,#fdf0ef)", border: `1.5px solid ${isProvider ? "var(--navy)" : "var(--rose)"}30`, borderRadius: 30, padding: "7px 18px", marginBottom: 22 }}>
-              <span style={{ fontSize: 18 }}>{isProvider ? " 😷" : "🧑‍⚕️"}</span>
-              <span style={{ fontFamily: "var(--mono)", fontSize: 11, letterSpacing: "0.12em", color: isProvider ? "var(--navy)" : "var(--rose)", fontWeight: 700 }}>
-                {isProvider ? t("nav.provider_full") : t("nav.patient_badge")}
-              </span>
-              <button onClick={backToRole} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "var(--body)", fontSize: 12, color: "var(--ink5)", textDecoration: "underline", padding: 0, marginLeft: 4 }}>
-                {t("auth.change")}
-              </button>
-            </div>
-            <h1 style={{ fontFamily: "var(--serif)", fontSize: 38, fontWeight: 400, fontStyle: "italic", color: "var(--ink)", letterSpacing: -0.5, lineHeight: 1.05, marginBottom: 6 }}>
-              {mode === "login" ? t("auth.welcome_back") : t("auth.create_account")}
-            </h1>
-            <p style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", letterSpacing: "0.2em" }}>{t("auth.subtitle")}</p>
-            <ECGLine style={{ marginTop: 14, opacity: 0.55 }} />
-          </div>
+      {/* Inline keyframe for hint float */}
+      <style>{`
+        @keyframes hintFloat {
+          0%,100%{opacity:.32;transform:translateX(-50%) translateY(0)}
+          50%{opacity:.65;transform:translateX(-50%) translateY(-5px)}
+        }
+      `}</style>
+    </div>
+  );
+}
 
-          <div className="card fade-up s1" style={{ padding: "36px 40px", boxShadow: "var(--shadow-xl)" }}>
-            <div className="shine" />
-            <div className="mode-pill" style={{ marginBottom: 28, width: "100%" }}>
-              {[{ id: "login", l: t("auth.signin") }, { id: "register", l: t("auth.register") }].map(m => (
-                <button key={m.id} className={`mode-opt${mode === m.id ? " on" : ""}`} onClick={() => { setMode(m.id); setErrors({}); setApiErr(""); setOk(""); }}>{m.l}</button>
-              ))}
-            </div>
-
-            {ok && <Banner type="success" style={{ marginBottom: 16, animation: "slide-r 0.35s ease both" }}><span style={{ color: "var(--sage)" }}>{ok}</span></Banner>}
-            {apiErr && <Banner type="error" style={{ marginBottom: 16, animation: "slide-r 0.35s ease both" }}><span style={{ color: "var(--rose)" }}>{apiErr}</span></Banner>}
-
-            {mode === "register" && <FormField label={t("auth.full_name")} value={form.full_name} onChange={f("full_name")} placeholder={isProvider ? t("auth.placeholder_name_provider") : t("auth.placeholder_name_patient")} />}
-            <FormField label={t("auth.username")} value={form.username} onChange={f("username")} placeholder={t("auth.placeholder_username")} error={errors.username} />
-            {mode === "register" && <FormField label={t("auth.email")} type="email" value={form.email} onChange={f("email")} placeholder={isProvider ? t("auth.placeholder_email_provider") : t("auth.placeholder_email_patient")} error={errors.email} />}
-            <FormField label={t("auth.password")} type="password" value={form.password} onChange={f("password")} placeholder="••••••••" error={errors.password} />
-            {mode === "register" && <FormField label={t("auth.confirm_password")} type="password" value={form.confirm} onChange={f("confirm")} placeholder="••••••••" error={errors.confirm} />}
-
-            <Button onClick={submit} disabled={loading || !!ok} size="lg" className="mt-1 w-full" style={{ background: isProvider ? "linear-gradient(135deg,var(--navy),#2050a8)" : undefined }}>
-              {loading ? t("auth.waiting") : mode === "login" ? t("auth.signin_btn") : t("auth.register_btn")}
-            </Button>
-
-            <InkDivider style={{ margin: "20px 0 16px" }} />
-            <p style={{ textAlign: "center", fontFamily: "var(--body)", fontSize: 14, color: "var(--ink3)" }}>
-              {mode === "login" ? t("auth.new_user") : t("auth.have_account")}{" "}
-              <button onClick={() => { setMode(mode === "login" ? "register" : "login"); setErrors({}); setApiErr(""); }} style={{ background: "none", border: "none", color: isProvider ? "var(--navy)" : "var(--rose)", fontFamily: "var(--body)", fontSize: 14, fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}>
-                {mode === "login" ? t("auth.register_link") : t("auth.signin_link")}
-              </button>
-            </p>
-          </div>
-
-          <div className="fade-up s3" style={{ textAlign: "center", marginTop: 18 }}>
-            <Button onClick={onSkip} variant="outline" size="default">{t("auth.guest")}</Button>
-          </div>
-        </div>
-      )}
+function LampField({ label, type, value, onChange, placeholder, error, lampColor, lampPale }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <label style={{ display: "block", fontFamily: "var(--mono)", fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(240,228,210,0.35)", marginBottom: 6 }}>{label}</label>
+      <input
+        type={type}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        style={{
+          width: "100%", background: "rgba(255,248,235,0.04)",
+          border: `1.5px solid ${focused ? lampColor : error ? "#e07060" : "rgba(240,200,120,0.12)"}`,
+          borderRadius: 10, padding: "11px 14px", color: "#f0e8d6",
+          fontFamily: "var(--body)", fontSize: 15, outline: "none",
+          boxShadow: focused ? `0 0 0 3px ${lampPale}, 0 0 18px ${lampPale}` : error ? "0 0 0 2px rgba(190,48,40,0.15)" : "none",
+          transition: "border-color 0.2s, box-shadow 0.2s",
+        }}
+      />
+      {error && <p style={{ fontFamily: "var(--body)", fontSize: 12, color: "#e07060", marginTop: 4 }}>{error}</p>}
     </div>
   );
 }

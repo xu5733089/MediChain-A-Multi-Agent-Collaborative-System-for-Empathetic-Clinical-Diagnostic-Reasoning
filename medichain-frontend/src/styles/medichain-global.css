@@ -2,11 +2,11 @@
 
 /* ─── Palette ─── */
 :root {
-  --paper:    #faf4e8;
-  --paper2:   #f2e8d2;
-  --paper3:   #e8dcc0;
-  --paper4:   #d8ccaa;
-  --ink:      #160f06;
+  --paper:    #fffaeb;
+  --paper2:   #fff2cc;
+  --paper3:   #f5e8b8;
+  --paper4:   #e8d898;
+  --ink:      #1f1a0e;
   --ink2:     #2e2008;
   --ink3:     #5a4422;
   --ink4:     #8a6e40;
@@ -33,11 +33,12 @@
   --plum:     #7a2868;
   --plumDim:  rgba(122,40,104,0.09);
   --plumPale: #f4d8f0;
-  --shadow-sm:  0 2px 8px rgba(22,15,6,0.08);
-  --shadow:     0 4px 24px rgba(22,15,6,0.11), 0 1px 6px rgba(22,15,6,0.07);
-  --shadow-lg:  0 12px 52px rgba(22,15,6,0.16), 0 4px 14px rgba(22,15,6,0.10);
-  --shadow-xl:  0 28px 80px rgba(22,15,6,0.22), 0 8px 24px rgba(22,15,6,0.12);
-  --nav-bg:     rgba(250,244,232,0.94);
+  /* Mistral-inspired golden amber shadows */
+  --shadow-sm:  0 2px 8px rgba(127,99,21,0.10);
+  --shadow:     0 4px 24px rgba(127,99,21,0.13), 0 1px 6px rgba(127,99,21,0.08);
+  --shadow-lg:  rgba(127,99,21,0.12) -8px 16px 39px, rgba(127,99,21,0.10) -20px 40px 72px, rgba(127,99,21,0.06) -40px 80px 97px;
+  --shadow-xl:  rgba(127,99,21,0.15) -8px 16px 39px, rgba(127,99,21,0.12) -33px 64px 72px, rgba(127,99,21,0.08) -73px 144px 97px, rgba(127,99,21,0.04) -120px 220px 160px;
+  --nav-bg:     rgba(255,250,235,0.96);
   --btn-px-xs:  1.2rem;
   --btn-px-sm:  1.5rem;
   --btn-px-md:  2rem;
@@ -112,7 +113,8 @@ body {
 @keyframes fadeIn    { from { opacity:0 } to { opacity:1 } }
 @keyframes scaleIn   { from { opacity:0; transform:scale(0.92) } to { opacity:1; transform:scale(1) } }
 @keyframes slideR    { from { opacity:0; transform:translateX(-14px) } to { opacity:1; transform:translateX(0) } }
-@keyframes slideUp   { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
+@keyframes slideUp      { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
+@keyframes fadeSlideUp  { from { opacity:0; transform:translateY(8px)  } to { opacity:1; transform:translateY(0) } }
 @keyframes float1    { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-16px) rotate(4deg)} }
 @keyframes float2    { 0%,100%{transform:translateY(0) rotate(0deg)} 33%{transform:translateY(-10px) rotate(-5deg)} 66%{transform:translateY(-18px) rotate(3deg)} }
 @keyframes float3    { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-8px) rotate(-3deg)} }
@@ -180,13 +182,13 @@ body {
 /* ─── Card ─── */
 .card {
   background: var(--paper2);
-  border: 1.5px solid rgba(22,15,6,0.13);
-  border-radius: 6px;
+  border: 1.5px solid rgba(127,99,21,0.18);
+  border-radius: 3px;
   position: relative;
   transition: transform 0.3s cubic-bezier(0.22,1,0.36,1), box-shadow 0.3s, border-color 0.2s;
   overflow: hidden;
 }
-.card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+.card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
 [data-theme="dark"] .card { border-color: rgba(248,240,224,0.10); }
 
 /* Corner accents */
@@ -212,17 +214,16 @@ body {
 /* ─── Stat card ─── */
 .stat-card {
   background: var(--paper2);
-  border: 1.5px solid rgba(22,15,6,0.12);
-  border-radius: 6px;
+  border: 1.5px solid rgba(127,99,21,0.18);
+  border-radius: 3px;
   padding: 20px 22px;
   position: relative;
   overflow: hidden;
   transition: transform 0.28s cubic-bezier(0.22,1,0.36,1), box-shadow 0.28s;
 }
-.stat-card:hover { transform: translateY(-5px) scale(1.02); box-shadow: var(--shadow-lg); }
+.stat-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
 .stat-card .accent-bar {
   position: absolute; top:0; left:0; right:0; height: 3px;
-  border-radius: 6px 6px 0 0;
 }
 
 /* ─── Label ─── */
@@ -244,7 +245,7 @@ body {
 .nav-lnk {
   font-family: var(--body); font-size: 14.5px; font-weight: 400;
   padding: 5px 16px; color: var(--ink3); background: transparent;
-  border: none; cursor: pointer; border-radius: 20px; transition: all 0.15s;
+  border: none; cursor: pointer; border-radius: 3px; transition: all 0.15s;
 }
 .nav-lnk:hover { color: var(--ink); background: var(--paper3); }
 .nav-lnk.on { color: var(--rose); font-weight: 600; }
@@ -294,8 +295,8 @@ input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.22); box-shad
 /* ─── Chat bubbles ─── */
 .bubble-ai {
   background: var(--paper);
-  border: 1.5px solid rgba(22,15,6,0.11);
-  border-radius: 4px 18px 18px 18px;
+  border: 1.5px solid rgba(127,99,21,0.15);
+  border-radius: 2px 12px 12px 12px;
   padding: 13px 18px; font-family: var(--body); font-size: 15px;
   line-height: 1.74; color: var(--ink); max-width: 78%;
   box-shadow: var(--shadow-sm);
@@ -303,7 +304,7 @@ input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.22); box-shad
 }
 .bubble-user {
   background: linear-gradient(135deg, var(--rose), var(--roseB));
-  color: #fff; border-radius: 18px 4px 18px 18px;
+  color: #fff; border-radius: 12px 2px 12px 12px;
   padding: 13px 18px; font-family: var(--body); font-size: 15px;
   line-height: 1.74; max-width: 78%;
   box-shadow: 0 4px 20px rgba(184,56,48,0.3);
@@ -319,7 +320,7 @@ input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.22); box-shad
 
 /* ─── Gradient heading ─── */
 .grad-heading {
-  background: linear-gradient(135deg, var(--rose), var(--plum), var(--amber));
+  background: linear-gradient(135deg, #fa520f, #ff8105, #ffa110, #ffb83e, #c08000);
   background-size: 200% 200%;
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -340,11 +341,18 @@ input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.22); box-shad
 .hero-sub     { animation: subtitleReveal 0.9s cubic-bezier(0.22,1,0.36,1) 0.55s both; }
 .hero-badges  { animation: heroSub    0.5s ease 0.85s both; }
 
-/* ─── Gold rule ─── */
+/* ─── Gold rule (Mistral-inspired warm gradient bar) ─── */
 .gold-rule {
   height: 2px; margin: 0;
-  background: linear-gradient(90deg, transparent, var(--gold), var(--amber), transparent);
-  opacity: 0.6; border-radius: 2px;
+  background: linear-gradient(90deg, transparent 0%, #ffd900 20%, #ffa110 45%, #ff8105 65%, #fa520f 85%, transparent 100%);
+  opacity: 0.75;
+}
+
+/* ─── Brand stripe — the Mistral block gradient identity ─── */
+.brand-stripe {
+  height: 3px;
+  background: linear-gradient(90deg, #ffd900, #ffe295, #ffa110, #ff8105, #fb6424, #fa520f);
+  flex-shrink: 0;
 }
 
 /* ─── Live badge ─── */
@@ -381,16 +389,46 @@ input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.22); box-shad
 
 /* ─── Flow node ─── */
 .flow-node {
-  position: absolute; border: 1.5px solid rgba(22,15,6,0.14);
-  border-radius: 6px; background: var(--paper2);
+  position: absolute; border: 1.5px solid rgba(127,99,21,0.18);
+  border-radius: 3px; background: var(--paper2);
   padding: 12px 16px; cursor: pointer;
   transition: all 0.25s cubic-bezier(0.22,1,0.36,1);
 }
-.flow-node:hover { transform: scale(1.04) translateY(-2px); box-shadow: var(--shadow); border-color: var(--rose); }
-.flow-node.on { border-color: var(--rose); background: var(--roseDim); box-shadow: var(--shadow-lg); transform: scale(1.05); }
+.flow-node:hover { transform: scale(1.04) translateY(-2px); box-shadow: var(--shadow); border-color: var(--amber); }
+.flow-node.on { border-color: var(--amber); background: var(--amberDim); box-shadow: var(--shadow-lg); transform: scale(1.05); }
 
 /* ─── ECG ─── */
 .ecg-path { stroke-dasharray: 1200; stroke-dashoffset: 1200; animation: drawLine2 4s linear infinite; }
+
+/* ─── Agent pipeline nodes ─── */
+@keyframes agentGlow { 0%,100%{box-shadow:0 0 0 0 currentColor} 50%{box-shadow:0 0 0 6px transparent} }
+.agent-node { display:flex; flex-direction:column; align-items:center; gap:5px; }
+.agent-avatar {
+  width:36px; height:36px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  border:2px solid; transition:all 0.3s; position:relative;
+}
+.agent-avatar.active { animation:agentGlow 1.5s ease infinite; }
+.agent-connector {
+  flex:1; height:2px; background:var(--paper4); border-radius:1px;
+  position:relative; overflow:hidden; transition:background 0.4s;
+  margin-bottom:18px;
+}
+.agent-connector.active { background:var(--amber); }
+.agent-connector.done   { background:var(--sage); }
+.agent-connector::after {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.5),transparent);
+  animation:shimmer 1.8s linear infinite; background-size:200% 100%;
+}
+
+/* ─── Agent conversation bubble ─── */
+.agent-bubble {
+  font-family:var(--body); font-size:13.5px; color:var(--ink2);
+  line-height:1.78; white-space:pre-wrap; word-break:break-word;
+  border-radius:0 10px 10px 10px; padding:10px 14px;
+  animation:slideUp 0.28s cubic-bezier(0.22,1,0.36,1) both;
+}
 
 /* ─── Hover lift ─── */
 .lift { transition: transform 0.25s cubic-bezier(0.22,1,0.36,1), box-shadow 0.25s; }

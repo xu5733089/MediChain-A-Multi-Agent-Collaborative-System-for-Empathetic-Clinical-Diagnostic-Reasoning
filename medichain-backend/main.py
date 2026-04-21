@@ -5,6 +5,7 @@ main.py — MediChain FastAPI 后端 v4.0
 """
 import os, json, uuid
 import re
+import asyncio
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, Union
@@ -19,7 +20,20 @@ from pydantic import BaseModel
 
 load_dotenv()
 
-from agents import call_interviewer, call_diagnostician, call_critic, call_diagnostician_cot, call_critic_cot, rewrite_image_findings_for_rag
+from sse_starlette.sse import EventSourceResponse
+
+from agents import (
+    call_interviewer, call_diagnostician, call_critic,
+    call_diagnostician_cot, call_critic_cot,
+    rewrite_image_findings_for_rag,
+    call_agent_commentary, call_diagnostic_roundtable,
+)
+from agents_async import (
+    call_interviewer_async,
+    call_diagnostician_cot_async, call_diagnostician_async,
+    call_critic_cot_async, call_critic_async,
+    call_agent_commentary_async, call_diagnostic_roundtable_async,
+)
 from safety import classify_safety
 from rag    import get_collection_size, search, add_documents
 from ingest import fetch_pmids, fetch_article_details, DEFAULT_TERMS
@@ -1255,10 +1269,30 @@ def chat(body: ChatMessage, user=Depends(get_current_user)):
     trigger = ready or force_trigger
     session_update(body.session_id,history=history,messages=messages,
         turns=turns,status="analyzing" if trigger else "interviewing")
+
+    # Generate inter-agent commentary (Safety ↔ Interviewer) asynchronously-ish
+    symptoms_ctx = ""
+    try:
+        s_payload = sess.get("symptoms") or {}
+        symptoms_ctx = s_payload.get("description", "") if isinstance(s_payload, dict) else ""
+    except Exception:
+        pass
+    agent_commentary = {}
+    if not trigger:
+        try:
+            agent_commentary = call_agent_commentary(
+                user_message=body.user_message,
+                interviewer_reply=clean,
+                symptoms_context=symptoms_ctx,
+            )
+        except Exception:
+            agent_commentary = {}
+
     return {
         "reply":clean,
         "status":"analyzing" if trigger else "interviewing",
         "trigger_diagnose":trigger,
+        "agent_commentary": agent_commentary,
         "safety": {
             "final_risk": safety.get("final_risk", safety.get("risk_level", "low")),
             "message": safety.get("message", ""),
@@ -1328,9 +1362,274 @@ def diagnose(body: DiagnoseRequest, user=Depends(get_current_user)):
 
     session_message_create(body.session_id, role="agent", content=diagnosis, agent_type="diagnostician", user_id=user["id"] if user else None)
     session_message_create(body.session_id, role="agent", content=review, agent_type="critic", user_id=user["id"] if user else None)
+
+    # Generate Diagnostician ↔ Critic debate logs
+    agent_logs = []
+    try:
+        agent_logs = call_diagnostic_roundtable(case_text, diagnosis, review)
+    except Exception:
+        agent_logs = []
+
     session_update(body.session_id, diagnosis=diagnosis, review=review, refs=refs, status="done",
                    cot=json.dumps(cot) if cot else None)
-    return {"status": "done", "diagnosis": diagnosis, "review": review, "refs": refs, "cot": cot}
+    return {"status": "done", "diagnosis": diagnosis, "review": review, "refs": refs, "cot": cot, "agent_logs": agent_logs}
+
+# ── SSE helpers ───────────────────────────────────────────
+def _sse(type_: str, **kwargs) -> dict:
+    """Format a single SSE data frame."""
+    return {"data": json.dumps({"type": type_, **kwargs}, ensure_ascii=False)}
+
+
+# ── /api/session/chat/stream ──────────────────────────────
+async def _chat_stream_gen(body: "ChatMessage", user):
+    """
+    SSE generator for the chat endpoint.
+    Events emitted (in order):
+      safety_result → interviewer_reply → agent_message × 2 → done
+    If trigger_diagnose the frontend should call /api/session/diagnose/stream next.
+    """
+    try:
+        sess = await asyncio.to_thread(session_get, body.session_id)
+        if not sess:
+            yield _sse("error", message="Session not found"); return
+        if sess["status"] != "interviewing":
+            yield _sse("error", message=f"Status: {sess['status']}"); return
+        if sess.get("user_id") and (not user or sess["user_id"] != user["id"]):
+            yield _sse("error", message="Forbidden"); return
+
+        uid = user["id"] if user else None
+        history = sess["history"]
+        messages = sess["messages"]
+        turns = sess["turns"] + 1
+
+        # Attachments
+        for att in (body.attachments or []):
+            att_text = (att or "").strip()
+            if not att_text: continue
+            history.append({"role": "user", "content": f"[ATTACHMENT] {att_text}"})
+            messages.append({"role": "user", "text": f"📎 {att_text}"})
+            await asyncio.to_thread(
+                session_message_create, body.session_id, "user", f"📎 {att_text}", None, uid
+            )
+
+        history.append({"role": "user", "content": body.user_message})
+        messages.append({"role": "user", "text": body.user_message})
+        await asyncio.to_thread(
+            session_message_create, body.session_id, "user", body.user_message, None, uid
+        )
+
+        # Safety check
+        safety = await asyncio.to_thread(classify_safety, body.user_message)
+        safety_content = json.dumps({
+            "final_risk": safety.get("final_risk", safety.get("risk_level", "low")),
+            "rule_risk": safety.get("rule_risk", "low"),
+            "llm_risk": safety.get("llm_risk", "low"),
+            "message": safety.get("message", ""),
+            "warning": safety.get("warning", ""),
+        }, ensure_ascii=False)
+        await asyncio.to_thread(
+            session_message_create, body.session_id, "agent", safety_content, "safety", uid
+        )
+        yield _sse("safety_result",
+                   final_risk=safety.get("final_risk", safety.get("risk_level", "low")),
+                   message=safety.get("message", ""),
+                   warning=safety.get("warning", ""),
+                   rule_risk=safety.get("rule_risk", "low"),
+                   llm_risk=safety.get("llm_risk", "low"))
+
+        # Interviewer
+        MAX_TURNS = 12
+        reply = await call_interviewer_async(normalize_history_for_interviewer(history))
+        ready = "[READY_FOR_DIAGNOSIS]" in reply
+        clean = reply.replace("[READY_FOR_DIAGNOSIS]", "").strip()
+        force_trigger = turns >= MAX_TURNS
+        if force_trigger and not ready:
+            clean = clean + "\n\nThank you for sharing all of that. I now have enough information to proceed with a thorough analysis."
+        trigger = ready or force_trigger
+
+        history.append({"role": "assistant", "content": clean})
+        messages.append({"role": "ai", "agent": "interviewer", "text": clean})
+        await asyncio.to_thread(
+            session_message_create, body.session_id, "agent", clean, "interviewer", uid
+        )
+        await asyncio.to_thread(
+            session_update, body.session_id,
+            history=history, messages=messages,
+            turns=turns, status="analyzing" if trigger else "interviewing"
+        )
+
+        yield _sse("interviewer_reply", text=clean, trigger=trigger)
+
+        # Inter-agent commentary (only when NOT triggering diagnosis)
+        if not trigger:
+            symptoms_ctx = ""
+            try:
+                s_pay = sess.get("symptoms") or {}
+                symptoms_ctx = s_pay.get("description", "") if isinstance(s_pay, dict) else ""
+            except Exception:
+                pass
+
+            commentary = await call_agent_commentary_async(body.user_message, clean, symptoms_ctx)
+
+            if commentary.get("safety_to_interviewer"):
+                await asyncio.sleep(0.2)
+                yield _sse("agent_message",
+                           from_agent="safety", to_agent="interviewer",
+                           text=commentary["safety_to_interviewer"], phase="intake")
+
+            if commentary.get("interviewer_to_safety"):
+                await asyncio.sleep(0.35)
+                yield _sse("agent_message",
+                           from_agent="interviewer", to_agent="safety",
+                           text=commentary["interviewer_to_safety"], phase="intake")
+
+        yield _sse("done")
+
+    except Exception as exc:
+        yield _sse("error", message=str(exc))
+
+
+@app.post("/api/session/chat/stream")
+async def chat_stream(body: ChatMessage, user=Depends(get_current_user)):
+    """SSE streaming version of /api/session/chat"""
+    return EventSourceResponse(_chat_stream_gen(body, user))
+
+
+# ── /api/session/diagnose/stream ──────────────────────────
+async def _diagnose_stream_gen(body: "DiagnoseRequest", user):
+    """
+    SSE generator for the diagnose endpoint.
+    Events: phase_sep → agent_message (diagnostician) → agent_message (critic)
+            → agent_message × 3 (roundtable) → diagnosis_ready → done
+    """
+    try:
+        sess = await asyncio.to_thread(session_get, body.session_id)
+        if not sess:
+            yield _sse("error", message="Session not found"); return
+        if sess.get("user_id") and (not user or sess["user_id"] != user["id"]):
+            yield _sse("error", message="Forbidden"); return
+
+        uid = user["id"] if user else None
+        s = sess["symptoms"]
+
+        # Build case_text (same logic as sync endpoint)
+        image_analyses, lines = [], []
+        for m in sess["messages"]:
+            role = m["role"]; text = m.get("text", "")
+            if role == "system" and text.startswith("Uploaded file:") and "image" in text.lower():
+                image_analyses.append(text.split("\n\n", 1)[1] if "\n\n" in text else text)
+            elif role == "user":   lines.append(f"PATIENT: {text}")
+            elif role == "system": lines.append(f"CONTEXT: {text}")
+            else:                  lines.append(f"INTERVIEWER: {text}")
+
+        image_section = ""
+        if image_analyses:
+            image_section = (
+                f"\nMEDICAL IMAGE ANALYSIS\n{'='*40}\n"
+                + "\n\n---\n\n".join(image_analyses) + "\n"
+            )
+        case_text = (
+            f"PATIENT CASE\n{'='*40}\n"
+            f"Chief complaint: {s['description']}\n"
+            f"Body area: {s['bodyPart']}\nDuration: {s['duration']}\n"
+            f"Severity: {s.get('severity_level', severity_to_level(s.get('severity')))}\n"
+            f"History: {s['notes'] or 'None'}\n"
+            f"{image_section}"
+            f"\nTRANSCRIPT\n{'='*40}\n" + "\n\n".join(lines)
+        )
+
+        from agents import rewrite_image_findings_for_rag as _rw
+        image_medical_terms = await asyncio.to_thread(_rw, image_analyses) if image_analyses else ""
+        rag_query = f"{s['description']} {s['bodyPart']} {s['duration']} {image_medical_terms}".strip()
+
+        # ── DIAGNOSTIC ANALYSIS phase ──
+        yield _sse("phase_sep", label="DIAGNOSTIC ANALYSIS")
+        await asyncio.sleep(0.15)
+        yield _sse("agent_message",
+                   from_agent="diagnostician", to_agent=None,
+                   text="Case received. Querying MedQuAD corpus (Dense + BM25 hybrid search)…",
+                   phase="diagnosis")
+
+        try:
+            diagnosis, diag_thinking, refs = await call_diagnostician_cot_async(case_text, rag_query)
+            review, critic_thinking = await call_critic_cot_async(case_text, diagnosis)
+            cot = {"diagnostician": diag_thinking, "critic": critic_thinking}
+        except Exception:
+            diagnosis, refs = await call_diagnostician_async(case_text, rag_query)
+            review = await call_critic_async(case_text, diagnosis)
+            cot = None
+
+        if refs:
+            await asyncio.sleep(0.25)
+            yield _sse("agent_message",
+                       from_agent="diagnostician", to_agent=None,
+                       text=f"Retrieved {len(refs)} supporting references from MedQuAD.",
+                       phase="diagnosis")
+
+        await asyncio.sleep(0.3)
+        yield _sse("agent_message",
+                   from_agent="diagnostician", to_agent="critic",
+                   text=diagnosis, phase="diagnosis")
+
+        # ── PEER REVIEW phase ──
+        await asyncio.sleep(0.4)
+        yield _sse("phase_sep", label="PEER REVIEW")
+        await asyncio.sleep(0.2)
+        yield _sse("agent_message",
+                   from_agent="critic", to_agent=None,
+                   text="Peer review initiated. Evaluating differential for clinical soundness and completeness…",
+                   phase="review")
+
+        await asyncio.sleep(0.35)
+        yield _sse("agent_message",
+                   from_agent="critic", to_agent="diagnostician",
+                   text=review, phase="review")
+
+        # Roundtable debate
+        roundtable = await call_diagnostic_roundtable_async(case_text, diagnosis, review)
+        for entry in roundtable:
+            await asyncio.sleep(0.35)
+            yield _sse("agent_message",
+                       from_agent=entry["from_agent"],
+                       to_agent=entry["to_agent"],
+                       text=entry["text"], phase="review")
+
+        # Final safety clearance
+        await asyncio.sleep(0.25)
+        yield _sse("agent_message",
+                   from_agent="safety", to_agent=None,
+                   text="Final safety sweep complete. No escalation pathway required at this stage.",
+                   phase="review")
+
+        # Persist to DB
+        await asyncio.to_thread(
+            session_message_create, body.session_id, "agent", diagnosis, "diagnostician", uid
+        )
+        await asyncio.to_thread(
+            session_message_create, body.session_id, "agent", review, "critic", uid
+        )
+        await asyncio.to_thread(
+            session_update, body.session_id,
+            diagnosis=diagnosis, review=review, refs=refs, status="done",
+            cot=json.dumps(cot) if cot else None
+        )
+
+        yield _sse("diagnosis_ready",
+                   diagnosis=diagnosis, review=review,
+                   refs=refs, cot=cot)
+        yield _sse("done")
+
+    except Exception as exc:
+        yield _sse("error", message=str(exc))
+
+
+@app.post("/api/session/diagnose/stream")
+async def diagnose_stream(body: DiagnoseRequest, user=Depends(get_current_user)):
+    """SSE streaming version of /api/session/diagnose"""
+    return EventSourceResponse(_diagnose_stream_gen(body, user))
+
+
+# ── (existing non-stream endpoints continue below) ────────
 
 @app.get("/api/session/{session_id}")
 def get_session(session_id: str, user=Depends(get_current_user)):

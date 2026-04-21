@@ -118,8 +118,10 @@
   },
   "chat": {
     "session": "会话 {{id}}",
-    "hide_reasoning": "隐藏推理过程",
-    "show_reasoning": "显示推理过程",
+    "hide_reasoning": "隐藏协作面板",
+    "show_reasoning": "显示协作面板",
+    "hide_agents": "隐藏协作面板",
+    "show_agents": "显示协作面板",
     "active_case": "当前病例",
     "safety_warning": "安全警告：",
     "safety_seek": "这可能是严重情况，请立即就医。",

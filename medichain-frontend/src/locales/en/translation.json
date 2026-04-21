@@ -118,8 +118,10 @@
   },
   "chat": {
     "session": "Session {{id}}",
-    "hide_reasoning": "Hide reasoning",
-    "show_reasoning": "Show reasoning",
+    "hide_reasoning": "Hide agents",
+    "show_reasoning": "Show agents",
+    "hide_agents": "Hide agents",
+    "show_agents": "Show agents",
     "active_case": "Active case",
     "safety_warning": "Safety Warning:",
     "safety_seek": "This may be a serious condition. Seek urgent medical care.",

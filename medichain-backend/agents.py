@@ -2,6 +2,8 @@
 agents.py — WORKFLOW: Three-agent cooperative logic (integrated RAG)
 """
 import os
+import json
+import re
 import anthropic
 from rag import search, multi_search, format_references_for_prompt
 
@@ -294,3 +296,76 @@ Provide your senior consultant review focusing on evidence quality, safety, and 
             review = block.text
 
     return review, thinking
+
+
+# ── Inter-Agent Commentary ──────────────────────────────────
+
+HAIKU = "claude-haiku-4-5-20251001"
+
+
+def call_agent_commentary(user_message: str, interviewer_reply: str, symptoms_context: str = "") -> dict:
+    """Safety↔Interviewer real-time commentary after each patient turn.
+    Returns: {"safety_to_interviewer": "...", "interviewer_to_safety": "..."}
+    """
+    ctx = f"Chief complaint: {symptoms_context[:200]}\n\n" if symptoms_context else ""
+    prompt = (
+        f"{ctx}"
+        f'Patient said: "{user_message[:400]}"\n'
+        f'Interviewer replied: "{interviewer_reply[:300]}"\n\n'
+        "Generate a brief inter-agent exchange:\n"
+        "1. SAFETY → INTERVIEWER: 1-2 sentences clinical note (red flags, what to probe). Direct, medical shorthand.\n"
+        "2. INTERVIEWER → SAFETY: 1 sentence acknowledgment.\n"
+        'Return ONLY valid JSON: {"safety_to_interviewer": "...", "interviewer_to_safety": "..."}'
+    )
+    try:
+        resp = client.messages.create(
+            model=HAIKU,
+            max_tokens=250,
+            system="Generate brief clinical inter-agent messages. Return only valid JSON.",
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = resp.content[0].text.strip()
+        # Strip markdown code fences if present
+        raw = re.sub(r"^```(?:json)?\s*", "", raw, flags=re.MULTILINE)
+        raw = re.sub(r"\s*```$", "", raw, flags=re.MULTILINE)
+        return json.loads(raw.strip())
+    except Exception:
+        return {}
+
+
+def call_diagnostic_roundtable(case_text: str, diagnosis: str, review: str) -> list:
+    """Diagnostician↔Critic structured debate after analysis.
+    Returns list of {"from_agent": ..., "to_agent": ..., "text": ...}
+    """
+    prompt = (
+        f"Case: {case_text[:600]}\n"
+        f"Diagnosis: {diagnosis[:800]}\n"
+        f"Critic review: {review[:600]}\n\n"
+        "Generate brief inter-agent debate:\n"
+        "1. Diagnostician → Critic: respond to key criticism (1-2 sentences)\n"
+        "2. Critic → Diagnostician: final verdict (1-2 sentences)\n"
+        "3. Safety → All: safety clearance or escalation (1 sentence)\n"
+        'Return ONLY valid JSON array: [{"from": "diagnostician", "to": "critic", "text": "..."}, ...]'
+    )
+    try:
+        resp = client.messages.create(
+            model=HAIKU,
+            max_tokens=400,
+            system="Generate brief clinical inter-agent debate. Return only valid JSON array.",
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = resp.content[0].text.strip()
+        raw = re.sub(r"^```(?:json)?\s*", "", raw, flags=re.MULTILINE)
+        raw = re.sub(r"\s*```$", "", raw, flags=re.MULTILINE)
+        logs = json.loads(raw.strip())
+        return [
+            {
+                "from_agent": l.get("from", l.get("from_agent", "")),
+                "to_agent":   l.get("to",   l.get("to_agent", "")),
+                "text":       l.get("text", ""),
+            }
+            for l in logs
+            if isinstance(l, dict)
+        ]
+    except Exception:
+        return []

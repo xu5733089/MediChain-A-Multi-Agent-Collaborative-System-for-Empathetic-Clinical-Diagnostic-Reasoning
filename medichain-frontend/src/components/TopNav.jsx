@@ -23,7 +23,8 @@ export default function TopNav({ user, onLogout, onNav, page, dark, toggle }) {
   const currentLang = LANGS.find(l => l.code === i18n.language) || LANGS[0];
 
   return (
-    <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "var(--nav-bg)", backdropFilter: "blur(28px)", WebkitBackdropFilter: "blur(28px)", height: 56, borderBottom: "1px solid rgba(22,15,6,0.09)" }}>
+    <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "var(--nav-bg)", backdropFilter: "blur(28px)", WebkitBackdropFilter: "blur(28px)", height: 56, borderBottom: "1px solid rgba(127,99,21,0.12)" }}>
+      <div className="brand-stripe" style={{ position: "absolute", top: 0, left: 0, right: 0 }} />
       <div style={{ padding: "0 28px", height: "100%", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <button onClick={() => onNav(isProvider ? "provider" : "input")} style={{ display: "flex", alignItems: "center", gap: 11, background: "none", border: "none", cursor: "pointer" }}>
           <div style={{ width: 34, height: 34, borderRadius: 9, background: "linear-gradient(135deg,var(--rose),var(--roseB))", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 3px 12px rgba(184,56,48,0.38)", color: "var(--paper)" }}>

@@ -1,5 +1,193 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+// ── Agent config ──────────────────────────────────────────
+const AC = {
+  safety:       { short: 'Safety',       icon: '🛡', c: '#9a5800', pale: '#fdebd0', right: false },
+  interviewer:  { short: 'Interviewer',  icon: '🩺', c: '#2a6235', pale: '#daeedd', right: false },
+  diagnostician:{ short: 'Diagnostician',icon: '🔬', c: '#6d28d9', pale: '#ede9fe', right: true  },
+  critic:       { short: 'Critic',       icon: '⚖️', c: '#1a3068', pale: '#dce4f8', right: true  },
+};
+
+function AgentAvatar({ agent, size = 30, typing = false }) {
+  const cfg = AC[agent] || AC.interviewer;
+  return (
+    <div style={{ position: 'relative', flexShrink: 0 }}>
+      <div style={{
+        width: size, height: size, borderRadius: '50%',
+        background: cfg.pale, border: `1.5px solid ${cfg.c}40`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: size * 0.48,
+        boxShadow: typing ? `0 0 0 3px ${cfg.c}25` : 'none',
+        transition: 'box-shadow 0.3s',
+      }}>{cfg.icon}</div>
+      {typing && (
+        <span style={{
+          position: 'absolute', inset: -3, borderRadius: '50%',
+          border: `2px solid ${cfg.c}`,
+          animation: 'pulseRing 1.6s ease-out infinite',
+          pointerEvents: 'none',
+        }} />
+      )}
+    </div>
+  );
+}
+
+const BUBBLE_PREVIEW = 320;
+
+function AgentConvBubble({ msg }) {
+  const [expanded, setExpanded] = useState(false);
+  const cfg = AC[msg.from] || AC.interviewer;
+  const toCfg = msg.to ? AC[msg.to] : null;
+  const text = msg.text || '';
+  const isLong = text.length > BUBBLE_PREVIEW;
+  const display = isLong && !expanded ? text.slice(0, BUBBLE_PREVIEW) + '…' : text;
+
+  return (
+    <div style={{ marginBottom: 14, animation: 'fadeSlideUp 0.28s ease both' }}>
+      {/* ── Routing header ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
+        {/* Sender chip */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: cfg.pale, borderRadius: 20, padding: '3px 9px 3px 4px', border: `1px solid ${cfg.c}30` }}>
+          <AgentAvatar agent={msg.from} size={20} />
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, color: cfg.c, letterSpacing: '0.1em' }}>{cfg.short.toUpperCase()}</span>
+        </div>
+        {toCfg ? (
+          <>
+            {/* Arrow */}
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink5)', lineHeight: 1, userSelect: 'none' }}>→</span>
+            {/* Recipient chip */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: toCfg.pale, borderRadius: 20, padding: '3px 9px 3px 4px', border: `1px solid ${toCfg.c}30` }}>
+              <AgentAvatar agent={msg.to} size={20} />
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, color: toCfg.c, letterSpacing: '0.1em' }}>{toCfg.short.toUpperCase()}</span>
+            </div>
+          </>
+        ) : (
+          /* No recipient — internal note */
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--ink5)', letterSpacing: '0.06em', fontStyle: 'italic' }}>internal</span>
+        )}
+      </div>
+
+      {/* ── Message body ── */}
+      <div style={{
+        marginLeft: 8,
+        background: cfg.pale,
+        border: `1px solid ${cfg.c}18`,
+        borderLeft: `3px solid ${cfg.c}`,
+        borderRadius: '0 10px 10px 10px',
+        padding: '10px 14px',
+        fontFamily: 'var(--body)',
+        fontSize: 13,
+        lineHeight: 1.68,
+        color: 'var(--ink2)',
+        wordBreak: 'break-word',
+        whiteSpace: 'pre-wrap',
+      }}>
+        {display}
+        {msg._streaming && (
+          <span style={{ display: 'inline-block', width: 2, height: '1em', background: cfg.c, marginLeft: 2, verticalAlign: 'text-bottom', animation: 'blink 0.8s step-end infinite' }} />
+        )}
+        {isLong && (
+          <button
+            onClick={() => setExpanded(e => !e)}
+            style={{
+              display: 'block', marginTop: 8,
+              fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '0.08em',
+              color: cfg.c, background: `${cfg.c}12`,
+              border: `1px solid ${cfg.c}25`, borderRadius: 10,
+              padding: '3px 10px', cursor: 'pointer',
+            }}
+          >
+            {expanded ? '▲ Collapse' : `▼ Expand (${text.length - BUBBLE_PREVIEW} more chars)`}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AgentPhaseSep({ label }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '20px 0 16px' }}>
+      <div style={{ flex: 1, height: 1, background: 'rgba(120,90,20,0.10)' }} />
+      <span style={{
+        fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--ink5)',
+        letterSpacing: '0.18em', whiteSpace: 'nowrap',
+        background: 'var(--paper)', padding: '3px 12px',
+        borderRadius: 20, border: '1px solid rgba(120,90,20,0.14)',
+        textTransform: 'uppercase',
+      }}>{label}</span>
+      <div style={{ flex: 1, height: 1, background: 'rgba(120,90,20,0.10)' }} />
+    </div>
+  );
+}
+
+function AgentTypingBubble({ agent }) {
+  const cfg = AC[agent] || AC.interviewer;
+  return (
+    <div style={{ marginBottom: 14, opacity: 0.9 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: cfg.pale, borderRadius: 20, padding: '3px 9px 3px 4px', border: `1px solid ${cfg.c}30` }}>
+          <AgentAvatar agent={agent} size={20} typing />
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, color: cfg.c, letterSpacing: '0.1em' }}>{cfg.short.toUpperCase()}</span>
+        </div>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--ink5)', letterSpacing: '0.06em', fontStyle: 'italic' }}>thinking…</span>
+      </div>
+      <div style={{
+        marginLeft: 8,
+        background: cfg.pale, border: `1px solid ${cfg.c}18`, borderLeft: `3px solid ${cfg.c}`,
+        borderRadius: '0 10px 10px 10px', padding: '10px 14px',
+        display: 'flex', gap: 5, alignItems: 'center',
+      }}>
+        {[0,1,2].map(i => (
+          <span key={i} style={{ width: 5, height: 5, borderRadius: '50%', background: cfg.c, display: 'inline-block', animation: `dotPulse 1.3s ${i * 0.22}s ease infinite`, opacity: 0.75 }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AgentPipelineStrip({ phase }) {
+  const stages = [
+    { key: 'safety',      label: 'Safety',        icon: '🛡', color: '#9a5800' },
+    { key: 'interviewing',label: 'Interviewer',   icon: '🩺', color: '#2a6235' },
+    { key: 'analyzing',   label: 'Diagnostician', icon: '🔬', color: '#6d28d9' },
+    { key: 'reviewing',   label: 'Critic',        icon: '⚖️', color: '#1a3068' },
+  ];
+  const order = ['safety', 'interviewing', 'analyzing', 'reviewing', 'done'];
+  const phaseIdx = order.indexOf(phase === 'done' ? 'done' : phase);
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', padding: '8px 18px', background: 'var(--paper3)', borderBottom: '1px solid rgba(127,99,21,0.10)', gap: 0, flexShrink: 0 }}>
+      {stages.map((s, i) => {
+        const si = order.indexOf(s.key);
+        const isDone    = phaseIdx > si;
+        const isActive  = phaseIdx === si;
+        const isPending = phaseIdx < si;
+        return (
+          <div key={s.key} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+            <div className="agent-node" style={{ flex: 'none', minWidth: 54 }}>
+              <div className={`agent-avatar${isActive ? ' active' : ''}`} style={{
+                color: isPending ? 'var(--ink5)' : s.color,
+                borderColor: isPending ? 'var(--paper4)' : s.color,
+                background: isDone ? `${s.color}18` : isActive ? `${s.color}12` : 'var(--paper)',
+                opacity: isPending ? 0.5 : 1,
+                boxShadow: isActive ? `0 0 0 3px ${s.color}30` : 'none',
+                fontSize: 15,
+              }}>
+                {isDone ? '✓' : s.icon}
+                {isActive && <span style={{ position: 'absolute', inset: -5, borderRadius: '50%', border: `2px solid ${s.color}`, animation: 'pulseRing 1.8s ease-out infinite', pointerEvents: 'none' }} />}
+              </div>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 7, letterSpacing: '0.1em', color: isPending ? 'var(--ink5)' : isActive ? s.color : 'var(--ink4)', fontWeight: isActive ? 700 : 400 }}>{s.label.toUpperCase()}</span>
+            </div>
+            {i < stages.length - 1 && (
+              <div className={`agent-connector${isDone ? ' done' : isActive ? ' active' : ''}`} style={{ flex: 1, margin: '0 3px', marginBottom: 14 }} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 const SOCRATES_DIMS = [
   { key: "S", label: "Site",      keywords: ["where", "location", "site", "located", "part of your body", "which area"] },
   { key: "O", label: "Onset",     keywords: ["when", "start", "onset", "began", "how long", "first notice"] },
@@ -16,8 +204,8 @@ function detectSocrates(msgs) {
   return new Set(SOCRATES_DIMS.filter(d => d.keywords.some(kw => aiText.includes(kw))).map(d => d.key));
 }
 import { useTranslation } from "react-i18next";
-import { AmbientBlobs, ECGLine, IllustFlower, IllustLeaf, ParticleField } from "../components/illustrations";
-import { AgentBadge, SevBadge, TypingDots } from "../components/ui";
+import { ECGLine, IllustFlower, ParticleField } from "../components/illustrations";
+import { SevBadge, TypingDots } from "../components/ui";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -43,7 +231,7 @@ export default function ChatPage({ api, symptoms, onComplete, onBack, resumeSess
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [pendingAttachments, setPendingAttachments] = useState([]);
   const [safetyAlert, setSafetyAlert] = useState(null);
-  const [cameraOpen, setCameraOpen] = useState(false);
+  const [_cameraOpen, setCameraOpen] = useState(false);
   const [streamingMsg, setStreamingMsg] = useState(null); // { displayed, full, time }
   const fileInputRef = useRef(null);
   const streamRef = useRef(null);
@@ -74,8 +262,11 @@ export default function ChatPage({ api, symptoms, onComplete, onBack, resumeSess
 
   useEffect(() => { msgEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
   useEffect(() => { logEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [logs]);
-  const addLog = useCallback((ag, text, time = new Date()) => {
-    setLogs(p => [...p, { id: Math.random().toString(36).slice(2), agent: ag, text, time }]);
+  const addLog = useCallback((ag, text, time = new Date(), to = null) => {
+    setLogs(p => [...p, { id: Math.random().toString(36).slice(2), agent: ag, to, text, time }]);
+  }, []);
+  const addSep = useCallback((label) => {
+    setLogs(p => [...p, { id: Math.random().toString(36).slice(2), _sep: label }]);
   }, []);
 
   const init = useCallback(async () => {
@@ -118,15 +309,40 @@ export default function ChatPage({ api, symptoms, onComplete, onBack, resumeSess
       }
       setMsgs([]);
       pushAiMsg(d.reply);
-      addLog("interviewer", "Session opened. Structured history-taking active.");
+      addLog("safety", "Triage complete. No immediate escalation required. Passing to Interviewer — prioritise onset, character, and associated symptoms.", new Date(), "interviewer");
+      addSep("CLINICAL INTAKE");
+      addLog("interviewer", "Session opened. SOCRATES intake protocol active.", new Date(), "safety");
     } catch (e) {
       addLog("interviewer", `Connection error: ${e.message}`);
     }
     setLoading(false);
     setConnecting(false);
-  }, [api, symptoms, resumeSession, addLog]);
+  }, [api, symptoms, resumeSession, addLog, addSep]);
 
   useEffect(() => { init(); }, [init]);
+
+  // ── shared: run diagnose SSE stream ─────────────────────
+  async function _runDiagnoseStream(sessionId) {
+    let result = null;
+    await api.diagnoseStream({ session_id: sessionId }, evt => {
+      switch (evt.type) {
+        case "phase_sep":
+          addSep(evt.label);
+          break;
+        case "agent_message":
+          addLog(evt.from_agent, evt.text, new Date(), evt.to_agent || null);
+          break;
+        case "diagnosis_ready":
+          result = evt;
+          break;
+        case "error":
+          addLog("diagnostician", `Error: ${evt.message}`);
+          break;
+        default: break;
+      }
+    });
+    return result;
+  }
 
   async function send() {
     if (!input.trim() || loading || phase !== "interviewing" || !sid) return;
@@ -140,47 +356,153 @@ export default function ChatPage({ api, symptoms, onComplete, onBack, resumeSess
       { role: "user", text: txt, time: new Date() },
     ]);
     setLoading(true);
+
+    let triggered = false;
+    let diagnoseResult = null;
+
     try {
-      const d = await api.chat({ session_id: sid, user_message: txt, attachments });
-      const safety = d?.safety || null;
-      if ((safety?.final_risk || safety?.risk_level) === "high") {
-        setSafetyAlert({
-          final_risk: "high",
-          message: safety?.warning || safety?.message || "This may be a serious condition. Seek urgent medical care.",
-        });
-      }
-      // Clear one-shot upload chip after content has been sent into the chat turn.
-      setUploadMeta(null);
-      setUploadPreview("");
-      setUploadError("");
-      if (uploadImageUrl) {
-        URL.revokeObjectURL(uploadImageUrl);
-        setUploadImageUrl(null);
-      }
-      pushAiMsg(d.reply);
-      addLog("interviewer", d.trigger_diagnose ? "Sufficient history collected. Initiating multi-agent pipeline." : "Continuing structured intake.");
-      if (d.trigger_diagnose) {
-        setPhase("analyzing");
-        addLog("diagnostician", "Querying ChromaDB vector store (MedQuAD corpus)…");
-        await new Promise(r => setTimeout(r, 700));
-        const dd = await api.diagnose({ session_id: sid });
-        addLog("diagnostician", dd.diagnosis);
-        if (dd.refs?.length > 0) addLog("diagnostician", `Retrieved ${dd.refs.length} supporting references.`);
-        addLog("critic", "Initiating senior peer review…");
-        await new Promise(r => setTimeout(r, 400));
-        addLog("critic", dd.review);
-        setPhase("done");
-        const safeRefs = Array.isArray(dd.refs) ? dd.refs : Array.isArray(dd.references) ? dd.references : [];
-        const fullSession = await api.session(sid);
-        const transcript = Array.isArray(fullSession?.messages)
-          ? fullSession.messages.filter(m => m.role === "user" || m.role === "ai")
-          : [];
-        setTimeout(() => onComplete({ symptoms, date: new Date(), sessionId: sid, transcript, diagnosis: dd.diagnosis || dd.result || JSON.stringify(dd), review: dd.review || dd.critique || "", refs: safeRefs, cot: dd.cot || null, mediaItems: symptoms.pre_items || [] }), 1500);
+      await api.chatStream({ session_id: sid, user_message: txt, attachments }, evt => {
+        switch (evt.type) {
+          case "safety_result":
+            if (evt.final_risk === "high") {
+              setSafetyAlert({
+                final_risk: "high",
+                message: evt.warning || evt.message || "This may be a serious condition. Seek urgent medical care.",
+              });
+            }
+            break;
+
+          case "interviewer_reply":
+            // Clear one-shot upload chip
+            setUploadMeta(null); setUploadPreview(""); setUploadError("");
+            if (uploadImageUrl) { URL.revokeObjectURL(uploadImageUrl); setUploadImageUrl(null); }
+            pushAiMsg(evt.text);
+            triggered = evt.trigger;
+            if (triggered) {
+              addLog("interviewer", "SOCRATES intake complete. Case summary ready — handing over for full diagnostic analysis.", new Date(), "diagnostician");
+              setPhase("analyzing");
+            }
+            break;
+
+          case "agent_message":
+            addLog(evt.from_agent, evt.text, new Date(), evt.to_agent || null);
+            break;
+
+          case "error":
+            addLog("interviewer", `Error: ${evt.message}`);
+            break;
+
+          default: break;
+        }
+      });
+
+      // If trigger_diagnose — kick off diagnose stream immediately
+      if (triggered) {
+        diagnoseResult = await _runDiagnoseStream(sid);
       }
     } catch (e) {
       addLog("interviewer", `Error: ${e.message}`);
     }
+
+    if (triggered && diagnoseResult) {
+      setPhase("done");
+      const safeRefs = Array.isArray(diagnoseResult.refs) ? diagnoseResult.refs : [];
+      const fullSession = await api.session(sid).catch(() => null);
+      const transcript = Array.isArray(fullSession?.messages)
+        ? fullSession.messages.filter(m => m.role === "user" || m.role === "ai")
+        : [];
+      setTimeout(() => onComplete({
+        symptoms, date: new Date(), sessionId: sid, transcript,
+        diagnosis: diagnoseResult.diagnosis || "",
+        review: diagnoseResult.review || "",
+        refs: safeRefs,
+        cot: diagnoseResult.cot || null,
+        mediaItems: symptoms.pre_items || [],
+      }), 1500);
+    }
+
     setLoading(false);
+  }
+
+  async function forceDiagnose() {
+    if (!sid || phase !== "interviewing" || loading) return;
+    setPhase("analyzing");
+    addLog("interviewer", "Early diagnosis requested. Compiling case summary and handing over.", new Date(), "diagnostician");
+    setLoading(true);
+
+    let diagnoseResult = null;
+    try {
+      diagnoseResult = await _runDiagnoseStream(sid);
+    } catch (e) {
+      addLog("diagnostician", `Error: ${e.message}`);
+      setPhase("interviewing");
+      setLoading(false);
+      return;
+    }
+
+    if (diagnoseResult) {
+      setPhase("done");
+      const safeRefs = Array.isArray(diagnoseResult.refs) ? diagnoseResult.refs : [];
+      const fullSession = await api.session(sid).catch(() => null);
+      const transcript = Array.isArray(fullSession?.messages)
+        ? fullSession.messages.filter(m => m.role === "user" || m.role === "ai")
+        : [];
+      setTimeout(() => onComplete({
+        symptoms, date: new Date(), sessionId: sid, transcript,
+        diagnosis: diagnoseResult.diagnosis || "",
+        review: diagnoseResult.review || "",
+        refs: safeRefs,
+        cot: diagnoseResult.cot || null,
+        mediaItems: symptoms.pre_items || [],
+      }), 1500);
+    }
+    setLoading(false);
+  }
+
+  // Detect quick-reply suggestions from the last AI message
+  function detectQuickReplies(text) {
+    if (!text) return null;
+    // Pain scale
+    if (/scale of (1|one).*(10|ten)|rate.*pain|\/10|how (bad|severe|intense)/i.test(text)) {
+      return ["1 — Minimal", "3 — Mild", "5 — Moderate", "7 — Severe", "9 — Very severe", "10 — Worst ever"];
+    }
+    // Character / quality
+    if (/feel like|describe.*pain|describe.*symptom|what.*sensation|type of (pain|discomfort)|quality of/i.test(text)) {
+      return ["Sharp", "Dull / aching", "Burning", "Pressure / tight", "Throbbing", "Cramping", "Stabbing"];
+    }
+    // Radiation
+    if (/spread|radiat|anywhere else|move to|going (to|anywhere)/i.test(text)) {
+      return ["Stays in one place", "Spreads to arm", "Spreads to jaw / neck", "Spreads to back", "Spreads to shoulder"];
+    }
+    // Associated symptoms
+    if (/nausea|vomit|fever|sweat|dizzin|shortness of breath|other symptom|anything else alongside|accompan/i.test(text)) {
+      return ["None", "Nausea", "Fever / chills", "Dizziness", "Shortness of breath", "Fatigue", "Sweating"];
+    }
+    // Aggravating / relieving factors
+    if (/worse|better|relief|reliev|aggravat|trigger|what (makes|helps)/i.test(text)) {
+      return ["Worse with exercise", "Better with rest", "Worse when eating", "Position-dependent", "Stress-related", "Nothing obvious"];
+    }
+    // Timing / pattern
+    if (/constant|come and go|intermittent|how often|always there|pattern/i.test(text)) {
+      return ["Constant", "Comes and goes", "Getting worse over time", "Only at certain times"];
+    }
+    // Onset / duration
+    if (/when (did|exactly|was|were)|how long (ago|have)|since when|when.*begin|when.*start|first (notice|feel|occur)|how long.*had/i.test(text)) {
+      return ["Just started", "A few hours ago", "Yesterday", "2–3 days ago", "About a week ago", "Longer than a week"];
+    }
+    // Site / location
+    if (/where (exactly|is|does|do|are)|which (part|area|side|region)|can you point|locate.*pain|location of/i.test(text)) {
+      return ["Centre of chest", "Left chest", "Right chest", "Upper abdomen", "Shoulder / arm", "Neck / jaw", "Whole chest"];
+    }
+    // Yes / no questions (have you, do you, are you, did you, was it, were you)
+    if (/\bhave you\b|\bdo you\b|\bare you\b|\bis (there|it)\b|\bdid you\b|\bwas (it|there|this)\b|\bwere you\b|\bhad (you|this)\b/i.test(text)) {
+      return ["Yes", "No", "Sometimes", "Not sure"];
+    }
+    // Generic fallback — any AI question
+    if (/\?/.test(text)) {
+      return ["Yes", "No", "Not sure", "Can you explain?"];
+    }
+    return null;
   }
 
   function onCameraCapture({ transcript, frameAnalyses }) {
@@ -268,11 +590,13 @@ export default function ChatPage({ api, symptoms, onComplete, onBack, resumeSess
     }
   }
 
-  const phaseConf = {
-    interviewing: { label: t("chat.taking_history"), c: "var(--sage)", bg: "var(--sagePale)" },
-    analyzing: { label: t("chat.analysing"), c: "var(--amber)", bg: "var(--amberPale)" },
-    done: { label: t("chat.complete"), c: "var(--navy)", bg: "var(--navyPale)" },
-  }[phase];
+  const phaseConf = ({
+    safety:       { label: "Safety triage…",          c: "var(--amber)", bg: "var(--amberPale)" },
+    interviewing: { label: t("chat.taking_history"),   c: "var(--sage)",  bg: "var(--sagePale)"  },
+    analyzing:    { label: t("chat.analysing"),        c: "var(--amber)", bg: "var(--amberPale)" },
+    reviewing:    { label: "Peer review…",             c: "var(--navy)",  bg: "var(--navyPale)"  },
+    done:         { label: t("chat.complete"),         c: "var(--navy)",  bg: "var(--navyPale)"  },
+  }[phase]) || { label: t("chat.taking_history"), c: "var(--sage)", bg: "var(--sagePale)" };
 
   return (
     <div style={{ height: "calc(100dvh - 56px)", marginTop: 56, background: "var(--paper)", display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
@@ -306,12 +630,13 @@ export default function ChatPage({ api, symptoms, onComplete, onBack, resumeSess
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <Badge className="rounded-[20px] px-3 py-[3px] text-[13px] italic" style={{ fontFamily: "var(--body)", color: phaseConf.c, background: phaseConf.bg, borderColor: `${phaseConf.c}40` }}>{phaseConf.label}</Badge>
-          <Button onClick={() => setPanel(v => !v)} variant="outline" size="xs">{panel ? t("chat.hide_reasoning") : t("chat.show_reasoning")}</Button>
+          <Button onClick={() => setPanel(v => !v)} variant="outline" size="xs">{panel ? t("chat.hide_agents") : t("chat.show_agents")}</Button>
         </div>
       </div>
+      <AgentPipelineStrip phase={phase === "interviewing" ? "interviewing" : phase === "analyzing" ? "analyzing" : phase === "done" ? "done" : "safety"} />
 
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-        <div style={{ flex: panel ? "0 0 54%" : 1, display: "flex", flexDirection: "column", borderRight: panel ? "1px solid rgba(22,15,6,0.09)" : "none" }}>
+        <div style={{ flex: panel ? "0 0 54%" : 1, minWidth: 0, overflow: "hidden", display: "flex", flexDirection: "column", borderRight: panel ? "1px solid rgba(22,15,6,0.09)" : "none" }}>
           <div style={{ padding: "9px 18px", borderBottom: "1px solid rgba(22,15,6,0.07)", background: "var(--sagePale)", flexShrink: 0, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             <Badge variant="sage" className="text-[9px]">{t("chat.active_case")}</Badge>
             <span style={{ fontFamily: "var(--body)", fontSize: 14, fontStyle: "italic", color: "var(--ink2)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{symptoms.description}</span>
@@ -511,6 +836,72 @@ export default function ChatPage({ api, symptoms, onComplete, onBack, resumeSess
                 </div>
               )}
 
+              {/* Quick reply chips */}
+              {(() => {
+                const lastAi = [...msgs].reverse().find(m => m.role === "ai");
+                const chips = !loading && !streamingMsg && lastAi ? detectQuickReplies(lastAi.text) : null;
+                if (!chips) return null;
+                return (
+                  <div style={{ marginBottom: 8 }}>
+                    <p style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)", letterSpacing: "0.1em", marginBottom: 5 }}>QUICK REPLY</p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                      {chips.map(c => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => {
+                            setInput(c);
+                            // auto-focus input so user can send immediately or edit
+                          }}
+                          style={{
+                            fontFamily: "var(--body)", fontSize: 12.5,
+                            color: "var(--ink2)", background: "var(--paper3)",
+                            border: "1px solid rgba(22,15,6,0.16)", borderRadius: 20,
+                            padding: "5px 13px", cursor: "pointer", transition: "all 0.12s",
+                            lineHeight: 1.3,
+                          }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.background = "var(--sagePale)";
+                            e.currentTarget.style.borderColor = "var(--sage)";
+                            e.currentTarget.style.color = "var(--sage)";
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.background = "var(--paper3)";
+                            e.currentTarget.style.borderColor = "rgba(22,15,6,0.16)";
+                            e.currentTarget.style.color = "var(--ink2)";
+                          }}
+                        >{c}</button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Force diagnose row */}
+              {msgs.filter(m => m.role === "user").length >= 2 && !loading && (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  {(() => {
+                    const covered = detectSocrates(msgs);
+                    const count = covered.size;
+                    return count >= 6
+                      ? <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--sage)", letterSpacing: "0.08em" }}>✓ Good coverage ({count}/8) · ready to diagnose</span>
+                      : <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", letterSpacing: "0.08em" }}>{count}/8 SOCRATES covered</span>;
+                  })()}
+                  <button
+                    type="button"
+                    onClick={forceDiagnose}
+                    style={{
+                      fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.08em",
+                      color: "var(--amber)", background: "var(--amberPale)",
+                      border: "1px solid var(--amber)40", borderRadius: 20,
+                      padding: "4px 14px", cursor: "pointer", transition: "all 0.15s",
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "var(--amber)"; e.currentTarget.style.color = "#fff"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "var(--amberPale)"; e.currentTarget.style.color = "var(--amber)"; }}
+                  >↗ Request diagnosis now</button>
+                </div>
+              )}
+
               <div style={{ display: "flex", gap: 10 }}>
                 <Button
                   onClick={() => fileInputRef.current?.click()}
@@ -545,23 +936,46 @@ export default function ChatPage({ api, symptoms, onComplete, onBack, resumeSess
         </div>
 
         {panel && (
-          <div style={{ flex: "0 0 46%", display: "flex", flexDirection: "column", background: "var(--paper2)", position: "relative", overflow: "hidden" }}>
-            <IllustLeaf w={70} h={105} style={{ position: "absolute", bottom: -10, right: -5, opacity: 0.1, pointerEvents: "none", animation: "float1 9s infinite" }} color="var(--sage)" />
-            <div style={{ padding: "11px 20px", borderBottom: "1px solid rgba(22,15,6,0.09)", flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <p style={{ fontFamily: "var(--serif)", fontSize: 15, fontStyle: "italic", color: "var(--ink2)" }}>{t("chat.reasoning_log")}</p>
-              <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)" }}>{t("chat.log_entries", { count: logs.length })}</span>
-            </div>
-            <div style={{ flex: 1, overflowY: "auto", padding: "14px 20px" }}>
-              {logs.length === 0 && <p style={{ fontFamily: "var(--body)", fontSize: 14, fontStyle: "italic", color: "var(--ink5)", paddingTop: 40, textAlign: "center" }}>{t("chat.log_empty")}</p>}
-              {logs.map((log, i) => (
-                <div key={log.id} className="slide-r" style={{ marginBottom: 18, paddingBottom: 14, borderBottom: i < logs.length - 1 ? "1px dashed rgba(22,15,6,0.09)" : "none" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                    <AgentBadge k={log.agent} sm />
-                    <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)" }}>{fmtT(log.time)}</span>
-                  </div>
-                  <p style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--ink3)", lineHeight: 1.8, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{log.text}</p>
+          <div style={{ flex: "0 0 46%", minWidth: 0, display: "flex", flexDirection: "column", background: "var(--paper2)", overflow: "hidden" }}>
+            <div style={{ padding: "11px 20px 10px", borderBottom: "1px solid rgba(22,15,6,0.09)", flexShrink: 0 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <p style={{ fontFamily: "var(--serif)", fontSize: 15, fontStyle: "italic", color: "var(--ink2)" }}>Agent Collaboration</p>
+                  {phase === "analyzing" && (
+                    <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--amber)", boxShadow: "0 0 6px var(--amber)", display: "inline-block", animation: "pulse 1.5s infinite" }} />
+                  )}
                 </div>
-              ))}
+                <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)", letterSpacing: "0.08em" }}>{logs.filter(l => !l._sep).length} messages</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "nowrap" }}>
+                {Object.entries(AC).map(([key, cfg], i, arr) => (
+                  <div key={key} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: 3, background: cfg.pale, borderRadius: 20, padding: "2px 7px 2px 4px", border: `1px solid ${cfg.c}28` }}>
+                      <span style={{ fontSize: 10 }}>{cfg.icon}</span>
+                      <span style={{ fontFamily: "var(--mono)", fontSize: 7, color: cfg.c, letterSpacing: "0.08em" }}>{cfg.short.toUpperCase()}</span>
+                    </div>
+                    {i < arr.length - 1 && (
+                      <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)", opacity: 0.5 }}>→</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "14px 16px", minWidth: 0 }}>
+              {logs.length === 0 && (
+                <div style={{ textAlign: "center", paddingTop: 48 }}>
+                  <p style={{ fontSize: 28, marginBottom: 10 }}>🤝</p>
+                  <p style={{ fontFamily: "var(--body)", fontSize: 14, fontStyle: "italic", color: "var(--ink5)" }}>Agents will appear here as they collaborate…</p>
+                </div>
+              )}
+              {logs.map(log =>
+                log._sep
+                  ? <AgentPhaseSep key={log.id} label={log._sep} />
+                  : <AgentConvBubble key={log.id} msg={{ from: log.agent, to: log.to, text: log.text }} />
+              )}
+              {phase === "analyzing" && logs.length > 0 && (
+                <AgentTypingBubble agent="diagnostician" />
+              )}
               <div ref={logEnd} />
             </div>
           </div>

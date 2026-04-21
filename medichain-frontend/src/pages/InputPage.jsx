@@ -93,6 +93,21 @@ function ChipGroup({ group, value, onChange }) {
   );
 }
 
+const DEMO_EXAMPLE = {
+  description: "I've had sharp chest pain for the past 2 days, especially when taking a deep breath or coughing. It started suddenly after a long-haul flight.",
+  bodyPart: "Chest",
+  duration: "1–3 days",
+  severity: 7,
+  notes: "No prior cardiac history. Not on any medication.",
+  socratesAnswers: {
+    character: ["Sharp"],
+    radiation: "Stays in one place",
+    timing: "Constant",
+    associated: ["Shortness of breath"],
+    factors: ["Worse with exercise"],
+  },
+};
+
 export default function InputPage({ api, onSubmit, onEval, selectedPatient, onClearPatient }) {
   const { t } = useTranslation();
   const [form, setForm] = useState({ description: "", bodyPart: "General", duration: "1–3 days", severity: 5, notes: selectedPatient?.conditions || "" });
@@ -109,16 +124,12 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
 
   const bodyParts = t("input.body_parts", { returnObjects: true });
   const durations = t("input.durations", { returnObjects: true });
-  const severityOptions = [
-    { value: 2, label: t("common.mild"), description: t("input.mild_desc") },
-    { value: 5, label: t("common.moderate"), description: t("input.moderate_desc") },
-    { value: 9, label: t("common.severe"), description: t("input.severe_desc") },
-  ];
   // Valid if: description typed, OR at least one fully-analysed file uploaded
   const hasReadyFile = preItems.some(it => !it.analysing && !it.error && it.analysis);
   const valid = form.description.trim().length > 15 || hasReadyFile;
   const s = SEV(form.severity);
-  const activeSeverity = severityOptions.find(o => o.value === form.severity) || severityOptions[1];
+  const sevLabel = form.severity >= 7 ? t("common.severe") : form.severity >= 4 ? t("common.moderate") : t("common.mild");
+  const sevDesc  = form.severity >= 7 ? t("input.severe_desc") : form.severity >= 4 ? t("input.moderate_desc") : t("input.mild_desc");
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--paper)", paddingTop: 72, paddingBottom: 56, position: "relative", zIndex: 1, overflow: "hidden" }}>
@@ -177,6 +188,22 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,var(--rosePale),var(--amberPale))", border: "1px solid var(--rose)30", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🩺</div>
                 <p style={{ fontFamily: "var(--serif)", fontSize: 20, fontWeight: 600, color: "var(--ink)" }}>{t("input.complaint_title")}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForm(f => ({ ...f, description: DEMO_EXAMPLE.description, bodyPart: DEMO_EXAMPLE.bodyPart, duration: DEMO_EXAMPLE.duration, severity: DEMO_EXAMPLE.severity, notes: DEMO_EXAMPLE.notes }));
+                    setSocratesAnswers(DEMO_EXAMPLE.socratesAnswers);
+                    setSocratesOpen(true);
+                  }}
+                  style={{
+                    marginLeft: "auto", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.08em",
+                    color: "var(--ink4)", background: "var(--paper3)",
+                    border: "1px solid rgba(22,15,6,0.14)", borderRadius: 20,
+                    padding: "4px 12px", cursor: "pointer", transition: "all 0.15s", flexShrink: 0,
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "var(--amberPale)"; e.currentTarget.style.borderColor = "var(--amber)"; e.currentTarget.style.color = "var(--amber)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "var(--paper3)"; e.currentTarget.style.borderColor = "rgba(22,15,6,0.14)"; e.currentTarget.style.color = "var(--ink4)"; }}
+                >✦ Try Example</button>
               </div>
 
               {/* Simple params row — above textarea */}
@@ -245,7 +272,12 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
                     ? `✓  ${preItems.filter(it => !it.analysing && !it.error && it.analysis).length} file(s) ready — text description optional`
                     : valid ? t("input.sufficient") : t("input.min_chars", { count: form.description.length })}
                 </span>
-                {valid && <Badge variant="sage" className="scale-in">{t("input.ready")}</Badge>}
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)" }}>
+                    {form.description.length} chars
+                  </span>
+                  {valid && <Badge variant="sage" className="scale-in">{t("input.ready")}</Badge>}
+                </div>
               </div>
             </div>
 
@@ -272,35 +304,21 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: s.bg, border: `1px solid ${s.c}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, transition: "background 0.3s" }}>⚡</div>
                 <p style={{ fontFamily: "var(--serif)", fontSize: 18, fontWeight: 600, color: "var(--ink)" }}>{t("input.severity_title")}</p>
               </div>
-              <div style={{ textAlign: "center", margin: "8px 0 16px", padding: "18px 12px", background: "var(--paper3)", borderRadius: 4, border: "1px solid rgba(22,15,6,0.07)" }}>
-                <span style={{ fontFamily: "var(--serif)", fontSize: 58, fontWeight: 400, color: s.c, lineHeight: 1, display: "block", transition: "color 0.3s", animation: form.severity === "severe" ? "pulse 1.5s ease-in-out infinite" : "none" }}>{activeSeverity.label}</span>
-                <p style={{ marginTop: 10, fontFamily: "var(--body)", fontSize: 14, lineHeight: 1.6, color: "var(--ink4)" }}>{activeSeverity.description}</p>
-                <div style={{ marginTop: 10 }}><SevBadge n={form.severity} /></div>
+              <div style={{ textAlign: "center", padding: "20px 12px", background: "var(--paper3)", borderRadius: 10, border: "1px solid rgba(22,15,6,0.07)", marginBottom: 14 }}>
+                <span style={{ fontFamily: "var(--serif)", fontSize: 64, fontWeight: 400, color: s.c, lineHeight: 1, display: "block", transition: "color 0.3s" }}>{form.severity}</span>
+                <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: s.c, letterSpacing: "0.16em", display: "block", marginTop: 6, transition: "color 0.3s" }}>
+                  {sevLabel.toUpperCase()} · /10
+                </span>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {severityOptions.map(opt => {
-                  const active = form.severity === opt.value;
-                  return (
-                    <button
-                      key={opt.label}
-                      type="button"
-                      onClick={() => setForm({ ...form, severity: opt.value })}
-                      style={{
-                        width: "100%", textAlign: "left", borderRadius: 8,
-                        border: active ? `1.5px solid ${s.c}` : "1px solid rgba(22,15,6,0.12)",
-                        padding: "10px 12px",
-                        background: active ? s.bg : "var(--paper2)",
-                        transition: "all 0.2s ease", cursor: "pointer",
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                        <span style={{ fontFamily: "var(--serif)", fontSize: 18, color: "var(--ink)" }}>{opt.label}</span>
-                        {active && <Badge variant="sage" className="text-[10px]">{t("common.selected")}</Badge>}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+              <input
+                type="range" min={1} max={10} value={form.severity}
+                onChange={e => setForm({ ...form, severity: +e.target.value })}
+                style={{ width: "100%", accentColor: s.c, cursor: "pointer", marginBottom: 14 }}
+              />
+              <p style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--ink4)", lineHeight: 1.6, textAlign: "center" }}>
+                {sevDesc}
+              </p>
+              <div style={{ marginTop: 10, textAlign: "center" }}><SevBadge n={form.severity} /></div>
             </div>
 
             <div className="card fade-up s3" style={{ padding: "0" }}>

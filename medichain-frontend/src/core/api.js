@@ -2,6 +2,44 @@
 // 本地开发时用环境变量 VITE_BACKEND_URL=http://localhost:8000
 export const BACKEND = import.meta.env.VITE_BACKEND_URL || "";
 
+/**
+ * Parse a POST SSE stream (text/event-stream over fetch).
+ * Calls onEvent(parsedJSON) for each `data:` line.
+ * Returns when the stream closes or a `done` event is received.
+ */
+async function _readSSE(response, onEvent) {
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  // SSE events are separated by a blank line.
+  // sse-starlette uses \r\n line endings so the separator is \r\n\r\n,
+  // NOT \n\n — must use a regex that matches both variants.
+  const EVENT_SEP = /\r?\n\r?\n/;
+  const LINE_SEP  = /\r?\n/;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const parts = buf.split(EVENT_SEP);
+      buf = parts.pop() ?? "";          // keep the incomplete trailing chunk
+      for (const part of parts) {
+        for (const line of part.split(LINE_SEP)) {
+          if (line.startsWith("data: ")) {
+            try {
+              const evt = JSON.parse(line.slice(6));
+              onEvent(evt);
+              if (evt.type === "done" || evt.type === "error") return;
+            } catch { /* malformed frame — skip */ }
+          }
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 export function makeApi(token) {
   const h = { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) };
   const hForm = { ...(token ? { Authorization: `Bearer ${token}` } : {}) };
@@ -55,6 +93,27 @@ export function makeApi(token) {
     start: s => post("/api/session/start", s),
     chat: b => post("/api/session/chat", b),
     diagnose: b => post("/api/session/diagnose", b),
+    // ── SSE streaming versions ──
+    chatStream: async (b, onEvent) => {
+      const r = await fetch(BACKEND + "/api/session/chat/stream", {
+        method: "POST", headers: h, body: JSON.stringify(b),
+      });
+      if (!r.ok) {
+        const e = await r.json().catch(() => ({ detail: r.status }));
+        throw new Error(e.detail || r.status);
+      }
+      await _readSSE(r, onEvent);
+    },
+    diagnoseStream: async (b, onEvent) => {
+      const r = await fetch(BACKEND + "/api/session/diagnose/stream", {
+        method: "POST", headers: h, body: JSON.stringify(b),
+      });
+      if (!r.ok) {
+        const e = await r.json().catch(() => ({ detail: r.status }));
+        throw new Error(e.detail || r.status);
+      }
+      await _readSSE(r, onEvent);
+    },
     sessions: (filters = {}) => get(withQuery("/api/sessions", filters)),
     providerSessions: (filters = {}) => get(withQuery("/api/provider/sessions", filters)),
     session: id => get(`/api/session/${id}`),
