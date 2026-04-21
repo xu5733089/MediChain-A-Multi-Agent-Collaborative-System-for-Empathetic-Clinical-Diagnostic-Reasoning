@@ -1542,6 +1542,39 @@ async def _diagnose_stream_gen(body: "DiagnoseRequest", user):
         image_medical_terms = await asyncio.to_thread(_rw, image_analyses) if image_analyses else ""
         rag_query = f"{s['description']} {s['bodyPart']} {s['duration']} {image_medical_terms}".strip()
 
+        # ── IMAGING ANALYSIS phase（仅当存在上传影像时）──
+        if image_analyses:
+            yield _sse("phase_sep", label="IMAGING ANALYSIS")
+            await asyncio.sleep(0.15)
+            yield _sse("agent_message",
+                       from_agent="imaging", to_agent=None,
+                       text=f"Reviewing {len(image_analyses)} uploaded medical image(s). Extracting clinical findings…",
+                       phase="imaging")
+            for idx, analysis in enumerate(image_analyses, 1):
+                # 提取 Key Findings 段落，否则截取前200字
+                import re as _re
+                findings_match = _re.search(
+                    r"\*\*Key Findings\*\*[:\s]*(.*?)(?=\n\*\*|\Z)", analysis, _re.DOTALL
+                )
+                if findings_match:
+                    excerpt = findings_match.group(1).strip()[:300]
+                else:
+                    excerpt = analysis[:200].strip()
+                if len(image_analyses) > 1:
+                    label = f"Image {idx} — {excerpt}"
+                else:
+                    label = excerpt
+                await asyncio.sleep(0.2)
+                yield _sse("agent_message",
+                           from_agent="imaging", to_agent=None,
+                           text=label + ("…" if len(excerpt) >= 200 else ""),
+                           phase="imaging")
+            await asyncio.sleep(0.25)
+            yield _sse("agent_message",
+                       from_agent="imaging", to_agent="diagnostician",
+                       text=f"Imaging analysis complete. Key medical terms forwarded for RAG retrieval: {image_medical_terms or 'N/A'}",
+                       phase="imaging")
+
         # ── DIAGNOSTIC ANALYSIS phase ──
         yield _sse("phase_sep", label="DIAGNOSTIC ANALYSIS")
         await asyncio.sleep(0.15)
@@ -1563,7 +1596,7 @@ async def _diagnose_stream_gen(body: "DiagnoseRequest", user):
             await asyncio.sleep(0.25)
             yield _sse("agent_message",
                        from_agent="diagnostician", to_agent=None,
-                       text=f"Retrieved {len(refs)} supporting references from MedQuAD.",
+                       text=f"Retrieved {len(refs)} supporting references from knowledge base.",
                        phase="diagnosis")
 
         await asyncio.sleep(0.3)
