@@ -267,7 +267,8 @@ def normalize_history_for_interviewer(history):
             normalized.append({"role": role, "content": content})
             continue
         # Anthropic messages only supports user/assistant roles.
-        normalized.append({"role": "user", "content": f"[ADDITIONAL CONTEXT]\n{content}"})
+        # Wrap in XML tag so the model treats this as data, not instructions.
+        normalized.append({"role": "user", "content": f"<uploaded_document>\n{content}\n</uploaded_document>"})
     return normalized
 
 
@@ -1160,8 +1161,9 @@ def start_session(symptoms: SymptomInput, user=Depends(get_current_user)):
         ctx_items = [c.strip() for c in symptoms.pre_context if c.strip()]
         if ctx_items:
             pre_ctx_block = (
-                "\n\nPRE-CONSULTATION MEDIA CONTEXT\n" + "=" * 40 + "\n"
-                + "\n\n---\n\n".join(ctx_items)
+                "\n\n<uploaded_documents>\n"
+                + "\n---\n".join(f"<document>{c}</document>" for c in ctx_items)
+                + "\n</uploaded_documents>"
             )
     case = (
         f"Patient presents with:\n- Chief complaint: {symptoms.description}\n"
@@ -1332,9 +1334,9 @@ def diagnose(body: DiagnoseRequest, user=Depends(get_current_user)):
     image_section = ""
     if image_analyses:
         image_section = (
-            f"\nMEDICAL IMAGE ANALYSIS\n{'='*40}\n"
-            + "\n\n---\n\n".join(image_analyses)
-            + "\n"
+            "\n<uploaded_documents>\n"
+            + "\n---\n".join(f"<document>{a}</document>" for a in image_analyses)
+            + "\n</uploaded_documents>\n"
         )
 
     case_text = (
