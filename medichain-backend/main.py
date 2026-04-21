@@ -671,7 +671,7 @@ def provider_sessions_list(
     with get_db() as c:
         rows = c.execute(
             f"""SELECT s.id, s.status, s.created_at, s.patient_id, s.symptoms, s.severity_level,
-                      u.username AS patient_username
+                      s.provider_verdict, u.username AS patient_username
                FROM sessions s
                LEFT JOIN users u ON s.user_id = u.id
                {where_sql}
@@ -694,6 +694,7 @@ def provider_sessions_list(
             "patient_username": d.get("patient_username"),
             "description": description[:120],
             "severity_level": d.get("severity_level") or symptoms.get("severity_level") or severity_to_level(symptoms.get("severity")),
+            "provider_verdict": d.get("provider_verdict"),
         })
     return out[offset: offset + limit]
 
@@ -1705,6 +1706,30 @@ def delete_session(session_id: str, user=Depends(get_current_user)):
         c.execute("PRAGMA foreign_keys = ON")
         c.execute("DELETE FROM sessions WHERE id=?", (session_id,))
         c.commit()
+
+
+class VerdictInput(BaseModel):
+    verdict: str  # 'approved' | 'flagged'
+    note: str = ""
+
+
+@app.patch("/api/sessions/{session_id}/verdict", status_code=200)
+def set_session_verdict(session_id: str, body: VerdictInput, user=Depends(require_user)):
+    """Provider submits approve/flag verdict with optional revision note."""
+    if body.verdict not in ("approved", "flagged"):
+        raise HTTPException(status_code=400, detail="verdict must be 'approved' or 'flagged'")
+    if not _is_provider(user):
+        raise HTTPException(status_code=403, detail="Provider role required")
+    sess = session_get(session_id)
+    if not sess:
+        raise HTTPException(status_code=404, detail="Session not found")
+    with get_db() as c:
+        c.execute(
+            "UPDATE sessions SET provider_verdict=?, provider_note=?, updated_at=? WHERE id=?",
+            (body.verdict, body.note.strip(), _now(), session_id),
+        )
+        c.commit()
+    return {"session_id": session_id, "verdict": body.verdict, "note": body.note.strip()}
 
 
 @app.get("/api/sessions")

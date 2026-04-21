@@ -71,6 +71,10 @@ export default function ProviderDashboard({ api }) {
   const [keyword, setKeyword] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [verdict, setVerdict] = useState(null);
+  const [verdictNote, setVerdictNote] = useState("");
+  const [submittingVerdict, setSubmittingVerdict] = useState(false);
+  const [verdictSaved, setVerdictSaved] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -91,12 +95,14 @@ export default function ProviderDashboard({ api }) {
   useEffect(() => { load(); }, [load]);
 
   async function openSession(id) {
-    if (selected === id) { setSelected(null); setDetail(null); setMessages([]); return; }
+    if (selected === id) { setSelected(null); setDetail(null); setMessages([]); setVerdict(null); setVerdictNote(""); setVerdictSaved(false); return; }
     setSelected(id);
+    setVerdict(null); setVerdictNote(""); setVerdictSaved(false);
     try {
       const [sess, msgs] = await Promise.all([api.session(id), api.sessionMessages(id).catch(() => [])]);
       setDetail(sess);
       setMessages(Array.isArray(msgs) ? msgs : []);
+      if (sess?.provider_verdict) { setVerdict(sess.provider_verdict); setVerdictNote(sess.provider_note || ""); }
     } catch { setDetail(null); setMessages([]); }
   }
 
@@ -309,7 +315,11 @@ export default function ProviderDashboard({ api }) {
                     <div style={{ width: 6, height: 6, borderRadius: "50%", background: r.status === "done" ? "var(--sage)" : "var(--amber)", flexShrink: 0 }} />
                     <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: r.status === "done" ? "var(--sage)" : "var(--amber)", letterSpacing: "0.08em" }}>{(r.status || "active").toUpperCase()}</span>
                   </div>
-                  <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--ink5)" }}>{fmtD(r.created_at)}</div>
+                  <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--ink5)", display: "flex", alignItems: "center", gap: 6 }}>
+                    {fmtD(r.created_at)}
+                    {r.provider_verdict === "approved" && <span style={{ color: "var(--sage)", fontSize: 10 }}>✅</span>}
+                    {r.provider_verdict === "flagged"  && <span style={{ color: "var(--amber)", fontSize: 10 }}>🚩</span>}
+                  </div>
                 </button>
 
                 {selected === r.id && (
@@ -345,6 +355,57 @@ export default function ProviderDashboard({ api }) {
                         </div>
                       ))}
                       {!messages.length && <p style={{ margin: 0, fontFamily: "var(--body)", fontSize: 13, color: "var(--ink4)" }}>{t("provider.no_messages")}</p>}
+                    </div>
+
+                    {/* ── Provider Verdict Panel ── */}
+                    <div style={{ marginTop: 16, borderTop: "1px solid rgba(22,15,6,0.10)", paddingTop: 14 }}>
+                      <p style={{ margin: "0 0 10px", fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", letterSpacing: "0.1em" }}>PROVIDER REVIEW</p>
+                      <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                        <button
+                          onClick={() => { setVerdict("approved"); setVerdictSaved(false); }}
+                          style={{
+                            padding: "6px 16px", borderRadius: 6, fontFamily: "var(--body)", fontSize: 13, cursor: "pointer",
+                            border: verdict === "approved" ? "1.5px solid var(--sage)" : "1px solid rgba(22,15,6,0.16)",
+                            background: verdict === "approved" ? "var(--sagePale)" : "var(--paper)",
+                            color: verdict === "approved" ? "var(--sage)" : "var(--ink3)",
+                            fontWeight: verdict === "approved" ? 600 : 400,
+                          }}
+                        >✅ Approve</button>
+                        <button
+                          onClick={() => { setVerdict("flagged"); setVerdictSaved(false); }}
+                          style={{
+                            padding: "6px 16px", borderRadius: 6, fontFamily: "var(--body)", fontSize: 13, cursor: "pointer",
+                            border: verdict === "flagged" ? "1.5px solid var(--amber)" : "1px solid rgba(22,15,6,0.16)",
+                            background: verdict === "flagged" ? "var(--amberPale)" : "var(--paper)",
+                            color: verdict === "flagged" ? "var(--amber)" : "var(--ink3)",
+                            fontWeight: verdict === "flagged" ? 600 : 400,
+                          }}
+                        >🚩 Flag for Review</button>
+                      </div>
+                      <textarea
+                        value={verdictNote}
+                        onChange={e => { setVerdictNote(e.target.value); setVerdictSaved(false); }}
+                        placeholder="Optional: leave revision suggestions or clinical notes…"
+                        rows={3}
+                        style={{ width: "100%", resize: "vertical", border: "1px solid rgba(22,15,6,0.14)", borderRadius: 6, padding: "8px 10px", fontFamily: "var(--body)", fontSize: 13, color: "var(--ink2)", background: "var(--paper)", boxSizing: "border-box" }}
+                      />
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
+                        <Button
+                          size="sm"
+                          disabled={!verdict || submittingVerdict}
+                          onClick={async () => {
+                            setSubmittingVerdict(true);
+                            try {
+                              await api.sessionVerdict(selected, verdict, verdictNote);
+                              setVerdictSaved(true);
+                            } catch { /* silent */ }
+                            setSubmittingVerdict(false);
+                          }}
+                        >
+                          {submittingVerdict ? "Saving…" : "Submit Review"}
+                        </Button>
+                        {verdictSaved && <span style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--sage)" }}>✓ Saved</span>}
+                      </div>
                     </div>
                   </div>
                 )}

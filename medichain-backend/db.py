@@ -186,5 +186,9 @@ def init_db():
             c.execute("ALTER TABLE sessions ADD COLUMN cot TEXT")
         if not _column_exists(c, "sessions", "consent_to_provider_review"):
             c.execute("ALTER TABLE sessions ADD COLUMN consent_to_provider_review INTEGER NOT NULL DEFAULT 0")
+        if not _column_exists(c, "sessions", "provider_verdict"):
+            c.execute("ALTER TABLE sessions ADD COLUMN provider_verdict TEXT")
+        if not _column_exists(c, "sessions", "provider_note"):
+            c.execute("ALTER TABLE sessions ADD COLUMN provider_note TEXT")
 
         c.commit()

@@ -74,6 +74,14 @@ export function makeApi(token) {
     if (!r.ok) throw new Error(`${r.status}`);
     return r.json();
   };
+  const patch = async (p, b) => {
+    const r = await fetch(BACKEND + p, { method: "PATCH", headers: h, body: JSON.stringify(b) });
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({ detail: r.status }));
+      throw new Error(e.detail || r.status);
+    }
+    return r.json();
+  };
   const withQuery = (path, params = {}) => {
     const entries = Object.entries(params || {}).filter(([, v]) => v !== undefined && v !== null && v !== "");
     if (!entries.length) return path;
@@ -144,6 +152,7 @@ export function makeApi(token) {
     evalRun: b => post("/api/eval/run", b),
     evalHist: () => get("/api/eval/history"),
     exportUrl: (id, t) => `${BACKEND}/api/session/${id}/export/${t}`,
+    sessionVerdict: (id, verdict, note) => patch(`/api/sessions/${id}/verdict`, { verdict, note }),
     ragStatus: () => get("/api/rag/status"),
     ragIngest: (b = {}) => post("/api/rag/ingest", b),
   };
