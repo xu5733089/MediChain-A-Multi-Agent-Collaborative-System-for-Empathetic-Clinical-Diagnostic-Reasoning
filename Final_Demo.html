@@ -236,7 +236,7 @@ body:hover .edit-hint{opacity:.6}
 <div class="slide" id="s2">
   <div class="slide-inner">
     <div class="slide-header reveal">
-      <div class="eyebrow">Motivation</div><div class="slide-num">02 / 09</div>
+      <div class="eyebrow">Motivation</div><div class="slide-num">02 / 10</div>
     </div>
     <div class="section-title reveal">Problem <em>Background</em></div>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(14px,2vw,28px);align-items:stretch">
@@ -301,7 +301,7 @@ body:hover .edit-hint{opacity:.6}
 <div class="slide" id="s3">
   <div class="slide-inner">
     <div class="slide-header reveal">
-      <div class="eyebrow">System Design</div><div class="slide-num">03 / 09</div>
+      <div class="eyebrow">System Design</div><div class="slide-num">03 / 10</div>
     </div>
     <div class="section-title reveal">System <em>Architecture</em></div>
     <p class="section-sub reveal">Four-layer stack — each layer independently testable, SSE streaming added end-to-end</p>
@@ -356,7 +356,7 @@ body:hover .edit-hint{opacity:.6}
 <div class="slide" id="s4">
   <div class="slide-inner">
     <div class="slide-header reveal">
-      <div class="eyebrow">Agent Design</div><div class="slide-num">04 / 09</div>
+      <div class="eyebrow">Agent Design</div><div class="slide-num">04 / 10</div>
     </div>
     <div class="section-title reveal">5-Agent <em>Pipeline</em></div>
     <p class="section-sub reveal">Each agent has a distinct clinical role — Safety Guard intercepts before any LLM call</p>
@@ -395,7 +395,7 @@ body:hover .edit-hint{opacity:.6}
 <div class="slide" id="s5">
   <div class="slide-inner">
     <div class="slide-header reveal">
-      <div class="eyebrow">Real-time Multi-Agent</div><div class="slide-num">05 / 09</div>
+      <div class="eyebrow">Real-time Multi-Agent</div><div class="slide-num">05 / 10</div>
     </div>
     <div class="section-title reveal">Agent <em>Collaboration</em> <span class="new-tag" style="font-size:12px">NEW</span></div>
     <p class="section-sub reveal">SSE streaming delivers agent-to-agent messages to the browser in real time — no polling, no page reload</p>
@@ -473,7 +473,7 @@ body:hover .edit-hint{opacity:.6}
 <div class="slide" id="s6">
   <div class="slide-inner">
     <div class="slide-header reveal">
-      <div class="eyebrow">Multimodal Input</div><div class="slide-num">06 / 09</div>
+      <div class="eyebrow">Multimodal Input</div><div class="slide-num">06 / 10</div>
     </div>
     <div class="section-title reveal">6 Input <em>Modalities</em></div>
     <p class="section-sub reveal">Patients communicate naturally — text, images, medical scans, documents, audio, and video all understood</p>
@@ -559,7 +559,7 @@ body:hover .edit-hint{opacity:.6}
 <div class="slide" id="s7">
   <div class="slide-inner">
     <div class="slide-header reveal">
-      <div class="eyebrow">Knowledge Retrieval</div><div class="slide-num">07 / 09</div>
+      <div class="eyebrow">Knowledge Retrieval</div><div class="slide-num">07 / 10</div>
     </div>
     <div class="section-title reveal">RAG <em>Architecture</em></div>
     <p class="section-sub reveal">Every diagnosis grounded in 47,441 MedQuAD documents — no hallucinated citations, no stale knowledge</p>
@@ -635,11 +635,94 @@ body:hover .edit-hint{opacity:.6}
   <div class="bottom-bar"></div>
 </div>
 
-<!-- ===================== SLIDE 8 — FULL FEATURE SET ========= -->
+<!-- ===================== SLIDE 8 — RAG PIPELINE DIAGRAM ===== -->
 <div class="slide" id="s8">
   <div class="slide-inner">
     <div class="slide-header reveal">
-      <div class="eyebrow">Full Feature Set</div><div class="slide-num">08 / 09</div>
+      <div class="eyebrow">RAG Pipeline</div><div class="slide-num">08 / 10</div>
+    </div>
+    <div class="section-title reveal">Full <em>Pipeline</em></div>
+    <p class="section-sub reveal">From patient input to grounded diagnosis — every step auditable</p>
+    <div class="reveal" style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden">
+      <svg viewBox="0 0 680 700" style="max-height:calc(100vh - 200px);width:100%;max-width:720px" role="img" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrow2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+        <rect width="680" height="700" fill="rgba(13,31,53,0.7)" rx="10"/>
+        <!-- Patient Input -->
+        <rect x="240" y="16" width="200" height="40" rx="6" fill="rgba(0,229,192,0.12)" stroke="rgba(0,229,192,0.5)" stroke-width="1"/>
+        <text x="340" y="36" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="13" font-weight="600" fill="#00E5C0">Patient Input</text>
+        <!-- Stem + fork -->
+        <line x1="340" y1="56" x2="340" y2="70" stroke="rgba(0,229,192,0.4)" stroke-width="1.5"/>
+        <line x1="170" y1="70" x2="510" y2="70" stroke="rgba(0,229,192,0.3)" stroke-width="1"/>
+        <line x1="170" y1="70" x2="170" y2="80" stroke="rgba(0,229,192,0.5)" stroke-width="1" marker-end="url(#arrow2)"/>
+        <line x1="510" y1="70" x2="510" y2="80" stroke="rgba(100,160,255,0.6)" stroke-width="1" marker-end="url(#arrow2)"/>
+        <text x="516" y="65" font-family="JetBrains Mono,monospace" font-size="9" fill="rgba(0,229,192,0.5)" font-style="italic">(optional)</text>
+        <!-- Clinical Description -->
+        <rect x="40" y="80" width="260" height="52" rx="6" fill="rgba(0,229,192,0.07)" stroke="rgba(0,229,192,0.3)" stroke-width="1"/>
+        <text x="170" y="99" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="12" font-weight="600" fill="#E8F4F8">Clinical Description</text>
+        <text x="170" y="118" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="10" fill="rgba(168,200,216,0.8)">Chief complaint · history · SOCRATES</text>
+        <!-- Medical Image Upload -->
+        <rect x="380" y="80" width="260" height="52" rx="6" fill="rgba(100,160,255,0.1)" stroke="rgba(100,160,255,0.4)" stroke-width="1"/>
+        <text x="510" y="99" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="12" font-weight="600" fill="#a0c8ff">Medical Image Upload</text>
+        <text x="510" y="118" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="10" fill="rgba(160,200,255,0.7)">X-ray · CT · MRI · DICOM</text>
+        <!-- Arrow: Image → Multimodal -->
+        <line x1="510" y1="132" x2="510" y2="152" stroke="rgba(100,160,255,0.5)" stroke-width="1" marker-end="url(#arrow2)"/>
+        <!-- Multimodal Bridge -->
+        <rect x="380" y="152" width="260" height="52" rx="6" fill="rgba(180,100,255,0.1)" stroke="rgba(180,100,255,0.4)" stroke-width="1"/>
+        <text x="510" y="171" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="12" font-weight="600" fill="#c8a0ff">Multimodal Bridge · Claude Vision</text>
+        <text x="510" y="190" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="10" fill="rgba(200,160,255,0.7)">Raw findings → medical terminology</text>
+        <!-- Merge lines -->
+        <path d="M170 132 L170 226 L338 226" fill="none" stroke="rgba(0,229,192,0.35)" stroke-width="1"/>
+        <path d="M510 204 L510 226 L342 226" fill="none" stroke="rgba(180,100,255,0.4)" stroke-width="1"/>
+        <line x1="340" y1="226" x2="340" y2="236" stroke="rgba(0,229,192,0.6)" stroke-width="1.5" marker-end="url(#arrow2)"/>
+        <!-- Query Rewriting -->
+        <rect x="130" y="236" width="420" height="52" rx="6" fill="rgba(100,160,255,0.1)" stroke="rgba(100,160,255,0.4)" stroke-width="1"/>
+        <text x="340" y="255" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="12" font-weight="600" fill="#a0c8ff">Query Rewriting · Claude Haiku</text>
+        <text x="340" y="274" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="10" fill="rgba(160,200,255,0.7)">Colloquial input → 3–4 parallel clinical queries</text>
+        <!-- Arrow -->
+        <line x1="340" y1="288" x2="340" y2="308" stroke="rgba(100,160,255,0.6)" stroke-width="1.5" marker-end="url(#arrow2)"/>
+        <!-- Hybrid Retrieval -->
+        <rect x="50" y="308" width="580" height="52" rx="6" fill="rgba(0,229,192,0.1)" stroke="rgba(0,229,192,0.45)" stroke-width="1"/>
+        <text x="340" y="327" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="12" font-weight="600" fill="#00E5C0">Hybrid Retrieval · Qdrant RRF Fusion</text>
+        <text x="340" y="346" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="10" fill="rgba(0,229,192,0.7)">BioLORD-2023 768-dim cosine  +  BM25 sparse  ·  47K+ docs</text>
+        <!-- Arrow -->
+        <line x1="340" y1="360" x2="340" y2="380" stroke="rgba(0,229,192,0.6)" stroke-width="1.5" marker-end="url(#arrow2)"/>
+        <!-- MedCPT Reranker -->
+        <rect x="90" y="380" width="500" height="52" rx="6" fill="rgba(80,200,120,0.1)" stroke="rgba(80,200,120,0.45)" stroke-width="1"/>
+        <text x="340" y="399" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="12" font-weight="600" fill="#60c878">MedCPT Reranker · ncbi/MedCPT-Cross-Encoder</text>
+        <text x="340" y="418" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="10" fill="rgba(100,200,130,0.7)">Top-20 candidates → top-6 ranked by clinical relevance</text>
+        <!-- Arrow -->
+        <line x1="340" y1="432" x2="340" y2="452" stroke="rgba(80,200,120,0.6)" stroke-width="1.5" marker-end="url(#arrow2)"/>
+        <!-- Diagnostician -->
+        <rect x="50" y="452" width="580" height="52" rx="6" fill="rgba(180,100,255,0.12)" stroke="rgba(180,100,255,0.45)" stroke-width="1"/>
+        <text x="340" y="471" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="12" font-weight="600" fill="#c8a0ff">Diagnostician Agent · Claude Sonnet</text>
+        <text x="340" y="490" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="10" fill="rgba(200,160,255,0.7)">RAG context + patient case → differential diagnosis</text>
+        <!-- Arrow -->
+        <line x1="340" y1="504" x2="340" y2="524" stroke="rgba(180,100,255,0.6)" stroke-width="1.5" marker-end="url(#arrow2)"/>
+        <!-- Critic -->
+        <rect x="130" y="524" width="420" height="52" rx="6" fill="rgba(100,160,255,0.1)" stroke="rgba(100,160,255,0.4)" stroke-width="1"/>
+        <text x="340" y="543" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="12" font-weight="600" fill="#a0c8ff">Critic Agent · Claude Sonnet</text>
+        <text x="340" y="562" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="10" fill="rgba(160,200,255,0.7)">Clinical soundness review · evidence quality check</text>
+        <!-- Arrow -->
+        <line x1="340" y1="576" x2="340" y2="596" stroke="rgba(100,160,255,0.6)" stroke-width="1.5" marker-end="url(#arrow2)"/>
+        <!-- Final -->
+        <rect x="130" y="596" width="420" height="52" rx="6" fill="rgba(0,229,192,0.12)" stroke="rgba(0,229,192,0.55)" stroke-width="1.5"/>
+        <text x="340" y="615" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="12" font-weight="600" fill="#00E5C0">Final Diagnosis + Citations</text>
+        <text x="340" y="634" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="10" fill="rgba(0,229,192,0.7)">Differential · PubMed citations · Recommended investigations</text>
+      </svg>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 9 — FULL FEATURE SET ========= -->
+<div class="slide" id="s8">
+  <div class="slide-inner">
+    <div class="slide-header reveal">
+      <div class="eyebrow">Full Feature Set</div><div class="slide-num">09 / 10</div>
     </div>
     <div class="section-title reveal">Everything <em>Else</em></div>
     <p class="section-sub reveal">Auth, patient management, export, eval, multilingual — all production-ready in Docker</p>
