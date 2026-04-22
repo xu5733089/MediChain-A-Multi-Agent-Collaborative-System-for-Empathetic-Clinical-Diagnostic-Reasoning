@@ -267,7 +267,7 @@ body:hover .edit-hint{opacity:.6}
 <div class="slide" id="s2">
   <div class="slide-inner">
     <div class="slide-header reveal">
-      <div class="eyebrow">Motivation</div><div class="slide-num">02 / 23</div>
+      <div class="eyebrow">Motivation</div><div class="slide-num">02 / 24</div>
     </div>
     <div class="section-title reveal">Problem <em>Background</em></div>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(14px,2vw,28px);align-items:stretch">
@@ -334,7 +334,7 @@ body:hover .edit-hint{opacity:.6}
 <!-- ===================== SLIDE 3 — LIMITATIONS ============== -->
 <div class="slide" id="s3">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Research Gap</div><div class="slide-num">03 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Research Gap</div><div class="slide-num">03 / 24</div></div>
     <div class="section-title reveal">Existing <em>Limitations</em></div>
     <p class="section-sub reveal">Current AI diagnostic tools fail on at least one of five critical clinical dimensions</p>
     <div class="reveal" style="flex:1;overflow:hidden">
@@ -364,10 +364,75 @@ body:hover .edit-hint{opacity:.6}
   <div class="bottom-bar"></div>
 </div>
 
-<!-- ===================== SLIDE 4 — SOLUTION ================= -->
+<!-- ===================== SLIDE 4 — RAG PIPELINE DIAGRAM ===== -->
+<div class="slide" id="s4new">
+  <div class="slide-inner">
+    <div class="slide-header reveal">
+      <div class="eyebrow">System Architecture</div><div class="slide-num">04 / 24</div>
+    </div>
+    <div class="section-title reveal">RAG <em>Pipeline</em></div>
+    <p class="section-sub reveal">From patient input to grounded diagnosis — every step auditable</p>
+    <div class="reveal" style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden">
+      <svg viewBox="0 0 680 700" style="max-height:calc(100vh - 200px);width:100%;max-width:700px" role="img" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrowB" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+        <rect width="680" height="700" fill="rgba(13,31,53,0.7)" rx="10"/>
+        <rect x="240" y="16" width="200" height="40" rx="6" fill="rgba(0,229,192,0.12)" stroke="rgba(0,229,192,0.5)" stroke-width="1"/>
+        <text x="340" y="36" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="13" font-weight="600" fill="#00E5C0">Patient Input</text>
+        <line x1="340" y1="56" x2="340" y2="70" stroke="rgba(0,229,192,0.4)" stroke-width="1.5"/>
+        <line x1="170" y1="70" x2="510" y2="70" stroke="rgba(0,229,192,0.3)" stroke-width="1"/>
+        <line x1="170" y1="70" x2="170" y2="80" stroke="rgba(0,229,192,0.5)" stroke-width="1" marker-end="url(#arrowB)"/>
+        <line x1="510" y1="70" x2="510" y2="80" stroke="rgba(100,160,255,0.6)" stroke-width="1" marker-end="url(#arrowB)"/>
+        <text x="516" y="65" font-family="JetBrains Mono,monospace" font-size="9" fill="rgba(0,229,192,0.5)" font-style="italic">(optional)</text>
+        <rect x="40" y="80" width="260" height="52" rx="6" fill="rgba(0,229,192,0.07)" stroke="rgba(0,229,192,0.3)" stroke-width="1"/>
+        <text x="170" y="99" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="12" font-weight="600" fill="#E8F4F8">Clinical Description</text>
+        <text x="170" y="118" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="10" fill="rgba(168,200,216,0.8)">Chief complaint · history · SOCRATES</text>
+        <rect x="380" y="80" width="260" height="52" rx="6" fill="rgba(100,160,255,0.1)" stroke="rgba(100,160,255,0.4)" stroke-width="1"/>
+        <text x="510" y="99" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="12" font-weight="600" fill="#a0c8ff">Medical Image Upload</text>
+        <text x="510" y="118" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="10" fill="rgba(160,200,255,0.7)">X-ray · CT · MRI · DICOM</text>
+        <line x1="510" y1="132" x2="510" y2="152" stroke="rgba(100,160,255,0.5)" stroke-width="1" marker-end="url(#arrowB)"/>
+        <rect x="380" y="152" width="260" height="52" rx="6" fill="rgba(180,100,255,0.1)" stroke="rgba(180,100,255,0.4)" stroke-width="1"/>
+        <text x="510" y="171" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="12" font-weight="600" fill="#c8a0ff">Multimodal Bridge · Claude Vision</text>
+        <text x="510" y="190" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="10" fill="rgba(200,160,255,0.7)">Raw findings → medical terminology</text>
+        <path d="M170 132 L170 226 L338 226" fill="none" stroke="rgba(0,229,192,0.35)" stroke-width="1"/>
+        <path d="M510 204 L510 226 L342 226" fill="none" stroke="rgba(180,100,255,0.4)" stroke-width="1"/>
+        <line x1="340" y1="226" x2="340" y2="236" stroke="rgba(0,229,192,0.6)" stroke-width="1.5" marker-end="url(#arrowB)"/>
+        <rect x="130" y="236" width="420" height="52" rx="6" fill="rgba(100,160,255,0.1)" stroke="rgba(100,160,255,0.4)" stroke-width="1"/>
+        <text x="340" y="255" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="12" font-weight="600" fill="#a0c8ff">Query Rewriting · Claude Haiku</text>
+        <text x="340" y="274" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="10" fill="rgba(160,200,255,0.7)">Colloquial input → 3–4 parallel clinical queries</text>
+        <line x1="340" y1="288" x2="340" y2="308" stroke="rgba(100,160,255,0.6)" stroke-width="1.5" marker-end="url(#arrowB)"/>
+        <rect x="50" y="308" width="580" height="52" rx="6" fill="rgba(0,229,192,0.1)" stroke="rgba(0,229,192,0.45)" stroke-width="1"/>
+        <text x="340" y="327" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="12" font-weight="600" fill="#00E5C0">Hybrid Retrieval · Qdrant RRF Fusion</text>
+        <text x="340" y="346" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="10" fill="rgba(0,229,192,0.7)">BioLORD-2023 768-dim cosine  +  BM25 sparse  ·  47K+ docs</text>
+        <line x1="340" y1="360" x2="340" y2="380" stroke="rgba(0,229,192,0.6)" stroke-width="1.5" marker-end="url(#arrowB)"/>
+        <rect x="90" y="380" width="500" height="52" rx="6" fill="rgba(80,200,120,0.1)" stroke="rgba(80,200,120,0.45)" stroke-width="1"/>
+        <text x="340" y="399" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="12" font-weight="600" fill="#60c878">MedCPT Reranker · ncbi/MedCPT-Cross-Encoder</text>
+        <text x="340" y="418" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="10" fill="rgba(100,200,130,0.7)">Top-20 candidates → top-6 ranked by clinical relevance</text>
+        <line x1="340" y1="432" x2="340" y2="452" stroke="rgba(80,200,120,0.6)" stroke-width="1.5" marker-end="url(#arrowB)"/>
+        <rect x="50" y="452" width="580" height="52" rx="6" fill="rgba(180,100,255,0.12)" stroke="rgba(180,100,255,0.45)" stroke-width="1"/>
+        <text x="340" y="471" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="12" font-weight="600" fill="#c8a0ff">Diagnostician Agent · Claude Sonnet</text>
+        <text x="340" y="490" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="10" fill="rgba(200,160,255,0.7)">RAG context + patient case → differential diagnosis</text>
+        <line x1="340" y1="504" x2="340" y2="524" stroke="rgba(180,100,255,0.6)" stroke-width="1.5" marker-end="url(#arrowB)"/>
+        <rect x="130" y="524" width="420" height="52" rx="6" fill="rgba(100,160,255,0.1)" stroke="rgba(100,160,255,0.4)" stroke-width="1"/>
+        <text x="340" y="543" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="12" font-weight="600" fill="#a0c8ff">Critic Agent · Claude Sonnet</text>
+        <text x="340" y="562" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="10" fill="rgba(160,200,255,0.7)">Clinical soundness review · evidence quality check</text>
+        <line x1="340" y1="576" x2="340" y2="596" stroke="rgba(100,160,255,0.6)" stroke-width="1.5" marker-end="url(#arrowB)"/>
+        <rect x="130" y="596" width="420" height="52" rx="6" fill="rgba(0,229,192,0.12)" stroke="rgba(0,229,192,0.55)" stroke-width="1.5"/>
+        <text x="340" y="615" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="12" font-weight="600" fill="#00E5C0">Final Diagnosis + Citations</text>
+        <text x="340" y="634" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono,monospace" font-size="10" fill="rgba(0,229,192,0.7)">Differential · PubMed citations · Recommended investigations</text>
+      </svg>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 5 — SOLUTION ================= -->
 <div class="slide" id="s4">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Our Approach</div><div class="slide-num">04 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Our Approach</div><div class="slide-num">05 / 24</div></div>
     <div class="section-title reveal">MediChain <em>Design</em></div>
     <p class="section-sub reveal">Four integrated design pillars address each identified limitation simultaneously</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:clamp(8px,1.2vw,16px)">
@@ -411,7 +476,7 @@ body:hover .edit-hint{opacity:.6}
 <!-- ===================== SLIDE 5 — USER JOURNEY ============= -->
 <div class="slide" id="s5">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Demo Flow</div><div class="slide-num">05 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Demo Flow</div><div class="slide-num">06 / 24</div></div>
     <div class="section-title reveal">User <em>Journey</em></div>
     <p class="section-sub reveal">End-to-end clinical consultation in 5 steps — from login to PubMed-cited diagnosis</p>
     <div style="flex:1;display:flex;flex-direction:column;gap:clamp(14px,2.2vh,24px);justify-content:center">
@@ -460,7 +525,7 @@ body:hover .edit-hint{opacity:.6}
 <!-- ===================== SLIDE 6 — ARCHITECTURE ============= -->
 <div class="slide" id="s6">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">System Design</div><div class="slide-num">06 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">System Design</div><div class="slide-num">07 / 24</div></div>
     <div class="section-title reveal">System <em>Architecture</em></div>
     <p class="section-sub reveal">Five-layer architecture — each layer independently testable and horizontally scalable</p>
     <div style="flex:1;display:flex;flex-direction:column;gap:clamp(5px,.9vh,10px);justify-content:center">
@@ -507,7 +572,7 @@ body:hover .edit-hint{opacity:.6}
 <!-- ===================== SLIDE 6 — THREE-AGENT ============== -->
 <div class="slide" id="s7">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Core Innovation</div><div class="slide-num">07 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Core Innovation</div><div class="slide-num">08 / 24</div></div>
     <div class="section-title reveal">Three-Agent <em>Design</em></div>
     <p class="section-sub reveal">Specialised agents operate in sequence, each with a distinct clinical role — mirroring real multi-disciplinary team consultation</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:clamp(10px,1.5vw,20px);align-items:stretch">
@@ -566,7 +631,7 @@ body:hover .edit-hint{opacity:.6}
 <!-- ===================== SLIDE 7 — DELIVERY ================= -->
 <div class="slide" id="s8">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Project Delivery</div><div class="slide-num">08 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Project Delivery</div><div class="slide-num">09 / 24</div></div>
     <div class="section-title reveal">Delivery <em>Summary</em></div>
     <p class="section-sub reveal">14 user stories · 48 story points · 2 sprints · all targets met on schedule</p>
     <div style="flex:1;display:flex;flex-direction:column;gap:clamp(5px,.8vh,9px)">
@@ -599,7 +664,7 @@ body:hover .edit-hint{opacity:.6}
 <!-- ===================== SLIDE 8 — RAG 2.0 OVERVIEW ======== -->
 <div class="slide" id="s9">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-7</div><div class="slide-num">09 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-7</div><div class="slide-num">10 / 24</div></div>
     <div class="section-title reveal">RAG <em>2.0</em></div>
     <p class="section-sub reveal">ChromaDB → Qdrant embedded · BioLORD-2023 768d + BM25 sparse + RRF · 9.4× knowledge growth</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,28px);align-items:stretch">
@@ -678,7 +743,7 @@ body:hover .edit-hint{opacity:.6}
 <!-- ===================== SLIDE 9 — RAG PIPELINE ============= -->
 <div class="slide" id="s10">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">RAG Detail</div><div class="slide-num">10 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">RAG Detail</div><div class="slide-num">11 / 24</div></div>
     <div class="section-title reveal">Query <em>Pipeline</em></div>
     <p class="section-sub reveal">6-stage pipeline from patient language to PubMed-cited diagnostic output — including multimodal image rewriting</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,24px);align-items:stretch">
@@ -749,7 +814,7 @@ body:hover .edit-hint{opacity:.6}
 <!-- ===================== SLIDE 10 — MULTIMODAL ============== -->
 <div class="slide" id="s11">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-8</div><div class="slide-num">11 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-8</div><div class="slide-num">12 / 24</div></div>
     <div class="section-title reveal">Multimodal <em>Input</em></div>
     <p class="section-sub reveal">6 clinical input modalities — unified preprocessing pipeline → Claude Vision / Speech / Text agents</p>
     <div style="flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(6px,1vw,12px)">
@@ -919,7 +984,7 @@ body:hover .edit-hint{opacity:.6}
 <!-- ===================== SLIDE 11 — IMAGE ANNOTATION ======== -->
 <div class="slide" id="s12">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-10</div><div class="slide-num">12 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-10</div><div class="slide-num">13 / 24</div></div>
     <div class="section-title reveal">AI Image <em>Annotation</em></div>
     <p class="section-sub reveal">Claude Vision → structured JSON · 9-region grid · interactive numbered overlays · hover-linked findings list</p>
     <div style="flex:1;display:grid;grid-template-columns:.95fr 1.05fr;gap:clamp(12px,2vw,24px);align-items:stretch">
@@ -999,7 +1064,7 @@ body:hover .edit-hint{opacity:.6}
 <!-- ===================== SLIDE 13 — EMPATHETIC AI =========== -->
 <div class="slide" id="s13">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-14</div><div class="slide-num">13 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-14</div><div class="slide-num">14 / 24</div></div>
     <div class="section-title reveal">Empathetic <em>AI Interviewer</em></div>
     <p class="section-sub reveal">SOCRATES clinical framework + warm language conventions + LLM query rewriting for RAG</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,24px);align-items:stretch">
@@ -1047,7 +1112,7 @@ body:hover .edit-hint{opacity:.6}
 <!-- ===================== SLIDE 14 — SAFETY ================== -->
 <div class="slide" id="s14">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-10</div><div class="slide-num">14 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-10</div><div class="slide-num">15 / 24</div></div>
     <div class="section-title reveal">Safety & <em>Critic Agent</em></div>
     <p class="section-sub reveal">Hard-coded safety rules in the Critic Agent — three escalation classes covering life-threatening presentations</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,24px);align-items:stretch">
@@ -1102,7 +1167,7 @@ body:hover .edit-hint{opacity:.6}
 <!-- ===================== SLIDE 15 — DUAL AUTH =============== -->
 <div class="slide" id="s15">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-9</div><div class="slide-num">15 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-9</div><div class="slide-num">16 / 24</div></div>
     <div class="section-title reveal">Dual Auth <em>Roles</em></div>
     <p class="section-sub reveal">JWT-based authentication with role claims — Patient and Provider access to distinct UI views and API endpoints</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,24px);align-items:stretch">
@@ -1147,7 +1212,7 @@ body:hover .edit-hint{opacity:.6}
 <!-- ===================== SLIDE 16 — i18n ==================== -->
 <div class="slide" id="s16">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-12</div><div class="slide-num">16 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Feature · PROJ-12</div><div class="slide-num">17 / 24</div></div>
     <div class="section-title reveal">Multilingual <em>Support</em></div>
     <p class="section-sub reveal">Full react-i18next internationalisation — UI, agent responses, and audio file analysis in EN / ZH / JA</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,24px);align-items:stretch">
@@ -1182,7 +1247,7 @@ body:hover .edit-hint{opacity:.6}
 <!-- ===================== SLIDE 17 — SESSION & EXPORT ======== -->
 <div class="slide" id="s17">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Feature · Data Persistence</div><div class="slide-num">17 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Feature · Data Persistence</div><div class="slide-num">18 / 24</div></div>
     <div class="section-title reveal">Session <em>Management</em></div>
     <p class="section-sub reveal">Automatic session persistence · full history access · one-click PDF/JSON export for clinical integration</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,24px);align-items:stretch">
@@ -1257,7 +1322,7 @@ body:hover .edit-hint{opacity:.6}
 <!-- ===================== SLIDE 18 — PERFORMANCE ============= -->
 <div class="slide" id="s18">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Evaluation</div><div class="slide-num">18 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Evaluation</div><div class="slide-num">19 / 24</div></div>
     <div class="section-title reveal">System <em>Performance</em></div>
     <p class="section-sub reveal">Quantitative comparison across all major system dimensions — Demo A baseline vs current implementation</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,28px);align-items:stretch">
@@ -1324,7 +1389,7 @@ body:hover .edit-hint{opacity:.6}
 <!-- ===================== SLIDE 19 — TECH STACK ============== -->
 <div class="slide" id="s19">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Implementation</div><div class="slide-num">19 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Implementation</div><div class="slide-num">20 / 24</div></div>
     <div class="section-title reveal">Technical <em>Stack</em></div>
     <p class="section-sub reveal">Technology choices justified by clinical AI requirements — performance, biomedical specificity, and zero external dependencies</p>
     <div style="flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(8px,1.2vw,16px)">
@@ -1359,7 +1424,7 @@ body:hover .edit-hint{opacity:.6}
 <!-- ===================== SLIDE 20 — DESIGN PRINCIPLES ======= -->
 <div class="slide" id="s20">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Engineering Quality</div><div class="slide-num">20 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Engineering Quality</div><div class="slide-num">21 / 24</div></div>
     <div class="section-title reveal">Design <em>Principles</em></div>
     <p class="section-sub reveal">Architectural decisions that ensure clinical-grade reliability, safety, and extensibility</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(10px,1.5vw,20px)">
@@ -1383,7 +1448,7 @@ body:hover .edit-hint{opacity:.6}
 <!-- ===================== SLIDE 21 — LIMITATIONS ============= -->
 <div class="slide" id="s21">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Honest Evaluation</div><div class="slide-num">21 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Honest Evaluation</div><div class="slide-num">22 / 24</div></div>
     <div class="section-title reveal">Limitations & <em>Future Work</em></div>
     <p class="section-sub reveal">Known constraints of the current implementation and planned directions for continued research</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,24px);align-items:stretch">
@@ -1409,7 +1474,7 @@ body:hover .edit-hint{opacity:.6}
 <!-- ===================== SLIDE 22 — CONTRIBUTION SUMMARY ==== -->
 <div class="slide" id="s22">
   <div class="slide-inner">
-    <div class="slide-header reveal"><div class="eyebrow">Research Contribution</div><div class="slide-num">22 / 23</div></div>
+    <div class="slide-header reveal"><div class="eyebrow">Research Contribution</div><div class="slide-num">23 / 24</div></div>
     <div class="section-title reveal">Key <em>Contributions</em></div>
     <p class="section-sub reveal">What MediChain contributes to the state of practice in AI-assisted clinical decision support</p>
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(10px,1.5vw,20px);align-items:stretch">
