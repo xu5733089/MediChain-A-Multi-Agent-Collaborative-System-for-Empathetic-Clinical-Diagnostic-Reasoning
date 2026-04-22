@@ -311,6 +311,9 @@ export default function ChatPage({ api, symptoms, onComplete, onBack, resumeSess
       }
       setMsgs([]);
       pushAiMsg(d.reply);
+      if (Array.isArray(d.quick_replies) && d.quick_replies.length) {
+        setLlmQuickReplies(d.quick_replies);
+      }
       addLog("safety", "Triage complete. No immediate escalation required. Passing to Interviewer — prioritise onset, character, and associated symptoms.", new Date(), "interviewer");
       addSep("CLINICAL INTAKE");
       addLog("interviewer", "Session opened. SOCRATES intake protocol active.", new Date(), "safety");

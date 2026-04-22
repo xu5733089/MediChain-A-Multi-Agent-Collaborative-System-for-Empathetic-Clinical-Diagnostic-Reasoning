@@ -1334,6 +1334,7 @@ def start_session(symptoms: SymptomInput, user=Depends(get_current_user)):
     )
     history = [{"role":"user","content":case}]
     reply = call_interviewer(history)
+    reply, _qr_start = _extract_quick_replies(reply)
     history.append({"role":"assistant","content":reply})
     messages = [{"role":"ai","agent":"interviewer","text":reply}]
     now = _now()
@@ -1362,6 +1363,7 @@ def start_session(symptoms: SymptomInput, user=Depends(get_current_user)):
     return {
         "session_id":sid,
         "reply":reply,
+        "quick_replies": _qr_start,
         "status":"interviewing",
         "safety": {
             "final_risk": safety.get("final_risk", safety.get("risk_level", "low")),
