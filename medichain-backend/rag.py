@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Optional
 
 from qdrant_client import QdrantClient, models
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, CrossEncoder
 
 # ── 路径配置 ──────────────────────────────────────────────
 DB_DIR = Path(__file__).parent / "qdrant_db"
@@ -20,9 +20,14 @@ COLLECTION_NAME = "medical_literature"
 DENSE_MODEL_NAME = "FremyCompany/BioLORD-2023"
 DENSE_DIM = 768
 
+# ── Reranker 配置 ─────────────────────────────────────────
+RERANKER_MODEL_NAME = "ncbi/MedCPT-Cross-Encoder"
+RERANKER_CANDIDATES = 20   # 初检候选数，rerank 后取 top-n_results
+
 # ── 全局单例 ──────────────────────────────────────────────
 _client: Optional[QdrantClient] = None
 _dense_model: Optional[SentenceTransformer] = None
+_reranker: Optional[CrossEncoder] = None
 _bm25_vocab: Optional[dict] = None  # word -> idf
 
 
@@ -55,6 +60,25 @@ def _get_dense_model() -> SentenceTransformer:
     if _dense_model is None:
         _dense_model = SentenceTransformer(DENSE_MODEL_NAME)
     return _dense_model
+
+
+def _get_reranker() -> CrossEncoder:
+    global _reranker
+    if _reranker is None:
+        _reranker = CrossEncoder(RERANKER_MODEL_NAME, max_length=512)
+    return _reranker
+
+
+def _rerank(query: str, results: list[dict], top_n: int) -> list[dict]:
+    """用 MedCPT cross-encoder 对初检结果重排，返回 top_n 条。"""
+    if not results:
+        return results
+    reranker = _get_reranker()
+    pairs = [(query, r["excerpt"]) for r in results]
+    scores = reranker.predict(pairs).tolist()
+    for i, r in enumerate(results):
+        r["score"] = round(float(scores[i]), 4)
+    return sorted(results, key=lambda x: x["score"], reverse=True)[:top_n]
 
 
 def _create_collection():
@@ -290,7 +314,8 @@ def search(query: str, n_results: int = 5) -> list[dict]:
         return []
 
     model = _get_dense_model()
-    prefetch_limit = min(n_results * 4, count)
+    # 初检候选数：取 RERANKER_CANDIDATES 或 n_results*4 中的较大值，供 reranker 使用
+    prefetch_limit = min(max(RERANKER_CANDIDATES, n_results * 4), count)
 
     # Dense query vector
     dense_vec = model.encode([query], normalize_embeddings=True).tolist()[0]
@@ -317,12 +342,12 @@ def search(query: str, n_results: int = 5) -> list[dict]:
             ),
         )
 
-    # RRF 融合查询
+    # RRF 融合查询，多取候选供 reranker 使用
     results = client.query_points(
         collection_name=COLLECTION_NAME,
         prefetch=prefetch,
         query=models.FusionQuery(fusion=models.Fusion.RRF),
-        limit=n_results * 2,
+        limit=max(RERANKER_CANDIDATES, n_results * 2),
         with_payload=True,
     )
 
@@ -336,7 +361,7 @@ def search(query: str, n_results: int = 5) -> list[dict]:
 
     for hit in results.points:
         score = round(hit.score / max_score, 4)
-        if score < 0.15:            # 降低阈值以提高召回率
+        if score < 0.15:
             continue
         payload = hit.payload or {}
         doc_text = payload.get("text", "")
@@ -353,10 +378,9 @@ def search(query: str, n_results: int = 5) -> list[dict]:
             "excerpt":     doc_text[:300] + ("…" if len(doc_text) > 300 else ""),
             "score":       score,
         })
-        if len(output) >= n_results:
-            break
 
-    return output
+    # MedCPT cross-encoder rerank，覆盖 RRF 分数，返回 top n_results
+    return _rerank(query, output, n_results)
 
 
 def multi_search(queries: list[str], n_results: int = 5) -> list[dict]:
