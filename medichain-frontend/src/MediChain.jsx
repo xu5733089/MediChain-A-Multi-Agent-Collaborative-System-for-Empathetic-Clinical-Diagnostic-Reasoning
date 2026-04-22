@@ -58,7 +58,7 @@ function AppInner() {
   const goResume = (session) => { setResumeSession(session); setSymp(session.symptoms || { description: session.description || "" }); go("chat"); };
   return (
     <>
-      <TopNav user={auth.user} onLogout={() => { auth.logout(); go("input"); }} onNav={go} page={page} dark={dark} toggle={toggle}/>
+      <TopNav user={auth.user} onLogout={() => { auth.logout(); go("input"); }} onNav={go} page={page} dark={dark} toggle={toggle} forceDark={page === "auth"}/>
       <div key={location.pathname} className="page-fade">
         <Routes>
           <Route path="/" element={<Navigate to={isProvider ? "/provider" : "/input"} replace />} />

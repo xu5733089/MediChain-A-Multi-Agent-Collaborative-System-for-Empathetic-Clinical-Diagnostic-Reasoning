@@ -9,7 +9,7 @@ const LANGS = [
   { code: "ja", label: "日", full: "日本語" },
 ];
 
-export default function TopNav({ user, onLogout, onNav, page, dark, toggle }) {
+export default function TopNav({ user, onLogout, onNav, page, dark, toggle, forceDark }) {
   const { t, i18n } = useTranslation();
   const [menu, setMenu] = useState(false);
   const [langMenu, setLangMenu] = useState(false);
@@ -22,8 +22,13 @@ export default function TopNav({ user, onLogout, onNav, page, dark, toggle }) {
 
   const currentLang = LANGS.find(l => l.code === i18n.language) || LANGS[0];
 
+  const navBg = forceDark ? "rgba(8,15,26,0.97)" : "var(--nav-bg)";
+  const navBorder = forceDark ? "1px solid rgba(255,255,255,0.07)" : "1px solid rgba(127,99,21,0.12)";
+  const textColor = forceDark ? "rgba(255,255,255,0.85)" : "var(--ink2)";
+  const subColor = forceDark ? "rgba(255,255,255,0.4)" : "var(--ink5)";
+
   return (
-    <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "var(--nav-bg)", backdropFilter: "blur(28px)", WebkitBackdropFilter: "blur(28px)", height: 56, borderBottom: "1px solid rgba(127,99,21,0.12)" }}>
+    <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: navBg, backdropFilter: "blur(28px)", WebkitBackdropFilter: "blur(28px)", height: 56, borderBottom: navBorder }}>
       <div className="brand-stripe" style={{ position: "absolute", top: 0, left: 0, right: 0 }} />
       <div style={{ padding: "0 28px", height: "100%", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <button onClick={() => onNav(isProvider ? "provider" : "input")} style={{ display: "flex", alignItems: "center", gap: 11, background: "none", border: "none", cursor: "pointer" }}>
@@ -31,8 +36,8 @@ export default function TopNav({ user, onLogout, onNav, page, dark, toggle }) {
             <Caduceus size={22} />
           </div>
           <div>
-            <div style={{ fontFamily: "var(--serif)", fontSize: 17, fontWeight: 700, color: "var(--ink)", letterSpacing: -0.3, lineHeight: 1.1 }}>MediChain</div>
-            <div style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink5)", letterSpacing: "0.16em", lineHeight: 1 }}>{t("nav.subtitle")}</div>
+            <div style={{ fontFamily: "var(--serif)", fontSize: 17, fontWeight: 700, color: textColor, letterSpacing: -0.3, lineHeight: 1.1 }}>MediChain</div>
+            <div style={{ fontFamily: "var(--mono)", fontSize: 9, color: subColor, letterSpacing: "0.16em", lineHeight: 1 }}>{t("nav.subtitle")}</div>
           </div>
         </button>
 
