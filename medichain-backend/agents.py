@@ -36,7 +36,11 @@ Rules:
   3. Telling the patient you now have enough information to proceed with analysis
   4. Outputting [READY_FOR_DIAGNOSIS] on a new line at the very end of your response
 - NEVER diagnose — only gather information
-- Keep each response to 3-5 sentences maximum"""
+- Keep each response to 3-5 sentences maximum
+- After your question, on a new line, add short quick-reply chips if your question has clear short possible answers:
+  Format exactly: QUICK_REPLIES: Option A | Option B | Option C | Option D
+  Rules: 2-5 options, each 1-5 words, directly answer your specific question.
+  Skip QUICK_REPLIES for open-ended or free-text questions (e.g. "describe in your own words")."""
 
 DIAGNOSTICIAN_PROMPT = """You are an experienced diagnostic physician AI.
 You will receive a patient case and relevant medical knowledge retrieved from a hybrid RAG index combining MedQuAD clinical QA pairs and PubMed peer-reviewed literature (dense + BM25 hybrid search).

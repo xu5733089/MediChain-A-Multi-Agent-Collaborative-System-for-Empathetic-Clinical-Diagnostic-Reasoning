@@ -1422,6 +1422,16 @@ def chat(body: ChatMessage, user=Depends(get_current_user)):
     ready = "[READY_FOR_DIAGNOSIS]" in reply
     clean = reply.replace("[READY_FOR_DIAGNOSIS]","").strip()
 
+    # Parse and strip QUICK_REPLIES from visible reply
+    quick_replies = []
+    _filtered = []
+    for _line in clean.splitlines():
+        if _line.strip().upper().startswith("QUICK_REPLIES:"):
+            quick_replies = [p.strip() for p in _line.split(":", 1)[1].split("|") if p.strip()]
+        else:
+            _filtered.append(_line)
+    clean = "\n".join(_filtered).strip()
+
     # If we hit the turn ceiling and Claude hasn't wrapped up yet, append a
     # natural closing sentence so the patient isn't left hanging.
     force_trigger = turns >= MAX_TURNS
@@ -1455,6 +1465,7 @@ def chat(body: ChatMessage, user=Depends(get_current_user)):
 
     return {
         "reply":clean,
+        "quick_replies": quick_replies,
         "status":"analyzing" if trigger else "interviewing",
         "trigger_diagnose":trigger,
         "agent_commentary": agent_commentary,
@@ -1607,6 +1618,19 @@ async def _chat_stream_gen(body: "ChatMessage", user):
         reply = await call_interviewer_async(normalize_history_for_interviewer(history))
         ready = "[READY_FOR_DIAGNOSIS]" in reply
         clean = reply.replace("[READY_FOR_DIAGNOSIS]", "").strip()
+
+        # Parse and strip QUICK_REPLIES line from the visible reply
+        quick_replies = []
+        clean_lines = clean.splitlines()
+        filtered_lines = []
+        for line in clean_lines:
+            stripped = line.strip()
+            if stripped.upper().startswith("QUICK_REPLIES:"):
+                parts = stripped.split(":", 1)[1].strip()
+                quick_replies = [p.strip() for p in parts.split("|") if p.strip()]
+            else:
+                filtered_lines.append(line)
+        clean = "\n".join(filtered_lines).strip()
         force_trigger = turns >= MAX_TURNS
         if force_trigger and not ready:
             clean = clean + "\n\nThank you for sharing all of that. I now have enough information to proceed with a thorough analysis."
@@ -1623,7 +1647,7 @@ async def _chat_stream_gen(body: "ChatMessage", user):
             turns=turns, status="analyzing" if trigger else "interviewing"
         )
 
-        yield _sse("interviewer_reply", text=clean, trigger=trigger)
+        yield _sse("interviewer_reply", text=clean, trigger=trigger, quick_replies=quick_replies)
 
         # Inter-agent commentary (only when NOT triggering diagnosis)
         if not trigger:

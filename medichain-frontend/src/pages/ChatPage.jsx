@@ -231,6 +231,7 @@ export default function ChatPage({ api, symptoms, onComplete, onBack, resumeSess
   const [uploadImageUrl, setUploadImageUrl] = useState(null);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [pendingAttachments, setPendingAttachments] = useState([]);
+  const [llmQuickReplies, setLlmQuickReplies] = useState(null); // from backend
   const [safetyAlert, setSafetyAlert] = useState(null);
   const [_cameraOpen, setCameraOpen] = useState(false);
   const [streamingMsg, setStreamingMsg] = useState(null); // { displayed, full, time }
@@ -355,6 +356,7 @@ export default function ChatPage({ api, symptoms, onComplete, onBack, resumeSess
     const attachments = [...pendingAttachments];
     setInput("");
     setPendingAttachments([]);
+    setLlmQuickReplies(null);
     setMsgs(p => [
       ...p,
       ...attachments.map(a => ({ role: "user", text: `📎 ${a}`, time: new Date() })),
@@ -382,6 +384,8 @@ export default function ChatPage({ api, symptoms, onComplete, onBack, resumeSess
             setUploadMeta(null); setUploadPreview(""); setUploadError("");
             if (uploadImageUrl) { URL.revokeObjectURL(uploadImageUrl); setUploadImageUrl(null); }
             pushAiMsg(evt.text);
+            // Use LLM-provided quick replies if available
+            setLlmQuickReplies(Array.isArray(evt.quick_replies) && evt.quick_replies.length ? evt.quick_replies : null);
             triggered = evt.trigger;
             if (triggered) {
               addLog("interviewer", "SOCRATES intake complete. Case summary ready — handing over for full diagnostic analysis.", new Date(), "diagnostician");
@@ -845,10 +849,12 @@ export default function ChatPage({ api, symptoms, onComplete, onBack, resumeSess
                 </div>
               )}
 
-              {/* Quick reply chips */}
+              {/* Quick reply chips — prefer LLM-generated, fallback to regex */}
               {(() => {
                 const lastAi = [...msgs].reverse().find(m => m.role === "ai");
-                const chips = !loading && !streamingMsg && lastAi ? detectQuickReplies(lastAi.text) : null;
+                const chips = !loading && !streamingMsg && lastAi
+                  ? (llmQuickReplies || detectQuickReplies(lastAi.text))
+                  : null;
                 if (!chips) return null;
                 return (
                   <div style={{ marginBottom: 8 }}>
