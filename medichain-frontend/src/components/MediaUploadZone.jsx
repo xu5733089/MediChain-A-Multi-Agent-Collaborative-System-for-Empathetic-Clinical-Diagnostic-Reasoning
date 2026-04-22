@@ -158,7 +158,7 @@ export default function MediaUploadZone({ api, onUpdate, disabled }) {
   const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [dragging, setDragging] = useState(false);
-  const audioLang = AUDIO_LANGS.find(l => navigator.language?.startsWith(l.code.split("-")[0]))?.code || "en-US";
+  const [audioLang, setAudioLang] = useState("en-US");
   const [comparing, setComparing] = useState(false);
   const [compareResult, setCompareResult] = useState(null);
   const fileInputRef = useRef(null);
@@ -237,6 +237,26 @@ export default function MediaUploadZone({ api, onUpdate, disabled }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {/* Audio language selector */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", letterSpacing: "0.08em" }}>🎙 Audio language:</span>
+        {AUDIO_LANGS.map(l => (
+          <button
+            key={l.code}
+            onClick={() => setAudioLang(l.code)}
+            style={{
+              fontFamily: "var(--mono)", fontSize: 11, padding: "3px 10px",
+              borderRadius: 5, border: "1.5px solid",
+              borderColor: audioLang === l.code ? "var(--navy)" : "rgba(22,15,6,0.15)",
+              background: audioLang === l.code ? "var(--navyPale)" : "none",
+              color: audioLang === l.code ? "var(--navy)" : "var(--ink4)",
+              cursor: "pointer", fontWeight: audioLang === l.code ? 700 : 400,
+              transition: "all 0.15s",
+            }}
+          >{l.label}</button>
+        ))}
+      </div>
+
       {/* Drop zone */}
       <div
         onDragOver={e => { e.preventDefault(); setDragging(true); }}
