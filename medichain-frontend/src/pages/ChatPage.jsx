@@ -464,48 +464,52 @@ export default function ChatPage({ api, symptoms, onComplete, onBack, resumeSess
     setLoading(false);
   }
 
-  // Detect quick-reply suggestions from the last AI message
+  // Detect quick-reply suggestions — match against the LAST question sentence only
+  // to avoid false positives from keywords earlier in the message.
   function detectQuickReplies(text) {
     if (!text) return null;
-    // Pain scale
-    if (/scale of (1|one).*(10|ten)|rate.*pain|\/10|how (bad|severe|intense)/i.test(text)) {
+    // Extract the last sentence / question from the message
+    const sentences = text.split(/(?<=[.!?])\s+/);
+    const lastQ = sentences.filter(s => s.includes("?")).pop() || sentences[sentences.length - 1] || text;
+    // Use the last question for matching; fall back to full text for keyword lists
+    const q = lastQ.toLowerCase();
+    const full = text.toLowerCase();
+
+    // Pain / severity scale
+    if (/scale of (1|one).*(10|ten)|rate.*pain|rate.*symptom|\/10|how (bad|severe|intense|much pain)/i.test(q)) {
       return ["1 — Minimal", "3 — Mild", "5 — Moderate", "7 — Severe", "9 — Very severe", "10 — Worst ever"];
     }
-    // Character / quality
-    if (/feel like|describe.*pain|describe.*symptom|what.*sensation|type of (pain|discomfort)|quality of/i.test(text)) {
-      return ["Sharp", "Dull / aching", "Burning", "Pressure / tight", "Throbbing", "Cramping", "Stabbing"];
-    }
-    // Radiation
-    if (/spread|radiat|anywhere else|move to|going (to|anywhere)/i.test(text)) {
-      return ["Stays in one place", "Spreads to arm", "Spreads to jaw / neck", "Spreads to back", "Spreads to shoulder"];
-    }
-    // Associated symptoms
-    if (/nausea|vomit|fever|sweat|dizzin|shortness of breath|other symptom|anything else alongside|accompan/i.test(text)) {
-      return ["None", "Nausea", "Fever / chills", "Dizziness", "Shortness of breath", "Fatigue", "Sweating"];
-    }
-    // Aggravating / relieving factors
-    if (/worse|better|relief|reliev|aggravat|trigger|what (makes|helps)/i.test(text)) {
-      return ["Worse with exercise", "Better with rest", "Worse when eating", "Position-dependent", "Stress-related", "Nothing obvious"];
-    }
-    // Timing / pattern
-    if (/constant|come and go|intermittent|how often|always there|pattern/i.test(text)) {
-      return ["Constant", "Comes and goes", "Getting worse over time", "Only at certain times"];
+    // Timing / pattern — check before character to avoid "constant" triggering character
+    if (/constant|come and go|intermittent|how often|always there|episode|recurring|pattern|continuous/i.test(q)) {
+      return ["Constant", "Comes and goes", "Getting worse over time", "Only at certain times", "Episodic"];
     }
     // Onset / duration
-    if (/when (did|exactly|was|were)|how long (ago|have)|since when|when.*begin|when.*start|first (notice|feel|occur)|how long.*had/i.test(text)) {
+    if (/when (did|exactly|was|were)|how long (ago|have)|since when|when.*begin|when.*start|first (notice|feel|occur|appear|happen)|how long.*had|how many days|how many weeks/i.test(q)) {
       return ["Just started", "A few hours ago", "Yesterday", "2–3 days ago", "About a week ago", "Longer than a week"];
     }
-    // Site / location
-    if (/where (exactly|is|does|do|are)|which (part|area|side|region)|can you point|locate.*pain|location of/i.test(text)) {
-      return ["Centre of chest", "Left chest", "Right chest", "Upper abdomen", "Shoulder / arm", "Neck / jaw", "Whole chest"];
+    // Radiation / spread
+    if (/spread|radiat|anywhere else|move to|going (to|anywhere)|does it go|travel/i.test(q)) {
+      return ["Stays in one place", "Spreads to arm", "Spreads to jaw / neck", "Spreads to back", "Spreads to leg", "Spreads to shoulder"];
     }
-    // Yes / no questions (have you, do you, are you, did you, was it, were you)
-    if (/\bhave you\b|\bdo you\b|\bare you\b|\bis (there|it)\b|\bdid you\b|\bwas (it|there|this)\b|\bwere you\b|\bhad (you|this)\b/i.test(text)) {
+    // Character / quality of symptom
+    if (/feel like|describe.*(pain|symptom|discomfort|sensation)|what.*sensation|type of (pain|discomfort)|quality of|how would you describe/i.test(q)) {
+      return ["Sharp / stabbing", "Dull / aching", "Burning", "Pressure / tight", "Throbbing", "Cramping", "Numbness / tingling"];
+    }
+    // Site / location — generic, not chest-specific
+    if (/where (exactly|is|does|do|are)|which (part|area|side|region)|can you point|locat.*(pain|symptom)|location of|whereabouts/i.test(q)) {
+      return ["Head / face", "Neck / throat", "Chest", "Abdomen / stomach", "Back", "Arms / hands", "Legs / feet", "Widespread"];
+    }
+    // Associated symptoms — check full text for symptom keywords in question context
+    if (/other symptom|anything else|accompan|associated|alongside|nausea|vomit|fever|dizzin|shortness of breath|sweat/i.test(q)) {
+      return ["None", "Nausea / vomiting", "Fever / chills", "Dizziness", "Shortness of breath", "Fatigue", "Sweating", "Headache"];
+    }
+    // Aggravating / relieving factors
+    if (/worse|better|relief|reliev|aggravat|trigger|what (makes|helps|worsens|improves)|affect.*symptom/i.test(q)) {
+      return ["Worse with activity", "Better with rest", "Worse after eating", "Position-dependent", "Stress-related", "Nothing obvious"];
+    }
+    // Yes / no questions — only when the last sentence is a clear yes/no question
+    if (/\?/.test(lastQ) && /\b(have you|do you|are you|is there|did you|was it|were you|has (this|it)|does (it|this)|had you)\b/i.test(q)) {
       return ["Yes", "No", "Sometimes", "Not sure"];
-    }
-    // Generic fallback — any AI question
-    if (/\?/.test(text)) {
-      return ["Yes", "No", "Not sure", "Can you explain?"];
     }
     return null;
   }
