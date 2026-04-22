@@ -136,37 +136,60 @@ function MistralPeerPanel({ peerReview, loading, error }) {
 
             {!loading && peerReview && verdictMeta && (
               <>
-                {/* Verdict badge */}
+                {/* Verdict + Confidence row */}
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                   <span style={{
                     fontFamily: "var(--mono)", fontSize: 11, fontWeight: 700, letterSpacing: "0.12em",
                     color: verdictMeta.color, background: verdictMeta.bg,
                     border: `1.5px solid ${verdictMeta.bd}`, borderRadius: 20, padding: "4px 14px",
                   }}>{verdictMeta.label}</span>
-                  <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink4)" }}>Confidence: {peerReview.confidence}</span>
+                  <span style={{
+                    fontFamily: "var(--mono)", fontSize: 9, letterSpacing: "0.1em",
+                    color: "var(--ink4)", background: "var(--paper3)",
+                    border: "1px solid rgba(22,15,6,0.12)", borderRadius: 20, padding: "3px 10px",
+                  }}>CONFIDENCE: {peerReview.confidence}</span>
                 </div>
 
-                {/* Assessment */}
+                {/* Assessment — split sentences into bullet points */}
                 {peerReview.assessment && (
-                  <div>
-                    <p style={{ fontFamily: "var(--mono)", fontSize: 9, letterSpacing: "0.16em", color: "var(--ink4)", textTransform: "uppercase", marginBottom: 6 }}>Assessment</p>
-                    <p style={{ fontFamily: "var(--body)", fontSize: 13.5, color: "var(--ink)", lineHeight: 1.75, margin: 0 }}>{peerReview.assessment}</p>
+                  <div style={{ paddingTop: 4 }}>
+                    <p style={{ fontFamily: "var(--mono)", fontSize: 9, letterSpacing: "0.16em", color: "var(--ink4)", textTransform: "uppercase", marginBottom: 8 }}>Assessment</p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      {peerReview.assessment
+                        .split(/(?<=[.!?])\s+/)
+                        .filter(s => s.trim().length > 0)
+                        .map((sentence, i) => (
+                          <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                            <span style={{ color: verdictMeta.color, fontSize: 10, flexShrink: 0, marginTop: 3, fontWeight: 700 }}>▸</span>
+                            <p style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--ink2)", lineHeight: 1.7, margin: 0 }}
+                               dangerouslySetInnerHTML={{ __html: sentence.trim().replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>") }} />
+                          </div>
+                        ))}
+                    </div>
                   </div>
                 )}
 
-                {/* Missed diagnoses */}
+                {/* Missed diagnoses — tag chips */}
                 {peerReview.missed_diagnoses && peerReview.missed_diagnoses !== "None" && (
                   <div style={{ paddingTop: 12, borderTop: "1px dashed rgba(22,15,6,0.09)" }}>
-                    <p style={{ fontFamily: "var(--mono)", fontSize: 9, letterSpacing: "0.16em", color: "var(--amber)", textTransform: "uppercase", marginBottom: 6 }}>Missed Differentials</p>
-                    <p style={{ fontFamily: "var(--body)", fontSize: 13.5, color: "var(--ink3)", margin: 0, lineHeight: 1.65 }}>{peerReview.missed_diagnoses}</p>
+                    <p style={{ fontFamily: "var(--mono)", fontSize: 9, letterSpacing: "0.16em", color: "var(--amber)", textTransform: "uppercase", marginBottom: 8 }}>Missed Differentials</p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {peerReview.missed_diagnoses.split(/,\s*/).map((d, i) => (
+                        <span key={i} style={{
+                          fontFamily: "var(--body)", fontSize: 12, color: "var(--amber)",
+                          background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.3)",
+                          borderRadius: 20, padding: "3px 10px",
+                        }}>{d.trim()}</span>
+                      ))}
+                    </div>
                   </div>
                 )}
 
                 {/* Safety flags */}
                 {peerReview.safety_flags && peerReview.safety_flags !== "None" && (
-                  <div style={{ paddingTop: 12, borderTop: "1px dashed rgba(22,15,6,0.09)", background: "rgba(220,38,38,0.04)", margin: "0 -20px -14px", padding: "12px 20px 16px" }}>
-                    <p style={{ fontFamily: "var(--mono)", fontSize: 9, letterSpacing: "0.16em", color: "var(--rose)", textTransform: "uppercase", marginBottom: 6 }}>⚠ Safety Flags</p>
-                    <p style={{ fontFamily: "var(--body)", fontSize: 13.5, color: "var(--rose)", margin: 0, lineHeight: 1.65 }}>{peerReview.safety_flags}</p>
+                  <div style={{ borderRadius: 8, background: "rgba(220,38,38,0.05)", border: "1px solid rgba(220,38,38,0.2)", padding: "10px 14px" }}>
+                    <p style={{ fontFamily: "var(--mono)", fontSize: 9, letterSpacing: "0.16em", color: "var(--rose)", textTransform: "uppercase", marginBottom: 5 }}>⚠ Safety Flags</p>
+                    <p style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--rose)", margin: 0, lineHeight: 1.65 }}>{peerReview.safety_flags}</p>
                   </div>
                 )}
               </>
@@ -564,43 +587,6 @@ export default function ResultsPage({ api, result, onNew, onHistory, onFlow }) {
                               {top.evidence[0]}
                             </span>
                           )}
-                        </div>
-                      </div>
-                    );
-                  })()}
-                  {tab === "diagnosis" && (() => {
-                    const investigations = parseInvestigations(diagnosis);
-                    if (!investigations.length) return null;
-                    return (
-                      <div style={{
-                        marginBottom: 22, padding: "18px 22px",
-                        background: "linear-gradient(135deg, rgba(3,105,161,0.07), rgba(3,105,161,0.03))",
-                        border: "1.5px solid rgba(3,105,161,0.25)",
-                        borderRadius: 12,
-                      }}>
-                        <p style={{
-                          fontFamily: "var(--mono)", fontSize: 10,
-                          color: "var(--sky, #0369a1)", letterSpacing: "0.16em",
-                          textTransform: "uppercase", marginBottom: 12, opacity: 0.9,
-                        }}>
-                          Recommended Investigations
-                        </p>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                          {investigations.map((inv, i) => (
-                            <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                              <span style={{
-                                fontFamily: "var(--mono)", fontSize: 10, fontWeight: 700,
-                                color: "var(--sky, #0369a1)", flexShrink: 0, marginTop: 3,
-                                background: "rgba(3,105,161,0.12)", borderRadius: 4,
-                                padding: "1px 6px", letterSpacing: "0.04em",
-                              }}>{String(i + 1).padStart(2, "0")}</span>
-                              <span style={{
-                                fontFamily: "var(--body)", fontSize: 14,
-                                fontWeight: 600, color: "var(--ink)",
-                                lineHeight: 1.55,
-                              }}>{inv}</span>
-                            </div>
-                          ))}
                         </div>
                       </div>
                     );
