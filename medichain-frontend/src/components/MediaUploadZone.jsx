@@ -54,6 +54,7 @@ function AttachmentChip({ item, onRemove, onOcrResult, api }) {
   const [ocring, setOcring] = useState(false);
   const [ocrText, setOcrText] = useState("");
   const [ocrExpanded, setOcrExpanded] = useState(false);
+  const [analysisExpanded, setAnalysisExpanded] = useState(false);
   const kind = ACCEPTED_TYPES[item.fileType] || ACCEPTED_TYPES.txt;
 
   async function runOcr() {
@@ -111,9 +112,19 @@ function AttachmentChip({ item, onRemove, onOcrResult, api }) {
         <button onClick={() => onRemove(item.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink5)", fontSize: 14, lineHeight: 1, padding: "2px 4px", borderRadius: 4 }}>×</button>
       </div>
       {item.analysisPreview && !item.analysing && (
-        <p style={{ fontFamily: "var(--body)", fontSize: 12, color: "var(--ink4)", lineHeight: 1.55, margin: 0 }}>
-          {item.analysisPreview.slice(0, 160)}{item.analysisPreview.length > 160 ? "…" : ""}
-        </p>
+        <div>
+          <p style={{ fontFamily: "var(--body)", fontSize: 12, color: "var(--ink4)", lineHeight: 1.55, margin: 0, whiteSpace: "pre-wrap" }}>
+            {analysisExpanded || item.analysisPreview.length <= 300
+              ? item.analysisPreview
+              : item.analysisPreview.slice(0, 300) + "…"}
+          </p>
+          {item.analysisPreview.length > 300 && (
+            <button
+              onClick={() => setAnalysisExpanded(v => !v)}
+              style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink4)", background: "none", border: "none", cursor: "pointer", padding: "2px 0", letterSpacing: "0.06em" }}
+            >{analysisExpanded ? "▲ Show less" : "▼ Show full analysis"}</button>
+          )}
+        </div>
       )}
       {item.annotations?.length > 0 && !item.analysing && (
         <AnnotationTags annotations={item.annotations} />

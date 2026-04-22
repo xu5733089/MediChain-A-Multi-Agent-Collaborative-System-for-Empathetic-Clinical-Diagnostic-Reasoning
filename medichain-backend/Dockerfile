@@ -4,7 +4,7 @@ WORKDIR /app
 
 # 系统依赖（OpenCV headless + SpeechRecognition 需要）
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libglib2.0-0 libsm6 libxext6 libxrender-dev ffmpeg \
+    libglib2.0-0 libsm6 libxext6 libxrender-dev ffmpeg flac \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
