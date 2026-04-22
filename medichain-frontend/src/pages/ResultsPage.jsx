@@ -42,8 +42,9 @@ function CotPanel({ title, agentKey, thinking }) {
   );
 }
 
-function MistralPeerPanel({ peerReview, loading, error }) {
+function MistralPeerPanel({ peerReview, loading, error, fullPage = false }) {
   const [open, setOpen] = useState(false);
+  const isOpen = fullPage || open;
 
   const verdictMeta = peerReview && peerReview.verdict !== "UNAVAILABLE" && peerReview.verdict !== "ERROR"
     ? {
@@ -54,9 +55,9 @@ function MistralPeerPanel({ peerReview, loading, error }) {
     : null;
 
   return (
-    <div style={{ position: "sticky", top: 90 }}>
-      {/* Collapsed trigger button */}
-      {!open && (
+    <div style={fullPage ? {} : { position: "sticky", top: 90 }}>
+      {/* Collapsed trigger button — hidden in fullPage mode */}
+      {!isOpen && (
         <button
           onClick={() => setOpen(true)}
           style={{
@@ -104,11 +105,11 @@ function MistralPeerPanel({ peerReview, loading, error }) {
       )}
 
       {/* Expanded panel */}
-      {open && (
+      {isOpen && (
         <div style={{
-          background: "var(--paper2, #faf8f4)", border: "1.5px solid rgba(245,166,35,0.3)",
-          borderRadius: 12, overflow: "hidden",
-          boxShadow: "0 4px 24px rgba(245,166,35,0.1)",
+          background: "var(--paper2, #faf8f4)", border: fullPage ? "none" : "1.5px solid rgba(245,166,35,0.3)",
+          borderRadius: fullPage ? 0 : 12, overflow: "hidden",
+          boxShadow: fullPage ? "none" : "0 4px 24px rgba(245,166,35,0.1)",
         }}>
           {/* Header */}
           <div style={{
@@ -123,7 +124,7 @@ function MistralPeerPanel({ peerReview, loading, error }) {
                 <p style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink4)", margin: 0, marginTop: 2 }}>mistral-large via OpenRouter</p>
               </div>
             </div>
-            <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "var(--mono)", fontSize: 16, color: "var(--ink4)", padding: "0 4px", lineHeight: 1 }}>✕</button>
+            {!fullPage && <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "var(--mono)", fontSize: 16, color: "var(--ink4)", padding: "0 4px", lineHeight: 1 }}>✕</button>}
           </div>
 
           <div style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
@@ -486,6 +487,7 @@ export default function ResultsPage({ api, result, onNew, onHistory, onFlow }) {
     { id: "refs", l: t("results.tab_refs", { count: refs.length }) },
     ...(mediaItems.length > 0 ? [{ id: "media", l: `🩻 Media (${mediaItems.length})` }] : []),
     { id: "transcript", l: t("results.tab_transcript") },
+    { id: "peer_review", l: "🤖 Peer Review" },
   ];
 
   return (
@@ -592,6 +594,29 @@ export default function ResultsPage({ api, result, onNew, onHistory, onFlow }) {
                     );
                   })()}
                   {tab === "diagnosis" && <DifferentialChart diagnosis={diagnosis} />}
+                  {tab === "diagnosis" && (() => {
+                    const investigations = parseInvestigations(diagnosis);
+                    if (!investigations.length) return null;
+                    return (
+                      <div style={{
+                        marginBottom: 22, padding: "18px 22px",
+                        background: "linear-gradient(135deg, rgba(3,105,161,0.07), rgba(3,105,161,0.03))",
+                        border: "1.5px solid rgba(3,105,161,0.25)", borderRadius: 12,
+                      }}>
+                        <p style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--sky, #0369a1)", letterSpacing: "0.16em", textTransform: "uppercase", marginBottom: 12, opacity: 0.9 }}>
+                          Recommended Investigations
+                        </p>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                          {investigations.map((inv, i) => (
+                            <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                              <span style={{ fontFamily: "var(--mono)", fontSize: 10, fontWeight: 700, color: "var(--sky, #0369a1)", flexShrink: 0, marginTop: 3, background: "rgba(3,105,161,0.12)", borderRadius: 4, padding: "1px 6px", letterSpacing: "0.04em" }}>{String(i + 1).padStart(2, "0")}</span>
+                              <span style={{ fontFamily: "var(--body)", fontSize: 14, fontWeight: 600, color: "var(--ink)", lineHeight: 1.55 }}>{inv}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                   <div className="md-body">
                     <ReactMarkdown>{tab === "diagnosis" ? diagnosis : review}</ReactMarkdown>
                   </div>
@@ -681,26 +706,23 @@ export default function ResultsPage({ api, result, onNew, onHistory, onFlow }) {
                 </div>
               )}
               {tab === "transcript" && (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 24, alignItems: "start" }}>
-                  {/* Left: transcript messages */}
-                  <div>
-                    {transcript.length === 0 && (
-                      <p style={{ fontFamily: "var(--body)", fontSize: 14, color: "var(--ink4)", fontStyle: "italic" }}>No transcript available.</p>
-                    )}
-                    {transcript.map((m, i) => (
-                      <div key={i} style={{ marginBottom: 22 }}>
-                        <p className="ink-label" style={{ color: m.role === "user" ? "var(--rose)" : "var(--sage)" }}>
-                          {m.role === "user" ? t("results.transcript_patient") : t("results.transcript_interviewer")}
-                        </p>
-                        <p style={{ fontFamily: "var(--body)", fontSize: 15.5, color: "var(--ink2)", lineHeight: 1.78 }}>{m.text}</p>
-                        {i < transcript.length - 1 && <InkDivider />}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Right: Mistral Second Opinion panel */}
-                  <MistralPeerPanel peerReview={peerReview} loading={peerLoading} error={peerError} />
+                <div>
+                  {transcript.length === 0 && (
+                    <p style={{ fontFamily: "var(--body)", fontSize: 14, color: "var(--ink4)", fontStyle: "italic" }}>No transcript available.</p>
+                  )}
+                  {transcript.map((m, i) => (
+                    <div key={i} style={{ marginBottom: 22 }}>
+                      <p className="ink-label" style={{ color: m.role === "user" ? "var(--rose)" : "var(--sage)" }}>
+                        {m.role === "user" ? t("results.transcript_patient") : t("results.transcript_interviewer")}
+                      </p>
+                      <p style={{ fontFamily: "var(--body)", fontSize: 15.5, color: "var(--ink2)", lineHeight: 1.78 }}>{m.text}</p>
+                      {i < transcript.length - 1 && <InkDivider />}
+                    </div>
+                  ))}
                 </div>
+              )}
+              {tab === "peer_review" && (
+                <MistralPeerPanel peerReview={peerReview} loading={peerLoading} error={peerError} fullPage />
               )}
             </div>
           </div>
