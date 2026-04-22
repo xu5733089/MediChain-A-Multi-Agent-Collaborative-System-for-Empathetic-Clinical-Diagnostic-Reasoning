@@ -42,6 +42,154 @@ function CotPanel({ title, agentKey, thinking }) {
   );
 }
 
+function MistralPeerPanel({ peerReview, loading, error }) {
+  const [open, setOpen] = useState(false);
+
+  const verdictMeta = peerReview && peerReview.verdict !== "UNAVAILABLE" && peerReview.verdict !== "ERROR"
+    ? {
+        PLAUSIBLE:    { label: "✓ Plausible",    color: "var(--sage)",  bg: "rgba(46,104,56,0.08)",   bd: "rgba(46,104,56,0.28)" },
+        NEEDS_REVIEW: { label: "△ Needs Review", color: "var(--amber)", bg: "rgba(245,166,35,0.08)",  bd: "rgba(245,166,35,0.28)" },
+        CONCERNING:   { label: "⚠ Concerning",   color: "var(--rose)",  bg: "rgba(220,38,38,0.08)",   bd: "rgba(220,38,38,0.28)" },
+      }[peerReview.verdict] || null
+    : null;
+
+  return (
+    <div style={{ position: "sticky", top: 90 }}>
+      {/* Collapsed trigger button */}
+      {!open && (
+        <button
+          onClick={() => setOpen(true)}
+          style={{
+            width: "100%", textAlign: "left", cursor: "pointer",
+            background: "linear-gradient(135deg, rgba(245,166,35,0.08), rgba(245,166,35,0.04))",
+            border: "1.5px solid rgba(245,166,35,0.3)", borderRadius: 12,
+            padding: "16px 20px", display: "flex", flexDirection: "column", gap: 8,
+            transition: "border-color 0.2s, box-shadow 0.2s",
+          }}
+          onMouseOver={e => { e.currentTarget.style.borderColor = "rgba(245,166,35,0.6)"; e.currentTarget.style.boxShadow = "0 4px 16px rgba(245,166,35,0.12)"; }}
+          onMouseOut={e => { e.currentTarget.style.borderColor = "rgba(245,166,35,0.3)"; e.currentTarget.style.boxShadow = "none"; }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+              <span style={{ fontSize: 18 }}>🤖</span>
+              <span style={{ fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(245,166,35,0.9)", fontWeight: 600 }}>
+                Mistral Second Opinion
+              </span>
+            </div>
+            <span style={{ fontFamily: "var(--mono)", fontSize: 13, color: "rgba(245,166,35,0.7)" }}>▶</span>
+          </div>
+          {loading && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 7, height: 7, borderRadius: "50%", background: "rgba(245,166,35,0.6)", animation: "pulse 1.2s ease-in-out infinite" }} />
+              <span style={{ fontFamily: "var(--body)", fontSize: 12.5, color: "var(--ink4)", fontStyle: "italic" }}>Evaluating diagnosis…</span>
+            </div>
+          )}
+          {!loading && verdictMeta && (
+            <span style={{
+              alignSelf: "flex-start", fontFamily: "var(--mono)", fontSize: 10, fontWeight: 700,
+              letterSpacing: "0.1em", color: verdictMeta.color,
+              background: verdictMeta.bg, border: `1.5px solid ${verdictMeta.bd}`,
+              borderRadius: 20, padding: "2px 12px",
+            }}>
+              {verdictMeta.label}
+            </span>
+          )}
+          {!loading && error && (
+            <span style={{ fontFamily: "var(--body)", fontSize: 12.5, color: "var(--rose)", fontStyle: "italic" }}>{error}</span>
+          )}
+          {!loading && !peerReview && !error && (
+            <span style={{ fontFamily: "var(--body)", fontSize: 12.5, color: "var(--ink4)", fontStyle: "italic" }}>Click to view independent review</span>
+          )}
+        </button>
+      )}
+
+      {/* Expanded panel */}
+      {open && (
+        <div style={{
+          background: "var(--paper2, #faf8f4)", border: "1.5px solid rgba(245,166,35,0.3)",
+          borderRadius: 12, overflow: "hidden",
+          boxShadow: "0 4px 24px rgba(245,166,35,0.1)",
+        }}>
+          {/* Header */}
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "14px 18px", background: "rgba(245,166,35,0.07)",
+            borderBottom: "1px solid rgba(245,166,35,0.2)",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+              <span style={{ fontSize: 17 }}>🤖</span>
+              <div>
+                <p style={{ fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(245,166,35,0.9)", margin: 0, fontWeight: 600 }}>Mistral Second Opinion</p>
+                <p style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--ink4)", margin: 0, marginTop: 2 }}>mistral-large via OpenRouter</p>
+              </div>
+            </div>
+            <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "var(--mono)", fontSize: 16, color: "var(--ink4)", padding: "0 4px", lineHeight: 1 }}>✕</button>
+          </div>
+
+          <div style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
+            {loading && (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 0" }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "rgba(245,166,35,0.7)", animation: "pulse 1.2s ease-in-out infinite" }} />
+                <span style={{ fontFamily: "var(--body)", fontSize: 13.5, color: "var(--ink4)", fontStyle: "italic" }}>Mistral is reviewing the diagnosis…</span>
+              </div>
+            )}
+
+            {!loading && peerReview && verdictMeta && (
+              <>
+                {/* Verdict badge */}
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <span style={{
+                    fontFamily: "var(--mono)", fontSize: 11, fontWeight: 700, letterSpacing: "0.12em",
+                    color: verdictMeta.color, background: verdictMeta.bg,
+                    border: `1.5px solid ${verdictMeta.bd}`, borderRadius: 20, padding: "4px 14px",
+                  }}>{verdictMeta.label}</span>
+                  <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink4)" }}>Confidence: {peerReview.confidence}</span>
+                </div>
+
+                {/* Assessment */}
+                {peerReview.assessment && (
+                  <div>
+                    <p style={{ fontFamily: "var(--mono)", fontSize: 9, letterSpacing: "0.16em", color: "var(--ink4)", textTransform: "uppercase", marginBottom: 6 }}>Assessment</p>
+                    <p style={{ fontFamily: "var(--body)", fontSize: 13.5, color: "var(--ink)", lineHeight: 1.75, margin: 0 }}>{peerReview.assessment}</p>
+                  </div>
+                )}
+
+                {/* Missed diagnoses */}
+                {peerReview.missed_diagnoses && peerReview.missed_diagnoses !== "None" && (
+                  <div style={{ paddingTop: 12, borderTop: "1px dashed rgba(22,15,6,0.09)" }}>
+                    <p style={{ fontFamily: "var(--mono)", fontSize: 9, letterSpacing: "0.16em", color: "var(--amber)", textTransform: "uppercase", marginBottom: 6 }}>Missed Differentials</p>
+                    <p style={{ fontFamily: "var(--body)", fontSize: 13.5, color: "var(--ink3)", margin: 0, lineHeight: 1.65 }}>{peerReview.missed_diagnoses}</p>
+                  </div>
+                )}
+
+                {/* Safety flags */}
+                {peerReview.safety_flags && peerReview.safety_flags !== "None" && (
+                  <div style={{ paddingTop: 12, borderTop: "1px dashed rgba(22,15,6,0.09)", background: "rgba(220,38,38,0.04)", margin: "0 -20px -14px", padding: "12px 20px 16px" }}>
+                    <p style={{ fontFamily: "var(--mono)", fontSize: 9, letterSpacing: "0.16em", color: "var(--rose)", textTransform: "uppercase", marginBottom: 6 }}>⚠ Safety Flags</p>
+                    <p style={{ fontFamily: "var(--body)", fontSize: 13.5, color: "var(--rose)", margin: 0, lineHeight: 1.65 }}>{peerReview.safety_flags}</p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {!loading && error && (
+              <p style={{ fontFamily: "var(--mono)", fontSize: 12, color: "var(--rose)", margin: 0 }}>Error: {error}</p>
+            )}
+
+            {!loading && peerReview?.verdict === "ERROR" && (
+              <p style={{ fontFamily: "var(--mono)", fontSize: 12, color: "var(--ink4)", margin: 0 }}>Unavailable: {peerReview.assessment}</p>
+            )}
+
+            {!loading && !error && (!peerReview || peerReview?.verdict === "UNAVAILABLE") && (
+              <p style={{ fontFamily: "var(--body)", fontSize: 13.5, color: "var(--ink4)", fontStyle: "italic", margin: 0 }}>No peer review available for this session.</p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Region name → center position (left%, top%) within the image
 const REGION_POS = {
   "UPPER-LEFT":    { l: 17, t: 17 },
@@ -286,6 +434,19 @@ function DifferentialChart({ diagnosis }) {
 export default function ResultsPage({ api, result, onNew, onHistory, onFlow }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState("diagnosis");
+  const [peerReview, setPeerReview] = useState(null);
+  const [peerLoading, setPeerLoading] = useState(false);
+  const [peerError, setPeerError] = useState(null);
+
+  useEffect(() => {
+    if (!result.sessionId) return;
+    setPeerLoading(true);
+    setPeerError(null);
+    api.peerReview(result.sessionId)
+      .then(d => setPeerReview(d))
+      .catch(e => setPeerError(e.message || "Failed to load peer review"))
+      .finally(() => setPeerLoading(false));
+  }, [result.sessionId, api]);
   const symptoms = result.symptoms || {};
   const severityValue = symptoms.severity_level || symptoms.severity || "moderate";
   const refs = Array.isArray(result.refs) ? result.refs : [];
@@ -533,13 +694,28 @@ export default function ResultsPage({ api, result, onNew, onHistory, onFlow }) {
                   ))}
                 </div>
               )}
-              {tab === "transcript" && transcript.map((m, i) => (
-                <div key={i} style={{ marginBottom: 22 }}>
-                  <p className="ink-label" style={{ color: m.role === "user" ? "var(--rose)" : "var(--sage)" }}>{m.role === "user" ? t("results.transcript_patient") : t("results.transcript_interviewer")}</p>
-                  <p style={{ fontFamily: "var(--body)", fontSize: 15.5, color: "var(--ink2)", lineHeight: 1.78 }}>{m.text}</p>
-                  {i < transcript.length - 1 && <InkDivider />}
+              {tab === "transcript" && (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 24, alignItems: "start" }}>
+                  {/* Left: transcript messages */}
+                  <div>
+                    {transcript.length === 0 && (
+                      <p style={{ fontFamily: "var(--body)", fontSize: 14, color: "var(--ink4)", fontStyle: "italic" }}>No transcript available.</p>
+                    )}
+                    {transcript.map((m, i) => (
+                      <div key={i} style={{ marginBottom: 22 }}>
+                        <p className="ink-label" style={{ color: m.role === "user" ? "var(--rose)" : "var(--sage)" }}>
+                          {m.role === "user" ? t("results.transcript_patient") : t("results.transcript_interviewer")}
+                        </p>
+                        <p style={{ fontFamily: "var(--body)", fontSize: 15.5, color: "var(--ink2)", lineHeight: 1.78 }}>{m.text}</p>
+                        {i < transcript.length - 1 && <InkDivider />}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Right: Mistral Second Opinion panel */}
+                  <MistralPeerPanel peerReview={peerReview} loading={peerLoading} error={peerError} />
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>

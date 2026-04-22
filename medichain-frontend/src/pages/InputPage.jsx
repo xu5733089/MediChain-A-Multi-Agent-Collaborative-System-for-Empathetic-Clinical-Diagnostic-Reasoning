@@ -381,6 +381,10 @@ export default function InputPage({ api, onSubmit, onEval, selectedPatient, onCl
               onClick={() => {
                 if (!valid) return;
                 let description = form.description.trim();
+                if (description.length > 2000) {
+                  alert("Description is too long (max 2000 characters). Please shorten it.");
+                  return;
+                }
                 if (!description && hasReadyFile) {
                   const fileSummaries = preItems
                     .filter(it => !it.analysing && !it.error && it.analysis)

@@ -11,14 +11,39 @@ from pathlib import Path
 from typing import Optional, Union
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Query
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Query, Request
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from typing import List
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import Response, JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 load_dotenv()
+
+# ── Input validation helpers ──────────────────────────────────
+_INJECTION_PATTERNS = re.compile(
+    r"(ignore\s+(previous|prior|all)\s+instructions?|"
+    r"you\s+are\s+now|forget\s+(everything|all)|"
+    r"act\s+as\s+if|pretend\s+(you\s+are|to\s+be)|"
+    r"disregard\s+(your|all)|system\s+prompt|"
+    r"jailbreak|do\s+anything\s+now|dan\s+mode|"
+    r"<\s*script|javascript:|on\w+\s*=)",
+    re.IGNORECASE,
+)
+
+def _check_injection(text: str, field: str = "input") -> None:
+    """Raise 400 if text contains prompt-injection or XSS patterns."""
+    if _INJECTION_PATTERNS.search(text):
+        raise HTTPException(400, f"Invalid content detected in {field}.")
+
+_ALLOWED_ROLES      = {"patient", "provider"}
+_ALLOWED_GENDERS    = {"male", "female", "other", "prefer not to say", ""}
+_ALLOWED_BLOOD_TYPES = {"a+", "a-", "b+", "b-", "ab+", "ab-", "o+", "o-", "unknown", ""}
+_ALLOWED_MSG_ROLES  = {"user", "agent", "system"}
+_ALLOWED_AGENT_TYPES = {"interviewer", "diagnostician", "critic", "safety", None}
+_ALLOWED_EVAL_MODES = {"rag", "base", "both"}
 
 from sse_starlette.sse import EventSourceResponse
 
@@ -38,7 +63,7 @@ from safety import classify_safety
 from rag    import get_collection_size, search, add_documents
 from ingest import fetch_pmids, fetch_article_details, DEFAULT_TERMS
 from export import generate_pdf
-from eval   import run_single_llm, run_multi_agent, SAMPLE_QUESTIONS
+from eval   import run_single_llm, run_multi_agent, run_mistral_judge, run_mistral_diagnosis_review, SAMPLE_QUESTIONS
 from db import get_db, init_db, now_iso, severity_to_level, severity_to_score, VALID_AGENT_TYPES
 from auth   import (
     user_create, user_get_by_username, verify_password,
@@ -49,6 +74,15 @@ from auth   import (
 app = FastAPI(title="MediChain API", version="4.0.0")
 app.add_middleware(CORSMiddleware,
     allow_origins=["http://localhost:5173","http://localhost:5174","http://localhost:3000"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Return a concise, user-friendly 422 error instead of the raw Pydantic dump."""
+    errors = []
+    for e in exc.errors():
+        field = " → ".join(str(x) for x in e["loc"] if x != "body")
+        errors.append(f"{field}: {e['msg']}" if field else e["msg"])
+    return JSONResponse(status_code=422, content={"detail": "; ".join(errors)})
 
 init_db()
 
@@ -704,53 +738,183 @@ def _is_provider(user):
 
 # ── Request Models ────────────────────────────────────────
 class RegisterInput(BaseModel):
-    username: str
-    email: str
-    password: str
-    full_name: str = ""
+    username: str = Field(min_length=3, max_length=50)
+    email: str    = Field(min_length=5, max_length=120)
+    password: str = Field(min_length=6, max_length=128)
+    full_name: str = Field(default="", max_length=100)
     role: str = "patient"
 
+    @field_validator("username")
+    @classmethod
+    def val_username(cls, v: str) -> str:
+        v = v.strip()
+        if not re.match(r"^[A-Za-z0-9_\-]+$", v):
+            raise ValueError("Username may only contain letters, digits, _ and -")
+        return v
+
+    @field_validator("email")
+    @classmethod
+    def val_email(cls, v: str) -> str:
+        v = v.strip().lower()
+        if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", v):
+            raise ValueError("Invalid email address")
+        return v
+
+    @field_validator("role")
+    @classmethod
+    def val_role(cls, v: str) -> str:
+        if v not in _ALLOWED_ROLES:
+            raise ValueError(f"role must be one of: {', '.join(_ALLOWED_ROLES)}")
+        return v
+
+    @field_validator("full_name")
+    @classmethod
+    def val_full_name(cls, v: str) -> str:
+        _check_injection(v, "full_name")
+        return v.strip()
+
+
 class SymptomInput(BaseModel):
-    description: str
-    bodyPart: str = "General"
-    duration: str = "1-3 days"
+    description: str = Field(min_length=2, max_length=2000)
+    bodyPart: str    = Field(default="General", max_length=100)
+    duration: str    = Field(default="1-3 days", max_length=50)
     severity: Union[int, str] = "moderate"
-    notes: str = ""
+    notes: str = Field(default="", max_length=500)
     patient_id: Optional[str] = None
-    pre_context: list[str] = []  # Analyses from pre-consultation media uploads
+    pre_context: list[str] = Field(default=[], max_length=20)
     consent_to_provider_review: bool = False
 
+    @field_validator("description")
+    @classmethod
+    def val_description(cls, v: str) -> str:
+        v = v.strip()
+        _check_injection(v, "description")
+        return v
+
+    @field_validator("severity")
+    @classmethod
+    def val_severity(cls, v: Union[int, str]) -> Union[int, str]:
+        if isinstance(v, int) and not (1 <= v <= 10):
+            raise ValueError("severity must be between 1 and 10")
+        return v
+
+    @field_validator("notes")
+    @classmethod
+    def val_notes(cls, v: str) -> str:
+        _check_injection(v, "notes")
+        return v.strip()
+
+
 class ChatMessage(BaseModel):
-    session_id: str
-    user_message: str
-    attachments: list[str] = []
+    session_id: str  = Field(min_length=1, max_length=64)
+    user_message: str = Field(min_length=1, max_length=2000)
+    attachments: list[str] = Field(default=[], max_length=10)
+
+    @field_validator("user_message")
+    @classmethod
+    def val_user_message(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Message cannot be empty")
+        _check_injection(v, "user_message")
+        return v
+
 
 class DiagnoseRequest(BaseModel):
-    session_id: str
+    session_id: str = Field(min_length=1, max_length=64)
 
 
 class MessageInput(BaseModel):
     role: str
-    content: str
+    content: str = Field(min_length=1, max_length=5000)
     agent_type: Optional[str] = None
 
+    @field_validator("role")
+    @classmethod
+    def val_role(cls, v: str) -> str:
+        if v not in _ALLOWED_MSG_ROLES:
+            raise ValueError(f"role must be one of: {', '.join(_ALLOWED_MSG_ROLES)}")
+        return v
+
+    @field_validator("agent_type")
+    @classmethod
+    def val_agent_type(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v not in _ALLOWED_AGENT_TYPES:
+            raise ValueError("agent_type must be interviewer/diagnostician/critic/safety")
+        return v
+
+    @field_validator("content")
+    @classmethod
+    def val_content(cls, v: str) -> str:
+        _check_injection(v, "content")
+        return v
+
+
 class PatientInput(BaseModel):
-    name: str
-    dob: str = ""
-    gender: str = ""
-    blood_type: str = ""
-    allergies: str = ""
-    medications: str = ""
-    conditions: str = ""
-    notes: str = ""
+    name: str        = Field(min_length=1, max_length=100)
+    dob: str         = Field(default="", max_length=20)
+    gender: str      = Field(default="", max_length=30)
+    blood_type: str  = Field(default="", max_length=10)
+    allergies: str   = Field(default="", max_length=500)
+    medications: str = Field(default="", max_length=500)
+    conditions: str  = Field(default="", max_length=500)
+    notes: str       = Field(default="", max_length=1000)
+
+    @field_validator("name")
+    @classmethod
+    def val_name(cls, v: str) -> str:
+        v = v.strip()
+        _check_injection(v, "name")
+        return v
+
+    @field_validator("gender")
+    @classmethod
+    def val_gender(cls, v: str) -> str:
+        if v.lower() not in _ALLOWED_GENDERS:
+            raise ValueError(f"gender must be one of: {', '.join(g for g in _ALLOWED_GENDERS if g)}")
+        return v
+
+    @field_validator("blood_type")
+    @classmethod
+    def val_blood_type(cls, v: str) -> str:
+        if v.lower() not in _ALLOWED_BLOOD_TYPES:
+            raise ValueError(f"Invalid blood type: {v}")
+        return v
+
+    @field_validator("allergies", "medications", "conditions", "notes")
+    @classmethod
+    def val_free_text(cls, v: str) -> str:
+        _check_injection(v, "patient field")
+        return v.strip()
+
 
 class EvalRequest(BaseModel):
-    question_id: str
+    question_id: str = Field(min_length=1, max_length=50)
     mode: str = "both"
 
+    @field_validator("mode")
+    @classmethod
+    def val_mode(cls, v: str) -> str:
+        if v not in _ALLOWED_EVAL_MODES:
+            raise ValueError(f"mode must be one of: {', '.join(_ALLOWED_EVAL_MODES)}")
+        return v
+
+
 class IngestRequest(BaseModel):
-    terms: list[str] = []       # 自定义搜索词；为空则使用默认词表
-    per_term: int = 15          # 每个搜索词最多抓取文章数
+    terms: list[str] = Field(default=[], max_length=50)
+    per_term: int    = Field(default=15, ge=1, le=100)
+
+    @field_validator("terms")
+    @classmethod
+    def val_terms(cls, v: list[str]) -> list[str]:
+        cleaned = []
+        for t in v:
+            t = t.strip()
+            if len(t) > 200:
+                raise ValueError("Each search term must be under 200 characters")
+            _check_injection(t, "terms")
+            cleaned.append(t)
+        return cleaned
 
 # ── Health ────────────────────────────────────────────────
 @app.get("/")
@@ -814,10 +978,6 @@ async def rag_ingest(body: IngestRequest, user=Depends(require_user)):
 @app.post("/api/auth/register")
 def register(body: RegisterInput):
     """用户注册"""
-    if len(body.password) < 6:
-        raise HTTPException(400, "Password must be at least 6 characters")
-    if len(body.username) < 3:
-        raise HTTPException(400, "Username must be at least 3 characters")
     user = user_create(body.username, body.email, body.password, body.full_name, body.role)
     token = create_token(user["id"], user["username"])
     return {"token": token, "user": user}
@@ -1957,6 +2117,55 @@ def export_json(session_id: str):
         media_type="application/json",
         headers={"Content-Disposition":f'attachment; filename="{fname}"'})
 
+# ── Mistral Peer Review ────────────────────────────────────
+@app.get("/api/session/{session_id}/peer-review")
+def session_peer_review(session_id: str, user=Depends(get_current_user)):
+    """
+    Mistral Large 对本次 Claude 诊断出具独立第二意见。
+    结果缓存在 sessions.mistral_peer_review（JSON），避免重复计费。
+    """
+    sess = session_get(session_id)
+    if not sess:
+        raise HTTPException(404, "Session not found")
+    # Only enforce ownership when both session and requester have a user_id
+    if user and sess.get("user_id") and sess["user_id"] != user["id"]:
+        raise HTTPException(403, "Forbidden")
+    if not sess.get("diagnosis"):
+        raise HTTPException(400, "No diagnosis available for this session yet")
+
+    # Return cached result if already evaluated
+    if sess.get("mistral_peer_review"):
+        try:
+            return json.loads(sess["mistral_peer_review"])
+        except Exception:
+            pass
+
+    # Build symptoms summary — sess["symptoms"] is already a parsed dict
+    sym = sess.get("symptoms") or {}
+    if isinstance(sym, str):
+        try: sym = json.loads(sym)
+        except Exception: sym = {}
+    symptoms_parts = []
+    if sym.get("description"):    symptoms_parts.append(f"Chief complaint: {sym['description']}")
+    if sym.get("body_part"):      symptoms_parts.append(f"Location: {sym['body_part']}")
+    if sym.get("duration"):       symptoms_parts.append(f"Duration: {sym['duration']}")
+    if sess.get("severity_level"):symptoms_parts.append(f"Severity: {sess['severity_level']}")
+    symptoms_text = "\n".join(symptoms_parts) or "No symptom details available"
+
+    review_result = run_mistral_diagnosis_review(
+        symptoms_text=symptoms_text,
+        diagnosis_text=sess["diagnosis"],
+        review_text=sess.get("review") or "",
+    )
+
+    # Cache in DB
+    with get_db() as c:
+        c.execute("UPDATE sessions SET mistral_peer_review=? WHERE id=?",
+                  (json.dumps(review_result), session_id))
+        c.commit()
+
+    return review_result
+
 # ── MedQA Eval ────────────────────────────────────────────
 @app.get("/api/eval/questions")
 def get_questions():
@@ -1973,18 +2182,32 @@ def run_eval(body: EvalRequest):
     if body.mode in ("multi","both"):
         m = run_multi_agent(q["question"], q["options"])
         result["multi"] = m; result["multi_correct"] = m["answer"]==q["correct"]
+        # Mistral独立评委：评估 Claude 多智能体答案
+        mj = run_mistral_judge(
+            question=q["question"],
+            options=q["options"],
+            claude_answer=m["answer"],
+            claude_reasoning=m["reasoning"],
+            correct_answer=q["correct"],
+        )
+        result["mistral_judge"] = mj
     eid = str(uuid.uuid4())
+    mj = result.get("mistral_judge", {})
     with get_db() as c:
         c.execute("""INSERT INTO eval_runs(id,question_id,single_answer,single_reasoning,
             multi_answer,multi_reasoning,multi_pipeline,correct_answer,category,
-            single_correct,multi_correct,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (eid,body.question_id,
-             result.get("single",{}).get("answer",""),result.get("single",{}).get("reasoning",""),
-             result.get("multi",{}).get("answer",""),result.get("multi",{}).get("reasoning",""),
+            single_correct,multi_correct,mistral_verdict,mistral_reasoning,mistral_correct,created_at)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (eid, body.question_id,
+             result.get("single",{}).get("answer",""), result.get("single",{}).get("reasoning",""),
+             result.get("multi",{}).get("answer",""),  result.get("multi",{}).get("reasoning",""),
              json.dumps(result.get("multi",{}).get("pipeline",{})),
-             q["correct"],q["category"],
+             q["correct"], q["category"],
              1 if result.get("single_correct") else 0,
-             1 if result.get("multi_correct") else 0, _now()))
+             1 if result.get("multi_correct")  else 0,
+             mj.get("verdict",""), mj.get("assessment",""),
+             1 if mj.get("correct") else 0,
+             _now()))
         c.commit()
     return result
 
@@ -1992,12 +2215,14 @@ def run_eval(body: EvalRequest):
 def eval_history():
     with get_db() as c:
         rows = c.execute("""SELECT question_id,single_answer,multi_answer,correct_answer,
-            category,single_correct,multi_correct,created_at FROM eval_runs
-            ORDER BY created_at DESC LIMIT 50""").fetchall()
+            category,single_correct,multi_correct,mistral_verdict,mistral_reasoning,mistral_correct,created_at
+            FROM eval_runs ORDER BY created_at DESC LIMIT 50""").fetchall()
     records = [dict(r) for r in rows]
     if records:
         total=len(records); s_total=sum(1 for r in records if r["single_answer"]); m_total=sum(1 for r in records if r["multi_answer"])
         s_correct=sum(r["single_correct"] or 0 for r in records); m_correct=sum(r["multi_correct"] or 0 for r in records)
+        mj_total=sum(1 for r in records if r.get("mistral_verdict") and r["mistral_verdict"] not in ("","UNAVAILABLE","ERROR"))
+        mj_agree=sum(1 for r in records if r.get("mistral_correct"))
         cats={}
         for r in records:
             cat=r["category"]
@@ -2006,6 +2231,7 @@ def eval_history():
             if r["multi_answer"]:  cats[cat]["multi"]+=1;  cats[cat]["multi_c"]+=r["multi_correct"] or 0
         stats={"total":total,"single_accuracy":round(s_correct/s_total*100,1) if s_total else 0,
                "multi_accuracy":round(m_correct/m_total*100,1) if m_total else 0,
+               "mistral_agreement":round(mj_agree/mj_total*100,1) if mj_total else None,
                "improvement":round((m_correct-s_correct)/s_total*100,1) if s_total else 0,"by_category":cats}
     else:
         stats={"total":0,"single_accuracy":0,"multi_accuracy":0,"improvement":0,"by_category":{}}

@@ -155,5 +155,6 @@ export function makeApi(token) {
     sessionVerdict: (id, verdict, note) => patch(`/api/sessions/${id}/verdict`, { verdict, note }),
     ragStatus: () => get("/api/rag/status"),
     ragIngest: (b = {}) => post("/api/rag/ingest", b),
+    peerReview: id => get(`/api/session/${id}/peer-review`),
   };
 }

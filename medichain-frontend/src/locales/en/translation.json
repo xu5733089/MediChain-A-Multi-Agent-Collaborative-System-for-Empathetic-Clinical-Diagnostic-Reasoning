@@ -89,7 +89,7 @@
     "title_line1": "Tell us how",
     "title_line2": "you feel",
     "subtitle": "Three specialist AI agents conduct a structured clinical interview, generate a RAG-grounded differential diagnosis, and peer-review the results — empathetic, evidence-based, auditable.",
-    "agents_online": "3 AGENTS ONLINE",
+    "agents_online": "5 AGENTS ONLINE",
     "eval_btn": "📊 MedQA Eval →",
     "profile_linked": "Profile linked",
     "unlink": "Unlink",

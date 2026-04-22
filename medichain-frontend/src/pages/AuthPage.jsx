@@ -602,28 +602,28 @@ export default function AuthPage({ api, onLogin, onSkip }) {
 
           {step === "auth" && (
             <>
-              {/* Role badge + change */}
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-                <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: lampColor, letterSpacing: "0.12em", background: `hsla(${hue},55%,48%,0.12)`, border: `1px solid ${lampColor}30`, borderRadius: 20, padding: "3px 10px" }}>
+              {/* Row 1: role badge + change */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: lampColor, letterSpacing: "0.12em", background: `hsla(${hue},55%,48%,0.12)`, border: `1px solid ${lampColor}30`, borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap" }}>
                   {isProvider ? "👨‍⚕️ PROVIDER" : "😷 PATIENT"}
                 </span>
                 <button onClick={() => { setStep("role"); setApiErr(""); setErrors({}); setOk(""); }}
-                  style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "var(--body)", fontSize: 12, color: "rgba(240,228,210,0.4)", textDecoration: "underline", padding: 0 }}>
+                  style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "var(--body)", fontSize: 12, color: "rgba(240,228,210,0.4)", textDecoration: "underline", padding: 0, whiteSpace: "nowrap" }}>
                   change
                 </button>
-                {/* Mode toggle */}
-                <div style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
-                  {[{ id: "login", l: "Sign In" }, { id: "register", l: "Register" }].map(m => (
-                    <button key={m.id} onClick={() => { setMode(m.id); setErrors({}); setApiErr(""); setOk(""); }}
-                      style={{
-                        fontFamily: "var(--mono)", fontSize: 9, letterSpacing: "0.1em",
-                        background: mode === m.id ? `hsla(${hue},55%,48%,0.18)` : "transparent",
-                        color: mode === m.id ? lampColor : "rgba(240,228,210,0.35)",
-                        border: `1px solid ${mode === m.id ? lampColor + "50" : "transparent"}`,
-                        borderRadius: 6, padding: "3px 8px", cursor: "pointer",
-                      }}>{m.l}</button>
-                  ))}
-                </div>
+              </div>
+              {/* Row 2: mode toggle */}
+              <div style={{ display: "flex", gap: 4, marginBottom: 16 }}>
+                {[{ id: "login", l: "Sign In" }, { id: "register", l: "Register" }].map(m => (
+                  <button key={m.id} onClick={() => { setMode(m.id); setErrors({}); setApiErr(""); setOk(""); }}
+                    style={{
+                      fontFamily: "var(--mono)", fontSize: 9, letterSpacing: "0.1em",
+                      background: mode === m.id ? `hsla(${hue},55%,48%,0.18)` : "transparent",
+                      color: mode === m.id ? lampColor : "rgba(240,228,210,0.35)",
+                      border: `1px solid ${mode === m.id ? lampColor + "50" : "rgba(240,200,120,0.12)"}`,
+                      borderRadius: 6, padding: "4px 14px", cursor: "pointer",
+                    }}>{m.l}</button>
+                ))}
               </div>
 
               {/* Banners */}
@@ -664,8 +664,7 @@ export default function AuthPage({ api, onLogin, onSkip }) {
           )}
 
           {/* Footer */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 18 }}>
-            <span style={{ fontFamily: "var(--body)", fontSize: 13.5, color: lampColor, opacity: 0.6 }}>Forgot password?</span>
+          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", marginTop: 18 }}>
             <button onClick={onSkip} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "var(--mono)", fontSize: 9, letterSpacing: "0.1em", color: "rgba(240,228,210,0.28)" }}>
               GUEST MODE
             </button>

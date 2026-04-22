@@ -190,5 +190,13 @@ def init_db():
             c.execute("ALTER TABLE sessions ADD COLUMN provider_verdict TEXT")
         if not _column_exists(c, "sessions", "provider_note"):
             c.execute("ALTER TABLE sessions ADD COLUMN provider_note TEXT")
+        if not _column_exists(c, "sessions", "mistral_peer_review"):
+            c.execute("ALTER TABLE sessions ADD COLUMN mistral_peer_review TEXT")
+        if not _column_exists(c, "eval_runs", "mistral_verdict"):
+            c.execute("ALTER TABLE eval_runs ADD COLUMN mistral_verdict TEXT")
+        if not _column_exists(c, "eval_runs", "mistral_reasoning"):
+            c.execute("ALTER TABLE eval_runs ADD COLUMN mistral_reasoning TEXT")
+        if not _column_exists(c, "eval_runs", "mistral_correct"):
+            c.execute("ALTER TABLE eval_runs ADD COLUMN mistral_correct INTEGER")
 
         c.commit()

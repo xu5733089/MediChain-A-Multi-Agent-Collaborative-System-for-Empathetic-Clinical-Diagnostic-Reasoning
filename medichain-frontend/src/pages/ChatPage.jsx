@@ -348,6 +348,10 @@ export default function ChatPage({ api, symptoms, onComplete, onBack, resumeSess
   async function send() {
     if (!input.trim() || loading || phase !== "interviewing" || !sid) return;
     const txt = input.trim();
+    if (txt.length > 2000) {
+      setError(t("chat.err_too_long") || "Message too long (max 2000 characters).");
+      return;
+    }
     const attachments = [...pendingAttachments];
     setInput("");
     setPendingAttachments([]);

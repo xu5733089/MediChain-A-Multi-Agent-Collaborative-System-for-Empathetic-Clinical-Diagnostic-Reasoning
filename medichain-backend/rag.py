@@ -1,6 +1,7 @@
 """
 rag.py — Qdrant 向量数据库 + 医学文献混合检索模块 (Dense + BM25 Hybrid Search, RRF Fusion)
 """
+import atexit
 import json
 import math
 import re
@@ -29,6 +30,20 @@ _client: Optional[QdrantClient] = None
 _dense_model: Optional[SentenceTransformer] = None
 _reranker: Optional[CrossEncoder] = None
 _bm25_vocab: Optional[dict] = None  # word -> idf
+
+
+def _shutdown():
+    """Close Qdrant client before interpreter teardown to suppress __del__ ImportError."""
+    global _client
+    if _client is not None:
+        try:
+            _client.close()
+        except Exception:
+            pass
+        _client = None
+
+
+atexit.register(_shutdown)
 
 
 def _get_client() -> QdrantClient:

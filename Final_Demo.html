@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediChain — Final Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+/* === RESET & TOKENS =========================================== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080F1A;--bg2:#0D1F35;--bg3:#0A1628;
+  --teal:#00E5C0;--teal2:#00C4A5;
+  --muted:#6A9BB5;--text:#E8F4F8;--text2:#A8C8D8;
+  --amber:#F5A623;--rose:#FF6B6B;
+  --mono:'JetBrains Mono',monospace;--serif:'DM Serif Display',serif;
+}
+html,body{width:100%;height:100%;background:var(--bg);overflow:hidden;font-family:var(--mono)}
+
+/* === SLIDE SYSTEM ============================================= */
+.deck{width:100vw;height:100vh;position:relative}
+.slide{
+  width:100vw;height:100vh;height:100dvh;
+  overflow:hidden;position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  opacity:0;pointer-events:none;transition:opacity .5s ease;
+}
+.slide.active{opacity:1;pointer-events:all}
+.slide::before{
+  content:'';position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(0,229,192,.032) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,229,192,.032) 1px,transparent 1px);
+  background-size:60px 60px;pointer-events:none;z-index:0;
+}
+
+/* === LAYOUT HELPERS ========================================== */
+.slide-inner{
+  position:relative;z-index:1;flex:1;display:flex;flex-direction:column;
+  padding:clamp(18px,3vh,40px) clamp(28px,4.5vw,64px);
+}
+.slide-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:clamp(10px,1.8vh,22px)}
+.eyebrow{font-size:clamp(11px,1.1vw,14px);color:var(--teal);letter-spacing:.28em;text-transform:uppercase}
+.eyebrow::before{content:'[ '}.eyebrow::after{content:' ]'}
+.slide-num{font-size:clamp(11px,1.1vw,14px);color:var(--muted);letter-spacing:.15em}
+.section-title{font-family:var(--serif);font-size:clamp(34px,5.2vw,68px);color:var(--text);line-height:.92;letter-spacing:-2px;margin-bottom:clamp(4px,1vh,12px)}
+.section-title em{color:var(--teal);font-style:italic}
+.section-sub{font-size:clamp(14px,1.4vw,17px);color:var(--muted);line-height:1.65;max-width:70ch;margin-bottom:clamp(10px,2vh,24px)}
+.bottom-bar{height:2px;background:linear-gradient(90deg,var(--teal),transparent);opacity:.55;flex-shrink:0}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:clamp(10px,1.5vw,22px)}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(8px,1.2vw,16px)}
+
+/* === BADGES ================================================== */
+.badge{display:inline-flex;align-items:center;font-size:clamp(10px,1vw,12px);letter-spacing:.18em;text-transform:uppercase;padding:3px 9px;border-radius:2px}
+.badge-teal{background:rgba(0,229,192,.12);color:var(--teal);border:1px solid rgba(0,229,192,.3)}
+.badge-amber{background:rgba(245,166,35,.12);color:var(--amber);border:1px solid rgba(245,166,35,.3)}
+.badge-rose{background:rgba(255,107,107,.12);color:var(--rose);border:1px solid rgba(255,107,107,.3)}
+.new-tag{display:inline-block;font-size:9px;background:var(--teal);color:var(--bg);padding:1px 5px;border-radius:2px;letter-spacing:.1em;margin-left:5px;vertical-align:middle}
+
+/* === CARDS =================================================== */
+.card{background:var(--bg2);border:1px solid rgba(0,229,192,.12);border-radius:6px;padding:clamp(10px,1.6vh,18px) clamp(12px,1.8vw,20px);position:relative;overflow:hidden}
+.card::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--teal),transparent)}
+.stat-card{background:var(--bg2);border:1px solid rgba(0,229,192,.18);border-radius:4px;padding:clamp(8px,1.4vh,16px) clamp(10px,1.5vw,18px)}
+.stat-card::after{content:'';display:block;width:100%;height:1px;background:linear-gradient(90deg,var(--teal),transparent);margin-bottom:4px}
+.stat-num{font-family:var(--serif);font-size:clamp(26px,4vw,54px);color:var(--teal);line-height:1;letter-spacing:-1px}
+.stat-label{font-size:clamp(11px,1.1vw,13px);color:var(--muted);letter-spacing:.18em;text-transform:uppercase;margin-top:3px}
+
+/* === ANIMATIONS ============================================== */
+.reveal{opacity:0;transform:translateY(14px);transition:opacity .55s ease,transform .55s ease}
+.slide.active .reveal{opacity:1;transform:translateY(0)}
+.reveal:nth-child(1){transition-delay:.08s}.reveal:nth-child(2){transition-delay:.16s}
+.reveal:nth-child(3){transition-delay:.24s}.reveal:nth-child(4){transition-delay:.32s}
+.reveal:nth-child(5){transition-delay:.40s}.reveal:nth-child(6){transition-delay:.48s}
+.reveal:nth-child(7){transition-delay:.56s}.reveal:nth-child(8){transition-delay:.64s}
+.reveal:nth-child(9){transition-delay:.72s}.reveal:nth-child(10){transition-delay:.80s}
+
+.bar-v{transform-box:fill-box;transform-origin:bottom;transform:scaleY(0);transition:transform .9s cubic-bezier(.16,1,.3,1)}
+.slide.active .bar-v{transform:scaleY(1)}
+.bar-h{transform-box:fill-box;transform-origin:left;transform:scaleX(0);transition:transform .9s cubic-bezier(.16,1,.3,1)}
+.slide.active .bar-h{transform:scaleX(1)}
+
+.mbar-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--teal2),var(--teal));transition:width 1.1s ease .6s}
+.slide:not(.active) .mbar-fill{width:0!important}
+.mbar-track{height:clamp(5px,.8vh,9px);background:var(--bg2);border-radius:99px;overflow:hidden;border:1px solid rgba(0,229,192,.1)}
+
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes glow{0%,100%{box-shadow:0 0 48px rgba(0,229,192,.5)}50%{box-shadow:0 0 80px rgba(0,229,192,.75)}}
+@keyframes fnl{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+@keyframes fadeSlideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* === COMPARISON TABLE ======================================== */
+.ctable{width:100%;border-collapse:collapse}
+.ctable th{font-size:clamp(11px,1.1vw,13px);letter-spacing:.18em;text-transform:uppercase;color:var(--muted);padding:clamp(5px,.9vh,9px) clamp(8px,1.2vw,14px);border-bottom:1px solid rgba(0,229,192,.2);text-align:left}
+.ctable th:nth-child(2){color:var(--rose)}.ctable th:nth-child(3){color:var(--amber)}.ctable th:nth-child(4){color:var(--text2)}.ctable th:nth-child(5){color:var(--teal)}
+.ctable td{font-size:clamp(11px,1.1vw,13px);padding:clamp(4px,.7vh,8px) clamp(8px,1.2vw,14px);border-bottom:1px solid rgba(255,255,255,.04);color:var(--muted);vertical-align:middle}
+.ctable td:first-child{color:var(--text2)}
+.ctable td .good{color:var(--teal)}.ctable td .bad{color:rgba(255,107,107,.7)}.ctable td .mid{color:var(--amber)}
+
+/* === PIPELINE STEPS ========================================== */
+.pipe-step{display:flex;align-items:flex-start;gap:10px;padding:clamp(7px,1.1vh,12px) clamp(10px,1.4vw,16px);background:var(--bg2);border:1px solid rgba(0,229,192,.1);border-left:3px solid var(--teal);border-radius:4px}
+.pipe-num{font-size:clamp(11px,1.1vw,14px);color:var(--teal);flex-shrink:0;margin-top:2px}
+.pipe-t{font-family:var(--serif);font-size:clamp(14px,1.7vw,19px);color:var(--text);margin-bottom:2px}
+.pipe-d{font-size:clamp(11px,1.1vw,13px);color:var(--muted);line-height:1.5}
+
+/* === AGENT CARDS ============================================ */
+.agent-card{background:var(--bg2);border:1px solid rgba(0,229,192,.15);border-radius:8px;padding:clamp(10px,1.6vh,20px) clamp(12px,1.8vw,20px);display:flex;flex-direction:column;gap:5px}
+.agent-icon{font-size:clamp(20px,2.5vw,30px)}
+.agent-name{font-family:var(--serif);font-size:clamp(15px,1.8vw,22px);color:var(--text)}
+.agent-role{font-size:clamp(10px,1vw,12px);color:var(--teal);letter-spacing:.18em;text-transform:uppercase;margin-bottom:3px}
+.agent-feat{font-size:clamp(11px,1.1vw,13px);color:var(--muted);line-height:1.5}
+.agent-feat::before{content:'→ ';color:var(--teal)}
+
+/* === ARCH DIAGRAM =========================================== */
+.arch-row{display:flex;align-items:stretch;gap:clamp(6px,1vw,12px)}
+.arch-lbl{font-size:clamp(10px,1vw,12px);color:var(--muted);letter-spacing:.14em;text-transform:uppercase;writing-mode:vertical-rl;transform:rotate(180deg);flex-shrink:0;display:flex;align-items:center;opacity:.55}
+.arch-cards{flex:1;display:flex;gap:clamp(5px,.8vw,10px)}
+.arch-card{flex:1;background:var(--bg2);border:1px solid rgba(0,229,192,.12);border-radius:4px;padding:clamp(6px,.9vh,11px) clamp(8px,1.2vw,13px);display:flex;flex-direction:column;gap:2px}
+.arch-card.hi{border-color:rgba(0,229,192,.35);background:rgba(0,229,192,.05)}
+.arch-ct{font-family:var(--serif);font-size:clamp(12px,1.4vw,16px);color:var(--text)}
+.arch-cd{font-size:clamp(10px,1vw,12px);color:var(--muted);line-height:1.35}
+.arch-arr{display:flex;align-items:center;justify-content:center;color:rgba(0,229,192,.35);font-size:clamp(10px,1.3vw,14px)}
+
+/* === SSE AGENT LOG PANEL ==================================== */
+.agent-panel{background:var(--bg3);border:1px solid rgba(0,229,192,.15);border-radius:6px;overflow:hidden;display:flex;flex-direction:column}
+.agent-panel-hdr{padding:7px 14px;background:rgba(0,229,192,.07);border-bottom:1px solid rgba(0,229,192,.1);display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--teal);flex-shrink:0}
+.agent-panel-hdr .dot{width:6px;height:6px;border-radius:50%;background:var(--teal);animation:blink 1.4s ease-in-out infinite}
+.agent-panel-body{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:7px}
+.agent-panel-body::-webkit-scrollbar{width:4px}
+.agent-panel-body::-webkit-scrollbar-thumb{background:rgba(0,229,192,.2);border-radius:2px}
+.agent-bubble{background:var(--bg2);border:1px solid rgba(0,229,192,.12);border-radius:5px;padding:7px 10px;font-size:clamp(10px,1vw,12px)}
+.agent-bubble-route{font-size:10px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:3px;display:flex;align-items:center;gap:5px}
+.agent-bubble-from{color:var(--teal)}.agent-bubble-arr{color:var(--muted);opacity:.6}.agent-bubble-to{color:var(--amber)}
+.agent-bubble-text{color:var(--text2);line-height:1.5}
+.phase-sep{text-align:center;padding:4px 0;font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:rgba(0,229,192,.55);display:flex;align-items:center;gap:8px}
+.phase-sep::before,.phase-sep::after{content:'';flex:1;height:1px;background:rgba(0,229,192,.15)}
+
+/* === MODAL CARDS ============================================ */
+.modal-card{background:var(--bg2);border:1px solid rgba(0,229,192,.12);border-radius:6px;padding:clamp(8px,1.2vh,13px) clamp(10px,1.4vw,14px);display:flex;flex-direction:column;gap:4px;position:relative;overflow:hidden}
+.modal-card::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--teal),transparent)}
+.modal-title{font-family:var(--serif);font-size:clamp(13px,1.5vw,17px);color:var(--text)}
+.modal-desc{font-size:clamp(10px,1vw,12px);color:var(--muted);line-height:1.45}
+.modal-visual{width:100%;height:clamp(44px,6vh,70px);border-radius:3px;overflow:hidden;background:var(--bg3);border:1px solid rgba(0,229,192,.08);display:flex;align-items:center;justify-content:center;font-size:clamp(22px,2.8vw,32px)}
+
+/* === CITATION ROW =========================================== */
+.cite-row{background:var(--bg2);border:1px solid rgba(0,229,192,.1);border-radius:4px;padding:clamp(6px,1vh,11px) clamp(10px,1.4vw,15px);display:flex;align-items:flex-start;gap:10px}
+.cite-score{font-family:var(--serif);font-size:clamp(18px,2.2vw,26px);color:var(--teal);flex-shrink:0;line-height:1}
+.cite-title{font-size:clamp(11px,1.1vw,13px);color:var(--text2);margin-bottom:2px}
+.cite-meta{font-size:clamp(10px,1vw,11px);color:var(--muted);letter-spacing:.08em}
+
+/* === REWRITE CARD =========================================== */
+.rw-txt{font-size:clamp(11px,1.1vw,13px);line-height:1.5;padding:5px 8px;border-radius:3px;margin-bottom:4px}
+.rw-before{background:rgba(255,107,107,.08);color:#FF9999;border-left:2px solid #FF6B6B}
+.rw-after{background:rgba(0,229,192,.08);color:var(--teal);border-left:2px solid var(--teal)}
+.rw-arrow{text-align:center;color:var(--teal);font-size:13px;margin:2px 0}
+
+/* === S1 TITLE =============================================== */
+#s1 .orb{position:absolute;width:clamp(260px,44vw,540px);height:clamp(260px,44vw,540px);border-radius:50%;background:radial-gradient(circle,rgba(0,229,192,.10) 0%,transparent 70%);top:-14%;right:-7%;animation:breathe 7s ease-in-out infinite;pointer-events:none;z-index:0}
+#s1 .content{position:relative;z-index:1;flex:1;display:grid;grid-template-columns:1.15fr .85fr;align-items:center;gap:clamp(20px,3vw,40px);padding:clamp(20px,3.5vh,48px) clamp(28px,4.5vw,64px)}
+#s1 h1{font-family:var(--serif);font-size:clamp(58px,9vw,118px);color:var(--text);line-height:.88;letter-spacing:-3px;margin:clamp(6px,1.2vh,14px) 0}
+#s1 h1 em{color:var(--teal);font-style:italic}
+#s1 .demo-badge{display:inline-flex;align-items:center;gap:8px;background:var(--teal);color:var(--bg);font-weight:700;font-size:clamp(12px,1.3vw,15px);letter-spacing:.2em;padding:5px 14px;border-radius:2px;margin-bottom:clamp(6px,1.2vh,14px);width:fit-content}
+#s1 .sub{font-size:clamp(14px,1.5vw,18px);color:var(--muted);line-height:1.75;max-width:44ch;margin:clamp(8px,1.5vh,16px) 0}
+#s1 .meta-line{font-size:clamp(12px,1.2vw,15px);color:var(--muted);letter-spacing:.1em}
+#s1 .meta-line span{color:var(--teal);margin-right:7px}
+#s1 .ring-wrap{position:relative;width:clamp(180px,26vw,340px);height:clamp(180px,26vw,340px)}
+#s1 .ring{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(0,229,192,.18);animation:spin 24s linear infinite}
+#s1 .ring:nth-child(2){inset:16%;border-color:rgba(0,229,192,.13);animation-duration:18s;animation-direction:reverse}
+#s1 .ring:nth-child(3){inset:32%;border-color:rgba(0,229,192,.22);animation-duration:12s}
+#s1 .core{position:absolute;inset:41%;background:var(--teal);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:clamp(14px,2vw,24px);color:var(--bg);animation:glow 3s ease-in-out infinite}
+#s1 .node{position:absolute;width:6px;height:6px;background:var(--teal);border-radius:50%;opacity:.55;animation:fnl 4s ease-in-out infinite}
+#s1 .node:nth-child(4){top:7%;left:48%}#s1 .node:nth-child(5){top:48%;right:5%;animation-delay:.9s}
+#s1 .node:nth-child(6){bottom:9%;left:28%;animation-delay:1.9s}#s1 .node:nth-child(7){top:30%;left:5%;animation-delay:.5s}
+
+/* === NAV ================================================== */
+#nav-dots{position:fixed;bottom:clamp(12px,2vh,20px);left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:200}
+.nav-dot{width:5px;height:5px;border-radius:50%;background:var(--muted);opacity:.45;cursor:pointer;transition:all .3s}
+.nav-dot.active{background:var(--teal);opacity:1;transform:scale(1.5)}
+.nav-arrow{position:fixed;top:50%;transform:translateY(-50%);background:rgba(13,31,53,.7);border:1px solid rgba(0,229,192,.2);color:var(--muted);font-size:18px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px;z-index:200;transition:all .2s;user-select:none}
+.nav-arrow:hover{border-color:var(--teal);color:var(--teal)}
+#nav-prev{left:14px}#nav-next{right:14px}
+
+/* === INLINE EDIT ============================================ */
+.edit-hint{position:fixed;top:12px;left:12px;z-index:300;font-size:8px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;opacity:.35;pointer-events:none;transition:opacity .3s}
+body:hover .edit-hint{opacity:.6}
+[contenteditable="true"]{outline:1px dashed rgba(0,229,192,.4);border-radius:2px;cursor:text}
+[contenteditable="true"]:focus{outline:1px solid var(--teal);background:rgba(0,229,192,.04)}
+
+@media(max-height:700px){.section-title{font-size:clamp(24px,4vw,44px)}.stat-num{font-size:clamp(20px,3vw,36px)}.section-sub{margin-bottom:8px}}
+@media(max-height:600px){.slide-inner{padding:10px 22px}.section-sub{display:none}}
+@media(prefers-reduced-motion:reduce){.slide{transition:none}.reveal{opacity:1!important;transform:none!important;transition:none!important}*{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="edit-hint">E = edit · F = fullscreen · Ctrl+S = save</div>
+<div class="deck" id="deck">
+
+<!-- ===================== SLIDE 1 — TITLE ===================== -->
+<div class="slide active" id="s1">
+  <div class="orb"></div>
+  <div class="content">
+    <div style="display:flex;flex-direction:column">
+      <div class="reveal eyebrow">COMP9900 · Team W18C-CAKE · UNSW Sydney · 2026</div>
+      <div class="reveal demo-badge">▶ FINAL DEMO</div>
+      <h1 class="reveal">Medi<em>Chain</em></h1>
+      <p class="reveal sub">A Multi-Agent Collaborative System for<br>Empathetic Clinical Diagnostic Reasoning</p>
+      <div class="reveal" style="display:flex;flex-direction:column;gap:4px;margin-top:8px">
+        <div class="meta-line"><span>//</span>5 Specialist AI Agents · SSE Real-time Streaming</div>
+        <div class="meta-line"><span>//</span>RAG: 47,441 MedQuAD Docs · BioLORD-2023 768d</div>
+        <div class="meta-line"><span>//</span>6 Input Modalities · DICOM · Audio · PDF · Video</div>
+        <div class="meta-line"><span>//</span>Dense + BM25 Hybrid Retrieval · PubMed Citations</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center">
+      <div class="ring-wrap">
+        <div class="ring"></div><div class="ring"></div><div class="ring"></div>
+        <div class="core">Mc</div>
+        <div class="node"></div><div class="node"></div><div class="node"></div><div class="node"></div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 2 — PROBLEM ================== -->
+<div class="slide" id="s2">
+  <div class="slide-inner">
+    <div class="slide-header reveal">
+      <div class="eyebrow">Motivation</div><div class="slide-num">02 / 09</div>
+    </div>
+    <div class="section-title reveal">Problem <em>Background</em></div>
+    <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(14px,2vw,28px);align-items:stretch">
+      <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
+        <div class="reveal" style="font-size:clamp(13px,1.3vw,16px);color:var(--muted);line-height:1.7">
+          Diagnostic errors remain one of the most persistent failures in modern healthcare. Despite AI advances, error rates have stayed high for over two decades — and single-agent AI tools still fall far short of clinical thresholds.
+        </div>
+        <div class="reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:clamp(6px,1vw,12px)">
+          <div class="stat-card"><div class="stat-num">12M<span style="font-size:.45em;color:var(--muted)">+</span></div><div class="stat-label">Diagnostic errors / year · USA</div><div style="font-size:8px;color:rgba(106,155,181,.6);margin-top:3px">Graber et al., 2013</div></div>
+          <div class="stat-card"><div class="stat-num">22<span style="font-size:.45em;color:var(--muted)">%</span></div><div class="stat-label">Error rate · Internal medicine</div><div style="font-size:8px;color:rgba(106,155,181,.6);margin-top:3px">BMJ Quality &amp; Safety, 2016</div></div>
+          <div class="stat-card"><div class="stat-num">$40<span style="font-size:.45em;color:var(--muted)">B</span></div><div class="stat-label">Annual cost · Diagnostic failures</div><div style="font-size:8px;color:rgba(106,155,181,.6);margin-top:3px">CRICO Strategies, 2021</div></div>
+          <div class="stat-card"><div class="stat-num">71<span style="font-size:.45em;color:var(--muted)">%</span></div><div class="stat-label">GPT-4 accuracy · MedQA bench.</div><div style="font-size:8px;color:rgba(106,155,181,.6);margin-top:3px">Kung et al., 2023</div></div>
+        </div>
+        <div class="reveal" style="padding:clamp(8px,1.3vh,14px);background:rgba(245,166,35,.07);border:1px solid rgba(245,166,35,.2);border-radius:4px;font-size:clamp(13px,1.3vw,15px);color:var(--muted);line-height:1.6">
+          <strong style="color:var(--amber)">Critical Gap:</strong> GPT-4's 71% MedQA accuracy falls short of the &gt;90% threshold required for clinical decision support. On rare disease classification the gap widens to &gt;50 percentage points.
+        </div>
+      </div>
+      <!-- Bar chart -->
+      <div class="reveal" style="background:var(--bg2);border:1px solid rgba(0,229,192,.12);border-radius:6px;padding:clamp(10px,1.5vh,18px);display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:clamp(12px,1.2vw,14px);color:var(--muted);letter-spacing:.15em;text-transform:uppercase">Clinical AI Accuracy Gap</div>
+        <svg viewBox="0 0 340 210" style="width:100%;flex:1">
+          <line x1="44" y1="10" x2="44" y2="168" stroke="rgba(0,229,192,.2)" stroke-width=".6"/>
+          <line x1="44" y1="168" x2="330" y2="168" stroke="rgba(0,229,192,.2)" stroke-width=".6"/>
+          <line x1="44" y1="44" x2="330" y2="44" stroke="rgba(0,229,192,.06)" stroke-width=".5" stroke-dasharray="3"/>
+          <line x1="44" y1="110" x2="330" y2="110" stroke="rgba(0,229,192,.06)" stroke-width=".5" stroke-dasharray="3"/>
+          <line x1="44" y1="142" x2="330" y2="142" stroke="rgba(0,229,192,.06)" stroke-width=".5" stroke-dasharray="3"/>
+          <text x="40" y="14" text-anchor="end" font-family="monospace" font-size="7" fill="#6A9BB5">100%</text>
+          <text x="40" y="47" text-anchor="end" font-family="monospace" font-size="7" fill="#6A9BB5">80%</text>
+          <text x="40" y="113" text-anchor="end" font-family="monospace" font-size="7" fill="#6A9BB5">50%</text>
+          <text x="40" y="145" text-anchor="end" font-family="monospace" font-size="7" fill="#6A9BB5">35%</text>
+          <!-- 90% target line -->
+          <line x1="44" y1="28" x2="330" y2="28" stroke="rgba(0,229,192,.55)" stroke-width="1" stroke-dasharray="5 3"/>
+          <text x="332" y="31" font-family="monospace" font-size="6.5" fill="var(--teal)">90% target</text>
+          <!-- Bar 1: Internal Medicine Error Rate (22%) -->
+          <rect x="62" y="133" width="50" height="35" rx="2" fill="var(--rose)" class="bar-v" style="transition-delay:.15s"/>
+          <text x="87" y="129" text-anchor="middle" font-family="monospace" font-size="8.5" fill="var(--rose)" font-weight="bold">22%</text>
+          <text x="87" y="182" text-anchor="middle" font-family="monospace" font-size="6" fill="#6A9BB5">Error Rate</text>
+          <text x="87" y="190" text-anchor="middle" font-family="monospace" font-size="6" fill="#6A9BB5">Internal Med.</text>
+          <!-- Bar 2: GPT-4 MedQA (71%) -->
+          <rect x="132" y="60" width="50" height="108" rx="2" fill="var(--amber)" class="bar-v" style="transition-delay:.3s"/>
+          <text x="157" y="56" text-anchor="middle" font-family="monospace" font-size="8.5" fill="var(--amber)" font-weight="bold">71%</text>
+          <text x="157" y="182" text-anchor="middle" font-family="monospace" font-size="6" fill="#6A9BB5">GPT-4</text>
+          <text x="157" y="190" text-anchor="middle" font-family="monospace" font-size="6" fill="#6A9BB5">MedQA</text>
+          <!-- Bar 3: GPT-4 Rare Disease (~40%) -->
+          <rect x="202" y="107" width="50" height="61" rx="2" fill="rgba(255,107,107,.65)" class="bar-v" style="transition-delay:.45s"/>
+          <text x="227" y="103" text-anchor="middle" font-family="monospace" font-size="8.5" fill="var(--rose)" font-weight="bold">40%</text>
+          <text x="227" y="182" text-anchor="middle" font-family="monospace" font-size="6" fill="#6A9BB5">GPT-4 Rare</text>
+          <text x="227" y="190" text-anchor="middle" font-family="monospace" font-size="6" fill="#6A9BB5">Disease Dx</text>
+          <!-- Bar 4: Required threshold (>90%) -->
+          <rect x="272" y="19" width="50" height="149" rx="2" fill="rgba(0,229,192,.25)" stroke="rgba(0,229,192,.5)" stroke-width=".8" class="bar-v" style="transition-delay:.6s"/>
+          <text x="297" y="15" text-anchor="middle" font-family="monospace" font-size="8.5" fill="var(--teal)" font-weight="bold">&gt;90%</text>
+          <text x="297" y="182" text-anchor="middle" font-family="monospace" font-size="6" fill="var(--teal)">Required</text>
+          <text x="297" y="190" text-anchor="middle" font-family="monospace" font-size="6" fill="var(--teal)">Threshold</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 3 — ARCHITECTURE ============= -->
+<div class="slide" id="s3">
+  <div class="slide-inner">
+    <div class="slide-header reveal">
+      <div class="eyebrow">System Design</div><div class="slide-num">03 / 09</div>
+    </div>
+    <div class="section-title reveal">System <em>Architecture</em></div>
+    <p class="section-sub reveal">Four-layer stack — each layer independently testable, SSE streaming added end-to-end</p>
+    <div style="flex:1;display:flex;flex-direction:column;gap:clamp(5px,.9vh,9px);justify-content:center">
+      <!-- Layer 1: Frontend -->
+      <div class="reveal arch-row">
+        <div class="arch-lbl">Frontend</div>
+        <div class="arch-cards">
+          <div class="arch-card hi"><div class="arch-ct">React 18 + Vite<span class="new-tag">SSE</span></div><div class="arch-cd">Chat UI · Agent Log Panel · Results Dashboard · History · Eval</div></div>
+          <div class="arch-card hi"><div class="arch-ct">Multimodal Zone</div><div class="arch-cd">DICOM · Video · OCR · Audio · PDF · Compare Mode</div></div>
+          <div class="arch-card hi"><div class="arch-ct">Dual Role UI</div><div class="arch-cd">Patient view · Provider dashboard · JWT role claims</div></div>
+        </div>
+      </div>
+      <div class="arch-arr reveal">▼</div>
+      <!-- Layer 2: API -->
+      <div class="reveal arch-row">
+        <div class="arch-lbl">API</div>
+        <div class="arch-cards">
+          <div class="arch-card"><div class="arch-ct">FastAPI REST</div><div class="arch-cd">/session/chat · /session/diagnose · Export · Auth</div></div>
+          <div class="arch-card hi"><div class="arch-ct">SSE Endpoints<span class="new-tag">New</span></div><div class="arch-cd">/chat/stream · /diagnose/stream · EventSourceResponse</div></div>
+          <div class="arch-card hi"><div class="arch-ct">Multimodal API</div><div class="arch-cd">/analyze/file · /analyze/ocr · /analyze/compare</div></div>
+        </div>
+      </div>
+      <div class="arch-arr reveal">▼</div>
+      <!-- Layer 3: Agents -->
+      <div class="reveal arch-row">
+        <div class="arch-lbl">Agents</div>
+        <div class="arch-cards">
+          <div class="arch-card"><div class="arch-ct">🛡 Safety Guard</div><div class="arch-cd">Pre-LLM rules · Cardiac · Stroke · Drug · Self-harm</div></div>
+          <div class="arch-card"><div class="arch-ct">🗣 Interviewer</div><div class="arch-cd">SOCRATES · Empathetic · Sonnet 4.5 async</div></div>
+          <div class="arch-card"><div class="arch-ct">🔬 Diagnostician</div><div class="arch-cd">CoT · RAG · Ranked differential · Sonnet 4.5 async</div></div>
+          <div class="arch-card hi"><div class="arch-ct">⚖ Critic<span class="new-tag">New</span></div><div class="arch-cd">Hallucination check · Safety clearance · Verdict</div></div>
+          <div class="arch-card hi"><div class="arch-ct">📡 Commentary<span class="new-tag">New</span></div><div class="arch-cd">Haiku 4.5 · Inter-agent messages · Live panel</div></div>
+        </div>
+      </div>
+      <div class="arch-arr reveal">▼</div>
+      <!-- Layer 4: Knowledge -->
+      <div class="reveal arch-row">
+        <div class="arch-lbl">Knowledge</div>
+        <div class="arch-cards">
+          <div class="arch-card hi"><div class="arch-ct">Qdrant Vector DB</div><div class="arch-cd">47,441 docs · BioLORD 768d Dense + BM25 Sparse · RRF fusion</div></div>
+          <div class="arch-card hi"><div class="arch-ct">LLM Query Rewriter</div><div class="arch-cd">Patient lang → SNOMED/MeSH · 3-variant expansion</div></div>
+          <div class="arch-card"><div class="arch-ct">SQLite Persistence</div><div class="arch-cd">Sessions · Messages · Users · Uploads · Eval history</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 4 — 5-AGENT PIPELINE ========= -->
+<div class="slide" id="s4">
+  <div class="slide-inner">
+    <div class="slide-header reveal">
+      <div class="eyebrow">Agent Design</div><div class="slide-num">04 / 09</div>
+    </div>
+    <div class="section-title reveal">5-Agent <em>Pipeline</em></div>
+    <p class="section-sub reveal">Each agent has a distinct clinical role — Safety Guard intercepts before any LLM call</p>
+    <div style="flex:1;display:flex;flex-direction:column;gap:clamp(6px,1vh,11px)">
+      <div class="reveal pipe-step" style="border-left-color:var(--rose)">
+        <div class="pipe-num" style="color:var(--rose)">01</div>
+        <div style="flex:1"><div class="pipe-t">🛡 Safety Guard</div><div class="pipe-d">Hard-coded keyword rules run before any LLM call. Detects cardiac emergency, stroke, drug crisis, self-harm. Triggers 999 escalation alert. Fast, deterministic, injection-resistant.</div></div>
+        <div style="flex-shrink:0;align-self:center"><span class="badge badge-rose">SSE: safety_result</span></div>
+      </div>
+      <div class="reveal pipe-step">
+        <div class="pipe-num">02</div>
+        <div style="flex:1"><div class="pipe-t">🗣 Interviewer Agent</div><div class="pipe-d">Claude Sonnet 4.5 (async). Applies SOCRATES framework. Warm empathetic framing. Accepts multimodal context. Decides when enough symptoms collected — hands off to Diagnostician.</div></div>
+        <div style="flex-shrink:0;align-self:center"><span class="badge badge-teal">SSE: interviewer_reply</span></div>
+      </div>
+      <div class="reveal pipe-step" style="border-left-color:var(--amber)">
+        <div class="pipe-num" style="color:var(--amber)">03</div>
+        <div style="flex:1"><div class="pipe-t">🔬 Diagnostician Agent</div><div class="pipe-d">Chain-of-Thought differential diagnosis. Queries RAG with 3 rewritten variants (Dense + BM25). Returns top-3 diagnoses ranked by confidence with PubMed citation per diagnosis.</div></div>
+        <div style="flex-shrink:0;align-self:center"><span class="badge badge-amber">SSE: agent_message</span></div>
+      </div>
+      <div class="reveal pipe-step">
+        <div class="pipe-num">04</div>
+        <div style="flex:1"><div class="pipe-t">⚖ Critic Agent</div><div class="pipe-d">Reviews Diagnostician output for reasoning gaps, hallucinations, drug conflicts, missed red flags. Returns structured verdict with confidence rating. Review integrated back into final diagnosis.</div></div>
+        <div style="flex-shrink:0;align-self:center"><span class="badge badge-teal">SSE: agent_message</span></div>
+      </div>
+      <div class="reveal pipe-step" style="border-left-color:rgba(168,200,216,.3)">
+        <div class="pipe-num" style="color:var(--text2)">05</div>
+        <div style="flex:1"><div class="pipe-t">📡 Commentary Layer</div><div class="pipe-d">Claude Haiku 4.5 generates terse professional inter-agent handoff messages — simulating a live clinical secure channel. Streamed to Agent Collaboration panel in real time via SSE.</div></div>
+        <div style="flex-shrink:0;align-self:center"><span class="badge" style="background:rgba(168,200,216,.07);color:var(--text2);border-color:rgba(168,200,216,.2)">Haiku 4.5</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 5 — AGENT COLLABORATION ======= -->
+<div class="slide" id="s5">
+  <div class="slide-inner">
+    <div class="slide-header reveal">
+      <div class="eyebrow">Real-time Multi-Agent</div><div class="slide-num">05 / 09</div>
+    </div>
+    <div class="section-title reveal">Agent <em>Collaboration</em> <span class="new-tag" style="font-size:12px">NEW</span></div>
+    <p class="section-sub reveal">SSE streaming delivers agent-to-agent messages to the browser in real time — no polling, no page reload</p>
+    <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(14px,2vw,28px);min-height:0">
+      <!-- Left: technical detail -->
+      <div style="display:flex;flex-direction:column;gap:clamp(7px,1.1vh,13px)">
+        <div class="reveal card" style="flex-shrink:0">
+          <div style="font-size:clamp(12px,1.2vw,14px);color:var(--teal);letter-spacing:.18em;text-transform:uppercase;margin-bottom:8px">SSE Architecture</div>
+          <div style="display:flex;flex-direction:column;gap:5px;font-size:clamp(11px,1.1vw,13px)">
+            <div style="color:var(--muted)">→ <span style="color:var(--text2)">POST /api/session/chat/stream</span><br>&nbsp;&nbsp;&nbsp;EventSourceResponse · sse-starlette 1.8</div>
+            <div style="color:var(--muted)">→ <span style="color:var(--text2)">POST /api/session/diagnose/stream</span><br>&nbsp;&nbsp;&nbsp;AsyncAnthropic · asyncio.to_thread(RAG)</div>
+            <div style="color:var(--muted)">→ <span style="color:var(--text2)">fetch() + ReadableStream · regex split</span><br>&nbsp;&nbsp;&nbsp;\r?\n\r?\n separator · zero-lag decode</div>
+          </div>
+        </div>
+        <div class="reveal card" style="flex-shrink:0">
+          <div style="font-size:clamp(12px,1.2vw,14px);color:var(--teal);letter-spacing:.18em;text-transform:uppercase;margin-bottom:8px">Event Stream Types</div>
+          <div style="display:flex;flex-direction:column;gap:4px;font-size:clamp(11px,1.1vw,13px)">
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--rose)">safety_result</span><span style="color:var(--muted)">risk level · escalation flag</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--teal)">interviewer_reply</span><span style="color:var(--muted)">patient-facing chat bubble</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--amber)">agent_message</span><span style="color:var(--muted)">inter-agent handoff (Haiku)</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">phase_sep</span><span style="color:var(--muted)">INTAKE / ANALYSIS / REVIEW</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--teal)">diagnosis_ready</span><span style="color:var(--muted)">differential + citations</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">done / error</span><span style="color:var(--muted)">stream close signals</span></div>
+          </div>
+        </div>
+        <div class="reveal card">
+          <div style="font-size:clamp(12px,1.2vw,14px);color:var(--teal);letter-spacing:.18em;text-transform:uppercase;margin-bottom:7px">nginx SSE Proxy</div>
+          <div style="background:var(--bg3);border-radius:3px;padding:7px 10px;font-size:clamp(10px,1vw,12px);color:var(--muted);line-height:1.85;font-family:var(--mono)">
+            proxy_buffering <span style="color:var(--teal)">off</span>;<br>
+            proxy_http_version <span style="color:var(--amber)">1.1</span>;<br>
+            proxy_set_header Connection <span style="color:var(--teal)">''</span>;<br>
+            chunked_transfer_encoding <span style="color:var(--teal)">on</span>;
+          </div>
+        </div>
+      </div>
+      <!-- Right: animated log panel -->
+      <div class="reveal" style="display:flex;flex-direction:column;min-height:0">
+        <div class="agent-panel" style="flex:1;min-height:0">
+          <div class="agent-panel-hdr">
+            <div class="dot"></div>Agent Collaboration · Live Stream
+          </div>
+          <div class="agent-panel-body" id="demoLog">
+            <div class="phase-sep">Clinical Intake</div>
+            <div class="agent-bubble">
+              <div class="agent-bubble-route"><span class="agent-bubble-from">Safety Guard</span><span class="agent-bubble-arr">→</span><span class="agent-bubble-to">Interviewer</span></div>
+              <div class="agent-bubble-text">Patient cleared. No cardiac/stroke/drug crisis signals. Risk: LOW. Proceeding with SOCRATES intake.</div>
+            </div>
+            <div class="agent-bubble">
+              <div class="agent-bubble-route"><span class="agent-bubble-from">Interviewer</span><span class="agent-bubble-arr">→</span><span class="agent-bubble-to">Safety Guard</span></div>
+              <div class="agent-bubble-text">Acknowledged. Chief complaint: chest tightness 3 days. Initiating character + radiation assessment.</div>
+            </div>
+            <div class="phase-sep">Diagnostic Analysis</div>
+            <div class="agent-bubble">
+              <div class="agent-bubble-route"><span class="agent-bubble-from">Diagnostician</span><span class="agent-bubble-arr">→</span><span class="agent-bubble-to">Critic</span></div>
+              <div class="agent-bubble-text">CoT complete. Top-3: (1) Costochondritis 74%, (2) GERD 68%, (3) MSK strain 61%. RAG: 6 citations. Requesting peer review.</div>
+            </div>
+            <div class="agent-bubble">
+              <div class="agent-bubble-route"><span class="agent-bubble-from">Critic</span><span class="agent-bubble-arr">→</span><span class="agent-bubble-to">Diagnostician</span></div>
+              <div class="agent-bubble-text">Reasoning valid. Recommend: add troponin caveat to rule out unstable angina. Safety clearance: GRANTED.</div>
+            </div>
+            <div class="phase-sep">Peer Review</div>
+            <div class="agent-bubble">
+              <div class="agent-bubble-route"><span class="agent-bubble-from">Diagnostician</span><span class="agent-bubble-arr">→</span><span class="agent-bubble-to">Critic</span></div>
+              <div class="agent-bubble-text">Troponin note integrated. Delivering final differential with evidence package to patient.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 6 — MULTIMODAL ================ -->
+<div class="slide" id="s6">
+  <div class="slide-inner">
+    <div class="slide-header reveal">
+      <div class="eyebrow">Multimodal Input</div><div class="slide-num">06 / 09</div>
+    </div>
+    <div class="section-title reveal">6 Input <em>Modalities</em></div>
+    <p class="section-sub reveal">Patients communicate naturally — text, images, medical scans, documents, audio, and video all understood</p>
+    <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,1.8vw,24px);align-items:start">
+      <!-- Left: modality grid -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:clamp(6px,1vw,12px)">
+        <div class="reveal modal-card">
+          <div class="modal-visual">🏥</div>
+          <div class="modal-title">Medical Images</div>
+          <div class="modal-desc">Claude Vision analyses PNG/JPG/BMP for lesions, inflammation, structural abnormalities. Returns annotated findings + clinical significance.</div>
+        </div>
+        <div class="reveal modal-card">
+          <div class="modal-visual" style="flex-direction:column;gap:2px"><div style="font-size:9px;color:var(--teal);letter-spacing:.1em">DICOM</div><div style="font-size:28px">🩻</div></div>
+          <div class="modal-title">DICOM / X-Ray</div>
+          <div class="modal-desc">pydicom extracts pixel arrays + metadata from CT, MRI, X-ray. Auto window/level normalised before Claude Vision analysis.</div>
+        </div>
+        <div class="reveal modal-card">
+          <div class="modal-visual">🎤</div>
+          <div class="modal-title">Audio (Speech)</div>
+          <div class="modal-desc">SpeechRecognition transcribes WAV/MP3. Multi-language (en-US, zh-CN, fr-FR). Transcript injected directly into chat context.</div>
+        </div>
+        <div class="reveal modal-card">
+          <div class="modal-visual">📄</div>
+          <div class="modal-title">PDF Reports</div>
+          <div class="modal-desc">pypdf extracts text from lab results, discharge summaries, clinical reports. Full text passed to Interviewer for context-aware follow-up.</div>
+        </div>
+        <div class="reveal modal-card">
+          <div class="modal-visual">📹</div>
+          <div class="modal-title">Video Frames</div>
+          <div class="modal-desc">OpenCV samples key frames. Each analysed by Claude Vision. Results merged into unified clinical narrative with temporal context.</div>
+        </div>
+        <div class="reveal modal-card">
+          <div class="modal-visual">💬</div>
+          <div class="modal-title">Text + OCR</div>
+          <div class="modal-desc">Pillow + Tesseract extracts text from handwritten prescriptions, charts, scanned documents. Mixed-language support.</div>
+        </div>
+      </div>
+      <!-- Right: analysis flow + comparison mode -->
+      <div style="display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px)">
+        <div class="reveal card">
+          <div style="font-size:clamp(12px,1.2vw,14px);color:var(--teal);letter-spacing:.18em;text-transform:uppercase;margin-bottom:10px">Image Analysis Flow</div>
+          <svg viewBox="0 0 300 130" style="width:100%;height:auto">
+            <defs><marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="rgba(0,229,192,.5)"/></marker></defs>
+            <rect x="5" y="8" width="64" height="38" rx="3" fill="rgba(0,229,192,.08)" stroke="rgba(0,229,192,.3)" stroke-width=".8"/>
+            <text x="37" y="23" text-anchor="middle" font-family="monospace" font-size="7.5" fill="var(--teal)">UPLOAD</text>
+            <text x="37" y="34" text-anchor="middle" font-family="monospace" font-size="6.5" fill="#6A9BB5">PNG · DICOM</text>
+            <text x="37" y="44" text-anchor="middle" font-family="monospace" font-size="6.5" fill="#6A9BB5">PDF · Audio</text>
+            <line x1="69" y1="27" x2="82" y2="27" stroke="rgba(0,229,192,.4)" stroke-width="1" marker-end="url(#arr)"/>
+            <rect x="82" y="8" width="72" height="38" rx="3" fill="rgba(13,31,53,.9)" stroke="rgba(0,229,192,.2)" stroke-width=".8"/>
+            <text x="118" y="23" text-anchor="middle" font-family="monospace" font-size="7.5" fill="var(--text2)">BACKEND</text>
+            <text x="118" y="34" text-anchor="middle" font-family="monospace" font-size="6.5" fill="#6A9BB5">pydicom · pypdf</text>
+            <text x="118" y="44" text-anchor="middle" font-family="monospace" font-size="6.5" fill="#6A9BB5">OpenCV · SpeechRec</text>
+            <line x1="154" y1="27" x2="167" y2="27" stroke="rgba(0,229,192,.4)" stroke-width="1" marker-end="url(#arr)"/>
+            <rect x="167" y="8" width="70" height="38" rx="3" fill="rgba(0,229,192,.07)" stroke="rgba(0,229,192,.35)" stroke-width=".8"/>
+            <text x="202" y="23" text-anchor="middle" font-family="monospace" font-size="7.5" fill="var(--teal)">CLAUDE</text>
+            <text x="202" y="34" text-anchor="middle" font-family="monospace" font-size="6.5" fill="#6A9BB5">Vision API</text>
+            <text x="202" y="44" text-anchor="middle" font-family="monospace" font-size="6.5" fill="#6A9BB5">Sonnet 4.5</text>
+            <line x1="202" y1="46" x2="202" y2="60" stroke="rgba(0,229,192,.4)" stroke-width="1" marker-end="url(#arr)"/>
+            <rect x="100" y="62" width="204" height="62" rx="3" fill="rgba(13,31,53,.9)" stroke="rgba(0,229,192,.15)" stroke-width=".8"/>
+            <text x="202" y="76" text-anchor="middle" font-family="monospace" font-size="7.5" fill="var(--teal)">Analysis Output</text>
+            <line x1="108" y1="82" x2="300" y2="82" stroke="rgba(0,229,192,.1)" stroke-width=".5"/>
+            <text x="111" y="92" font-family="monospace" font-size="7" fill="#A8C8D8">→ Region annotations · lesion markers</text>
+            <text x="111" y="103" font-family="monospace" font-size="7" fill="#A8C8D8">→ Clinical significance · confidence</text>
+            <text x="111" y="114" font-family="monospace" font-size="7" fill="#A8C8D8">→ Differential flags → Diagnostician</text>
+          </svg>
+        </div>
+        <div class="reveal card">
+          <div style="font-size:clamp(12px,1.2vw,14px);color:var(--teal);letter-spacing:.18em;text-transform:uppercase;margin-bottom:7px">Comparison Mode</div>
+          <div style="font-size:clamp(11px,1.1vw,13px);color:var(--muted);line-height:1.6">Upload <strong style="color:var(--text2)">multiple images</strong> simultaneously — MediChain compares them chronologically, identifying disease progression, treatment response, or bilateral asymmetry.</div>
+          <div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap">
+            <span class="badge badge-teal">Before / After</span>
+            <span class="badge badge-amber">Left / Right</span>
+            <span class="badge" style="background:rgba(168,200,216,.07);color:var(--text2);border-color:rgba(168,200,216,.2)">Time Series</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 7 — RAG ======================= -->
+<div class="slide" id="s7">
+  <div class="slide-inner">
+    <div class="slide-header reveal">
+      <div class="eyebrow">Knowledge Retrieval</div><div class="slide-num">07 / 09</div>
+    </div>
+    <div class="section-title reveal">RAG <em>Architecture</em></div>
+    <p class="section-sub reveal">Every diagnosis grounded in 47,441 MedQuAD documents — no hallucinated citations, no stale knowledge</p>
+    <div style="flex:1;display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(14px,2vw,28px);align-items:start">
+      <!-- Left -->
+      <div style="display:flex;flex-direction:column;gap:clamp(7px,1.1vh,13px)">
+        <div class="reveal card">
+          <div style="font-size:clamp(12px,1.2vw,14px);color:var(--teal);letter-spacing:.18em;text-transform:uppercase;margin-bottom:9px">Corpus &amp; Embeddings</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px">
+            <div class="stat-card"><div class="stat-num" style="font-size:clamp(18px,2.5vw,34px)">47K<span style="font-size:.4em;color:var(--muted)">+</span></div><div class="stat-label">MedQuAD Docs</div></div>
+            <div class="stat-card"><div class="stat-num" style="font-size:clamp(18px,2.5vw,34px)">768<span style="font-size:.4em;color:var(--muted)">d</span></div><div class="stat-label">BioLORD Vector</div></div>
+            <div class="stat-card"><div class="stat-num" style="font-size:clamp(18px,2.5vw,34px)">2<span style="font-size:.4em;color:var(--muted)">×</span></div><div class="stat-label">Hybrid Search</div></div>
+          </div>
+        </div>
+        <div class="reveal card">
+          <div style="font-size:clamp(12px,1.2vw,14px);color:var(--teal);letter-spacing:.18em;text-transform:uppercase;margin-bottom:7px">Query Rewriting</div>
+          <div style="font-size:clamp(10px,1vw,12px);color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px">Raw patient input</div>
+          <div class="rw-txt rw-before">"I have chest pain and feel dizzy"</div>
+          <div class="rw-arrow">↓ Claude Haiku expands to 3 clinical queries</div>
+          <div class="rw-txt rw-after">"chest pain differential diagnosis etiology"</div>
+          <div class="rw-txt rw-after" style="margin-top:3px">"dizziness vertigo cardiovascular cause"</div>
+          <div class="rw-txt rw-after" style="margin-top:3px">"chest tightness dyspnea clinical workup"</div>
+        </div>
+        <div class="reveal card">
+          <div style="font-size:clamp(12px,1.2vw,14px);color:var(--teal);letter-spacing:.18em;text-transform:uppercase;margin-bottom:8px">Dense + BM25 Fusion (Recall@10)</div>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <div style="display:flex;align-items:center;gap:8px;font-size:clamp(11px,1.1vw,13px)">
+              <span style="color:var(--teal);width:65px;flex-shrink:0">Dense</span>
+              <div class="mbar-track" style="flex:1"><div class="mbar-fill" style="width:72%"></div></div>
+              <span style="color:var(--muted);width:35px;text-align:right">72%</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:clamp(11px,1.1vw,13px)">
+              <span style="color:var(--amber);width:65px;flex-shrink:0">BM25</span>
+              <div class="mbar-track" style="flex:1"><div class="mbar-fill" style="width:58%;background:linear-gradient(90deg,#c07800,var(--amber))"></div></div>
+              <span style="color:var(--muted);width:35px;text-align:right">58%</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:clamp(11px,1.1vw,13px)">
+              <span style="color:var(--teal);width:65px;flex-shrink:0">Hybrid</span>
+              <div class="mbar-track" style="flex:1"><div class="mbar-fill" style="width:89%"></div></div>
+              <span style="color:var(--teal);width:35px;text-align:right">89%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Right: citations -->
+      <div style="display:flex;flex-direction:column;gap:clamp(7px,1.1vh,13px)">
+        <div class="reveal" style="font-size:clamp(10px,1vw,12px);color:var(--muted);letter-spacing:.18em;text-transform:uppercase">Evidence Citations · Diagnostician Output</div>
+        <div class="reveal cite-row">
+          <div class="cite-score">0.91</div>
+          <div><div class="cite-title">Costochondritis: clinical features, diagnosis and management in primary care</div><div class="cite-meta">PubMed · BMJ · 2021 · PMID 33483350</div></div>
+        </div>
+        <div class="reveal cite-row">
+          <div class="cite-score">0.87</div>
+          <div><div class="cite-title">Gastroesophageal reflux and non-cardiac chest pain: systematic review</div><div class="cite-meta">PubMed · Gut · 2019 · PMID 31203188</div></div>
+        </div>
+        <div class="reveal cite-row">
+          <div class="cite-score">0.84</div>
+          <div><div class="cite-title">Musculoskeletal chest pain: prevalence and distinguishing features from cardiac</div><div class="cite-meta">PubMed · Chest · 2020 · PMID 32001271</div></div>
+        </div>
+        <div class="reveal cite-row">
+          <div class="cite-score">0.79</div>
+          <div><div class="cite-title">Troponin elevation in non-cardiac chest pain: systematic analysis</div><div class="cite-meta">PubMed · NEJM · 2022 · PMID 35196427</div></div>
+        </div>
+        <div class="reveal card" style="margin-top:2px">
+          <div style="font-size:clamp(12px,1.2vw,14px);color:var(--teal);letter-spacing:.18em;text-transform:uppercase;margin-bottom:6px">Vector DB — Qdrant</div>
+          <div style="font-size:clamp(11px,1.1vw,13px);color:var(--muted);line-height:1.6">
+            Collections: <span style="color:var(--text2)">medquad_dense</span> (BioLORD cosine) + <span style="color:var(--text2)">medquad_sparse</span> (BM25). RRF fusion. Reindexable via <span style="color:var(--teal)">/api/rag/ingest</span> · status at <span style="color:var(--teal)">/api/rag/status</span>.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 8 — FULL FEATURE SET ========= -->
+<div class="slide" id="s8">
+  <div class="slide-inner">
+    <div class="slide-header reveal">
+      <div class="eyebrow">Full Feature Set</div><div class="slide-num">08 / 09</div>
+    </div>
+    <div class="section-title reveal">Everything <em>Else</em></div>
+    <p class="section-sub reveal">Auth, patient management, export, eval, multilingual — all production-ready in Docker</p>
+    <div style="flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr;gap:clamp(8px,1.2vw,16px)">
+      <div class="reveal agent-card">
+        <div class="agent-icon">🔐</div>
+        <div class="agent-name">Dual Auth</div>
+        <div class="agent-role">Patient + Provider</div>
+        <div class="agent-feat">JWT with bcrypt password hashing</div>
+        <div class="agent-feat">Provider dashboard: all patient sessions</div>
+        <div class="agent-feat">Role-based API access control</div>
+      </div>
+      <div class="reveal agent-card">
+        <div class="agent-icon">👥</div>
+        <div class="agent-name">Patient Management</div>
+        <div class="agent-role">CRUD + Session History</div>
+        <div class="agent-feat">Create, update, archive patient records</div>
+        <div class="agent-feat">Full session history per patient</div>
+        <div class="agent-feat">Resume prior sessions seamlessly</div>
+      </div>
+      <div class="reveal agent-card">
+        <div class="agent-icon">📊</div>
+        <div class="agent-name">Evaluation Suite</div>
+        <div class="agent-role">MedQA Benchmarking</div>
+        <div class="agent-feat">50-question clinical Q&amp;A benchmark</div>
+        <div class="agent-feat">Automated scoring with history log</div>
+        <div class="agent-feat">Compare against GPT-4 baseline</div>
+      </div>
+      <div class="reveal agent-card">
+        <div class="agent-icon">📤</div>
+        <div class="agent-name">Export</div>
+        <div class="agent-role">PDF + JSON</div>
+        <div class="agent-feat">Full session export with agent logs</div>
+        <div class="agent-feat">ReportLab PDF — EHR-ready format</div>
+        <div class="agent-feat">Structured JSON for integration</div>
+      </div>
+      <div class="reveal agent-card">
+        <div class="agent-icon">🌐</div>
+        <div class="agent-name">Multilingual</div>
+        <div class="agent-role">3 Languages</div>
+        <div class="agent-feat">English · Mandarin · French</div>
+        <div class="agent-feat">Audio transcription per language</div>
+        <div class="agent-feat">Agents respond in patient's language</div>
+      </div>
+      <div class="reveal agent-card">
+        <div class="agent-icon">🐳</div>
+        <div class="agent-name">Docker Deploy</div>
+        <div class="agent-role">Production-Ready</div>
+        <div class="agent-feat">docker compose up — full stack</div>
+        <div class="agent-feat">nginx reverse proxy · SSE streaming</div>
+        <div class="agent-feat">FastAPI + React 18 + Qdrant</div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+<!-- ===================== SLIDE 9 — CLOSE ==================== -->
+<div class="slide" id="s9">
+  <div class="orb" style="position:absolute;width:clamp(260px,44vw,540px);height:clamp(260px,44vw,540px);border-radius:50%;background:radial-gradient(circle,rgba(0,229,192,.10) 0%,transparent 70%);top:-14%;right:-7%;animation:breathe 7s ease-in-out infinite;pointer-events:none;z-index:0"></div>
+  <div class="slide-inner" style="justify-content:center">
+    <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;text-align:center;gap:clamp(12px,2vh,24px)">
+      <div class="reveal eyebrow">COMP9900 · Team W18C-CAKE · UNSW Sydney</div>
+      <div class="reveal" style="font-family:var(--serif);font-size:clamp(48px,8vw,100px);color:var(--text);line-height:.88;letter-spacing:-3px">Medi<em style="color:var(--teal);font-style:italic">Chain</em></div>
+      <div class="reveal" style="font-size:clamp(14px,1.5vw,18px);color:var(--muted);max-width:52ch;line-height:1.7">Multi-Agent · RAG-grounded · Multimodal<br>Empathetic · Real-time SSE · Production-ready</div>
+      <div class="reveal" style="display:flex;gap:clamp(10px,1.5vw,20px);flex-wrap:wrap;justify-content:center;margin-top:8px">
+        <div class="stat-card" style="min-width:110px;text-align:center"><div class="stat-num">5</div><div class="stat-label">AI Agents</div></div>
+        <div class="stat-card" style="min-width:110px;text-align:center"><div class="stat-num">47K</div><div class="stat-label">RAG Docs</div></div>
+        <div class="stat-card" style="min-width:110px;text-align:center"><div class="stat-num">6</div><div class="stat-label">Modalities</div></div>
+        <div class="stat-card" style="min-width:110px;text-align:center"><div class="stat-num">SSE</div><div class="stat-label">Streaming</div></div>
+      </div>
+      <div class="reveal" style="margin-top:clamp(8px,1.5vh,16px);font-size:clamp(12px,1.2vw,15px);color:var(--muted)">Thank you · Questions welcome</div>
+    </div>
+  </div>
+  <div class="bottom-bar"></div>
+</div>
+
+</div><!-- end deck -->
+
+<!-- Nav dots -->
+<div id="nav-dots"></div>
+<div class="nav-arrow" id="nav-prev">&#8592;</div>
+<div class="nav-arrow" id="nav-next">&#8594;</div>
+
+<!-- Fullscreen button (same as DemoB) -->
+<button id="fs-btn" onclick="toggleFullscreen()" title="Fullscreen (F)"
+  style="position:fixed;bottom:clamp(12px,2vh,20px);right:clamp(14px,2vw,22px);z-index:200;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:var(--muted);font-size:15px;width:30px;height:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s"
+  onmouseover="this.style.color='var(--teal)';this.style.borderColor='rgba(0,229,192,.4)'"
+  onmouseout="this.style.color='var(--muted)';this.style.borderColor='rgba(255,255,255,.15)'">⛶</button>
+
+<script>
+/* === NAVIGATION ============================================== */
+const slides = document.querySelectorAll('.slide');
+const dotsEl = document.getElementById('nav-dots');
+let cur = 0;
+
+slides.forEach((_, i) => {
+  const d = document.createElement('div');
+  d.className = 'nav-dot' + (i === 0 ? ' active' : '');
+  d.addEventListener('click', () => goto(i));
+  dotsEl.appendChild(d);
+});
+
+function goto(n) {
+  if (n < 0 || n >= slides.length) return;
+  slides[cur].classList.remove('active');
+  dotsEl.children[cur].classList.remove('active');
+  cur = n;
+  slides[cur].classList.add('active');
+  dotsEl.children[cur].classList.add('active');
+  if (cur === 4) animateLog(); // slide 5 (index 4) = agent collaboration
+}
+
+document.getElementById('nav-prev').addEventListener('click', () => goto(cur - 1));
+document.getElementById('nav-next').addEventListener('click', () => goto(cur + 1));
+
+document.addEventListener('keydown', e => {
+  if (['ArrowRight','ArrowDown',' '].includes(e.key)) { e.preventDefault(); goto(cur + 1); }
+  if (['ArrowLeft','ArrowUp'].includes(e.key)) { e.preventDefault(); goto(cur - 1); }
+  if (e.key === 'Home') goto(0);
+  if (e.key === 'End')  goto(slides.length - 1);
+  if (e.key.toLowerCase() === 'f') toggleFullscreen();
+  if (e.key.toLowerCase() === 'e') toggleEdit();
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveToStorage(); }
+});
+
+// Touch/swipe
+let tx = 0;
+document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
+document.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - tx;
+  if (Math.abs(dx) > 50) dx < 0 ? goto(cur + 1) : goto(cur - 1);
+}, { passive: true });
+
+/* === FULLSCREEN ============================================== */
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen();
+  }
+}
+document.addEventListener('fullscreenchange', () => {
+  const btn = document.getElementById('fs-btn');
+  if (btn) btn.textContent = document.fullscreenElement ? '⛶' : '⛶';
+});
+
+/* === INLINE EDIT ============================================ */
+let editing = false;
+const EDIT_SEL = '.section-title,.section-sub,.stat-num,.stat-label,.pipe-t,.pipe-d,.agent-name,.agent-feat,.agent-role,.modal-title,.modal-desc,.cite-title,.cite-meta,.arch-ct,.arch-cd,.rw-txt';
+function toggleEdit() {
+  editing = !editing;
+  document.querySelectorAll(EDIT_SEL).forEach(el => { el.contentEditable = editing ? 'true' : 'false'; });
+  document.querySelector('.edit-hint').textContent = editing ? 'Editing ON — click text · Ctrl+S save' : 'E = edit · F = fullscreen · Ctrl+S = save';
+}
+
+function saveToStorage() {
+  localStorage.setItem('mc-final-demo', document.getElementById('deck').innerHTML);
+  const m = Object.assign(document.createElement('div'), {
+    textContent: 'Saved ✓',
+    style: 'position:fixed;top:12px;right:12px;z-index:999;font-family:monospace;font-size:10px;letter-spacing:.14em;color:var(--teal);background:rgba(0,229,192,.1);border:1px solid rgba(0,229,192,.3);padding:5px 12px;border-radius:3px;transition:opacity .5s;opacity:1'
+  });
+  document.body.appendChild(m);
+  setTimeout(() => { m.style.opacity = '0'; setTimeout(() => m.remove(), 500); }, 1800);
+}
+
+const saved = localStorage.getItem('mc-final-demo');
+if (saved) document.getElementById('deck').innerHTML = saved;
+
+/* === AGENT LOG ANIMATION (slide 5 — index 4) ================ */
+function animateLog() {
+  const panel = document.getElementById('demoLog');
+  if (!panel) return;
+  const items = panel.querySelectorAll('.agent-bubble, .phase-sep');
+  items.forEach(b => { b.style.opacity = '0'; b.style.transform = 'translateY(8px)'; });
+  let i = 0;
+  function showNext() {
+    if (i >= items.length) return;
+    const b = items[i];
+    b.style.transition = 'opacity .4s ease, transform .4s ease';
+    b.style.opacity = '1';
+    b.style.transform = 'translateY(0)';
+    panel.scrollTop = panel.scrollHeight;
+    i++;
+    setTimeout(showNext, 650);
+  }
+  setTimeout(showNext, 300);
+}
+</script>
+</body>
+</html>

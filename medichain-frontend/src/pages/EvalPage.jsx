@@ -25,6 +25,8 @@ export default function EvalPage({ api }) {
             multi: { answer: r.multi_answer, reasoning: r.multi_reasoning },
             single_correct: !!r.single_correct,
             multi_correct: !!r.multi_correct,
+            mistral_judge: r.mistral_verdict ? { verdict: r.mistral_verdict, assessment: r.mistral_reasoning } : null,
+            mistral_correct: r.mistral_correct != null ? !!r.mistral_correct : null,
           };
         }
       }
@@ -109,6 +111,11 @@ export default function EvalPage({ api }) {
                       {r && <>
                         <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: r.single_correct ? "var(--sage)" : "var(--rose)" }}>{t("eval.label_single")}: {r.single?.answer} {r.single_correct ? "✓" : "✗"}</span>
                         <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: r.multi_correct ? "var(--sage)" : "var(--rose)" }}>{t("eval.label_multi")}: {r.multi?.answer} {r.multi_correct ? "✓" : "✗"}</span>
+                        {r.mistral_judge && r.mistral_judge.verdict !== "UNAVAILABLE" && r.mistral_judge.verdict !== "ERROR" && (
+                          <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: r.mistral_correct ? "var(--sage)" : "var(--rose)", background: "rgba(245,166,35,0.10)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 3, padding: "1px 6px" }}>
+                            Mistral: {r.mistral_judge.verdict === "CORRECT" ? "✓" : "✗"}
+                          </span>
+                        )}
                       </>}
                     </div>
                     <p style={{ fontFamily: "var(--body)", fontSize: 15, color: "var(--ink)", lineHeight: 1.66 }}>{q.question}</p>
@@ -134,16 +141,31 @@ export default function EvalPage({ api }) {
                       ))}
                     </div>
                     {r && (
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                        {[{ l: t("eval.label_single"), c: "var(--navy)", bg: "var(--navyPale)", d: r.single, ok: r.single_correct }, { l: t("eval.label_multi"), c: "var(--rose)", bg: "var(--rosePale)", d: r.multi, ok: r.multi_correct }].map(({ l, c, bg, d, ok }) => (
-                          <div key={l} style={{ background: bg, border: `1.5px solid ${c}30`, borderRadius: 4, padding: "14px 16px" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                              <span style={{ fontFamily: "var(--body)", fontSize: 13, fontStyle: "italic", color: c }}>{l}</span>
-                              <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: ok ? "var(--sage)" : "var(--rose)", fontWeight: 600 }}>{d?.answer} {ok ? "✓" : "✗"}</span>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                          {[{ l: t("eval.label_single"), c: "var(--navy)", bg: "var(--navyPale)", d: r.single, ok: r.single_correct }, { l: t("eval.label_multi"), c: "var(--rose)", bg: "var(--rosePale)", d: r.multi, ok: r.multi_correct }].map(({ l, c, bg, d, ok }) => (
+                            <div key={l} style={{ background: bg, border: `1.5px solid ${c}30`, borderRadius: 4, padding: "14px 16px" }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                                <span style={{ fontFamily: "var(--body)", fontSize: 13, fontStyle: "italic", color: c }}>{l}</span>
+                                <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: ok ? "var(--sage)" : "var(--rose)", fontWeight: 600 }}>{d?.answer} {ok ? "✓" : "✗"}</span>
+                              </div>
+                              <p style={{ fontFamily: "var(--body)", fontSize: 12.5, color: "var(--ink3)", lineHeight: 1.78 }}>{d?.reasoning?.slice(0, 165)}{d?.reasoning?.length > 165 ? "…" : ""}</p>
                             </div>
-                            <p style={{ fontFamily: "var(--body)", fontSize: 12.5, color: "var(--ink3)", lineHeight: 1.78 }}>{d?.reasoning?.slice(0, 165)}{d?.reasoning?.length > 165 ? "…" : ""}</p>
+                          ))}
+                        </div>
+                        {r.mistral_judge && r.mistral_judge.verdict !== "UNAVAILABLE" && (
+                          <div style={{ background: "rgba(245,166,35,0.07)", border: "1.5px solid rgba(245,166,35,0.3)", borderRadius: 4, padding: "13px 16px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
+                              <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: "rgba(245,166,35,0.9)", letterSpacing: "0.14em" }}>MISTRAL JUDGE</span>
+                              <span style={{ fontFamily: "var(--mono)", fontSize: 11, fontWeight: 600, color: r.mistral_judge.verdict === "CORRECT" ? "var(--sage)" : r.mistral_judge.verdict === "ERROR" ? "var(--ink4)" : "var(--rose)" }}>
+                                {r.mistral_judge.verdict === "CORRECT" ? "✓ CORRECT" : r.mistral_judge.verdict === "ERROR" ? "⚠ ERROR" : "✗ INCORRECT"}
+                              </span>
+                            </div>
+                            <p style={{ fontFamily: "var(--body)", fontSize: 12.5, color: "var(--ink3)", lineHeight: 1.75, margin: 0 }}>
+                              {r.mistral_judge.assessment?.slice(0, 220)}{r.mistral_judge.assessment?.length > 220 ? "…" : ""}
+                            </p>
                           </div>
-                        ))}
+                        )}
                       </div>
                     )}
                   </div>

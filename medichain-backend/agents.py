@@ -50,6 +50,11 @@ IMPORTANT RULES:
 
 Always respond in this exact format:
 
+## Specialist Router
+Route this case to the most appropriate expert domain based on the presenting symptoms.
+Choose ONE primary domain: Cardiology | Neurology | Gastroenterology | Pulmonology | Dermatology | Musculoskeletal | Infectious Disease | Endocrinology | Psychiatry | General Medicine
+Format: **Routed to: [Domain]** — [one sentence clinical justification]
+
 ## Differential Diagnoses
 
 1. **[Condition Name]** — Confidence: HIGH
