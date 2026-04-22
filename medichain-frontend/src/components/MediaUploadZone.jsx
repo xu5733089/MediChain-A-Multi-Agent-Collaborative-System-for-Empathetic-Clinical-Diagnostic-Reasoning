@@ -53,6 +53,7 @@ function AttachmentChip({ item, onRemove, onOcrResult, api }) {
   const { t } = useTranslation();
   const [ocring, setOcring] = useState(false);
   const [ocrText, setOcrText] = useState("");
+  const [ocrExpanded, setOcrExpanded] = useState(false);
   const kind = ACCEPTED_TYPES[item.fileType] || ACCEPTED_TYPES.txt;
 
   async function runOcr() {
@@ -119,9 +120,17 @@ function AttachmentChip({ item, onRemove, onOcrResult, api }) {
       )}
       {ocrText && (
         <div style={{ background: "var(--amberPale)", border: "1px solid rgba(160,88,8,0.2)", borderRadius: 7, padding: "8px 10px" }}>
-          <p style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--amber)", letterSpacing: "0.1em", marginBottom: 4 }}>OCR · EXTRACTED MEDICAL RECORD</p>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+            <p style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--amber)", letterSpacing: "0.1em", margin: 0 }}>OCR · EXTRACTED MEDICAL RECORD</p>
+            {ocrText.length > 400 && (
+              <button
+                onClick={() => setOcrExpanded(v => !v)}
+                style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--amber)", background: "none", border: "none", cursor: "pointer", padding: "0 2px", letterSpacing: "0.06em" }}
+              >{ocrExpanded ? "▲ Collapse" : "▼ Show all"}</button>
+            )}
+          </div>
           <p style={{ fontFamily: "var(--body)", fontSize: 12, color: "var(--ink2)", lineHeight: 1.65, whiteSpace: "pre-wrap", margin: 0 }}>
-            {ocrText.slice(0, 400)}{ocrText.length > 400 ? "…" : ""}
+            {ocrExpanded || ocrText.length <= 400 ? ocrText : ocrText.slice(0, 400) + "…"}
           </p>
         </div>
       )}
