@@ -513,8 +513,25 @@ def _transcribe_audio(path: Path, language: str = "en-US") -> str:
         return f"Audio file: {path.name}. (Install SpeechRecognition to enable transcription.)"
 
     r = sr.Recognizer()
+    wav_path = path
+    tmp_wav = None
     try:
-        with sr.AudioFile(str(path)) as source:
+        # Convert non-WAV formats (mp3, m4a, ogg, flac, etc.) to WAV via pydub+ffmpeg
+        if path.suffix.lower() != ".wav":
+            try:
+                from pydub import AudioSegment
+                audio = AudioSegment.from_file(str(path))
+                tmp_wav = path.with_suffix(".tmp_conv.wav")
+                audio.export(str(tmp_wav), format="wav")
+                wav_path = tmp_wav
+            except Exception as conv_err:
+                return (
+                    f"Audio file '{path.name}' uploaded. "
+                    f"Format conversion failed: {conv_err}. "
+                    "Ensure ffmpeg is installed in the environment."
+                )
+
+        with sr.AudioFile(str(wav_path)) as source:
             audio_data = r.record(source)
         text = r.recognize_google(audio_data, language=language)
         return f"Audio transcription of '{path.name}' [{language}]:\n\n{text}"
@@ -525,9 +542,11 @@ def _transcribe_audio(path: Path, language: str = "en-US") -> str:
     except Exception as e:
         return (
             f"Audio file '{path.name}' uploaded. "
-            f"Transcription failed (format may require ffmpeg): {e}. "
-            "Consider converting to WAV format for best results."
+            f"Transcription failed: {e}."
         )
+    finally:
+        if tmp_wav and tmp_wav.exists():
+            tmp_wav.unlink(missing_ok=True)
 
 
 def _analyze_video(path: Path) -> str:

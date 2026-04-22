@@ -17,3 +17,4 @@ opencv-python-headless==4.10.0.84
 SpeechRecognition==3.11.0
 Pillow>=10.0.0
 pydicom>=2.4.0
+pydub==0.25.1
