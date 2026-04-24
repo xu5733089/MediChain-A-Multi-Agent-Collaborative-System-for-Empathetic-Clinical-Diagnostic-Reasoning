@@ -91,6 +91,8 @@
     "err_not_patient": "Dieses Konto ist kein Patientenkonto. Bitte Behandler-Login nutzen.",
     "success_signin": "Willkommen zurück.",
     "success_register": "Konto erfolgreich erstellt.",
+    "signing_in": "Anmeldung…",
+    "redirecting": "Weiterleitung…",
     "err_generic": "Ein Fehler ist aufgetreten."
   },
   "input": {

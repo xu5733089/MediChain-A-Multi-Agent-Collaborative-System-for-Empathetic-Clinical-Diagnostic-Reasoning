@@ -91,6 +91,8 @@
     "err_not_patient": "このアカウントは患者アカウントではありません。医療者ログインをご利用ください。",
     "success_signin": "お帰りなさい。",
     "success_register": "アカウントが作成されました。",
+    "signing_in": "ログイン中…",
+    "redirecting": "移動中…",
     "err_generic": "エラーが発生しました。"
   },
   "input": {

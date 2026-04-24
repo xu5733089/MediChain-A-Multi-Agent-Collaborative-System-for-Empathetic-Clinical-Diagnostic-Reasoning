@@ -91,6 +91,8 @@
     "err_not_patient": "Esta conta não é de paciente. Use o login de profissional.",
     "success_signin": "Bem-vindo de volta.",
     "success_register": "Conta criada com sucesso.",
+    "signing_in": "A iniciar sessão…",
+    "redirecting": "A redirecionar…",
     "err_generic": "Ocorreu um erro."
   },
   "input": {

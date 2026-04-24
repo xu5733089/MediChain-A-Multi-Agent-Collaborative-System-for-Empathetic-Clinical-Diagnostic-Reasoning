@@ -91,6 +91,8 @@
     "err_not_patient": "환자 계정이 아닙니다. 의료진 로그인을 이용하세요.",
     "success_signin": "다시 오신 것을 환영합니다.",
     "success_register": "계정이 생성되었습니다.",
+    "signing_in": "로그인 중…",
+    "redirecting": "이동 중…",
     "err_generic": "오류가 발생했습니다."
   },
   "input": {

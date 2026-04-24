@@ -91,6 +91,8 @@
     "err_not_patient": "该账号不是患者账号，请使用医疗人员登录入口。",
     "success_signin": "欢迎回来。",
     "success_register": "账号创建成功。",
+    "signing_in": "正在登录…",
+    "redirecting": "正在跳转…",
     "err_generic": "发生错误，请重试。"
   },
   "input": {
@@ -143,6 +145,7 @@
     "context_files": "上下文文件（{{count}}）",
     "analysis_preview": "AI 分析预览",
     "queued": "{{count}} 个文件已排队待发送。",
+    "err_too_long": "消息过长（最多 2000 个字符）。",
     "upload_error": "上传错误：{{error}}",
     "listening": "正在聆听…",
     "placeholder": "输入您的回复…",

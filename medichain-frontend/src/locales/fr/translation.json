@@ -91,6 +91,8 @@
     "err_not_patient": "Ce compte n'est pas un compte patient. Utilisez la connexion soignant.",
     "success_signin": "Bon retour.",
     "success_register": "Compte créé avec succès.",
+    "signing_in": "Connexion…",
+    "redirecting": "Redirection…",
     "err_generic": "Une erreur s'est produite."
   },
   "input": {

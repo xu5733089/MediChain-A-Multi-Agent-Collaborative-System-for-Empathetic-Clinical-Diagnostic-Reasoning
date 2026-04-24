@@ -19,9 +19,9 @@ export default function TopNav({ user, onLogout, onNav, page, dark, toggle, forc
   const currentLang = UI_LANGUAGES.find(l => l.code === langCode) || UI_LANGUAGES[0];
 
   const navBg = forceDark ? "rgba(8,15,26,0.97)" : "var(--nav-bg)";
-  const navBorder = forceDark ? "1px solid rgba(255,255,255,0.07)" : "1px solid rgba(127,99,21,0.12)";
-  const textColor = forceDark ? "rgba(255,255,255,0.85)" : "var(--ink2)";
-  const subColor = forceDark ? "rgba(255,255,255,0.4)" : "var(--ink5)";
+  const navBorder = forceDark ? "1px solid rgba(255,255,255,0.14)" : "1px solid rgba(127,99,21,0.12)";
+  const textColor = forceDark ? "rgba(255,255,255,0.92)" : "var(--ink2)";
+  const subColor = forceDark ? "rgba(255,255,255,0.68)" : "var(--ink5)";
 
   return (
     <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: navBg, backdropFilter: "blur(28px)", WebkitBackdropFilter: "blur(28px)", height: 56, borderBottom: navBorder }}>

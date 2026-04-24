@@ -91,6 +91,8 @@
     "err_not_patient": "Questo account non è un account paziente. Usa l'accesso operatore.",
     "success_signin": "Bentornato.",
     "success_register": "Account creato con successo.",
+    "signing_in": "Accesso in corso…",
+    "redirecting": "Reindirizzamento…",
     "err_generic": "Si è verificato un errore."
   },
   "input": {

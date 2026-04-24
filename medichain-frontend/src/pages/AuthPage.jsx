@@ -1,26 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { gsap } from "gsap";
-
-const WARM_HUES = [35, 22, 45, 12, 52, 28, 40, 350, 340];
-let _hueIdx = 0;
-function nextHue() { _hueIdx = (_hueIdx + 1) % WARM_HUES.length; return WARM_HUES[_hueIdx]; }
-
-function playClick(on) {
-  try {
-    const ac = new (window.AudioContext || window.webkitAudioContext)();
-    const buf = ac.createBuffer(1, Math.floor(ac.sampleRate * 0.14), ac.sampleRate);
-    const d = buf.getChannelData(0);
-    for (let i = 0; i < d.length; i++) {
-      const t = i / ac.sampleRate;
-      const env = Math.exp(-t * 55);
-      d[i] = env * (Math.random() * 2 - 1) * 0.55
-           + env * Math.sin(2 * Math.PI * (on ? 1100 : 800) * t) * 0.45;
-    }
-    const src = ac.createBufferSource();
-    src.buffer = buf; src.connect(ac.destination); src.start();
-  } catch (_) {}
-}
+import { nextHue, playClick } from "./auth/authAudioHue";
+import { useAuthStarfield } from "./auth/useAuthStarfield";
+import { useAuthGsapIdle } from "./auth/useAuthGsapIdle";
 
 export default function AuthPage({ api, onLogin, onSkip }) {
   const { t } = useTranslation();
@@ -32,8 +15,12 @@ export default function AuthPage({ api, onLogin, onSkip }) {
   const [form, setForm] = useState({ username: "", email: "", password: "", confirm: "", full_name: "", role: "patient" });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const [apiErr, setApiErr] = useState("");
-  const [ok, setOk] = useState("");
+  /** Bottom snackbar: errors + success (avoids banner layout shift in the card). */
+  const [toast, setToast] = useState(null);
+  const toastTimerRef = useRef(null);
+  const toastIdRef = useRef(0);
+  /** True after successful auth until redirect — disables submit without inline banner. */
+  const [authSuccessPending, setAuthSuccessPending] = useState(false);
 
   // Lamp state
   const [lampOn, setLampOn] = useState(false);
@@ -51,12 +38,41 @@ export default function AuthPage({ api, onLogin, onSkip }) {
   const lampOnRef = useRef(false);
   const hueRef = useRef(35);
 
+  useAuthStarfield(canvasRef, rafRef);
+  useAuthGsapIdle(containerRef, blinkRef, lookRef, nodRef);
+
+  const dismissToast = useCallback(() => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    }
+    setToast(null);
+  }, []);
+
+  const showToast = useCallback((message, variant = "error", durationMs = 4800) => {
+    if (!message) {
+      dismissToast();
+      return;
+    }
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastIdRef.current += 1;
+    setToast({ message, id: toastIdRef.current, variant });
+    toastTimerRef.current = setTimeout(dismissToast, durationMs);
+  }, [dismissToast]);
+
+  const showErrorToast = useCallback((message) => showToast(message, "error", 4800), [showToast]);
+  const showSuccessToast = useCallback((message) => showToast(message, "success", 3200), [showToast]);
+
+  useEffect(() => () => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+  }, []);
+
   const f = k => v => setForm(p => ({ ...p, [k]: v }));
 
   function chooseRole(role) {
     setSelectedRole(role);
     setForm(p => ({ ...p, role }));
-    setApiErr(""); setErrors({}); setOk("");
+    dismissToast(); setErrors({}); setAuthSuccessPending(false);
   }
 
   function validate() {
@@ -76,7 +92,9 @@ export default function AuthPage({ api, onLogin, onSkip }) {
 
   async function submit() {
     if (!validate()) return;
-    setApiErr(""); setLoading(true);
+    dismissToast();
+    setAuthSuccessPending(false);
+    setLoading(true);
     try {
       const data = mode === "login"
         ? await api.loginJson({ username: form.username, password: form.password })
@@ -85,146 +103,20 @@ export default function AuthPage({ api, onLogin, onSkip }) {
       if (mode === "login") {
         const actualRole = data?.user?.role;
         if (selectedRole === "provider" && actualRole !== "provider") {
-          setApiErr(t("auth.err_not_provider")); setLoading(false); return;
+          showErrorToast(t("auth.err_not_provider")); setLoading(false); return;
         }
         if (selectedRole === "patient" && actualRole !== "patient") {
-          setApiErr(t("auth.err_not_patient")); setLoading(false); return;
+          showErrorToast(t("auth.err_not_patient")); setLoading(false); return;
         }
       }
-      setOk(mode === "login" ? t("auth.success_signin") : t("auth.success_register"));
+      showSuccessToast(mode === "login" ? t("auth.success_signin") : t("auth.success_register"));
+      setAuthSuccessPending(true);
       setTimeout(() => onLogin(data.token || data.access_token, data.user), 700);
     } catch (e) {
-      setApiErr(e.message || t("auth.err_generic"));
+      showErrorToast(e.message || t("auth.err_generic"));
     }
     setLoading(false);
   }
-
-  // ── Stars canvas ──────────────────────────────────────────
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    let stars = [];
-
-    function resize() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      stars = Array.from({ length: 140 }, () => ({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        r: Math.random() * 1.3 + 0.2,
-        base: Math.random() * 0.5 + 0.05,
-        phase: Math.random() * Math.PI * 2,
-        speed: Math.random() * 0.012 + 0.003,
-        warm: Math.random() > 0.6,
-      }));
-    }
-
-    function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const t = Date.now() * 0.001;
-      stars.forEach(s => {
-        const o = s.base * (0.55 + 0.45 * Math.sin(t * s.speed * 60 + s.phase));
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-        ctx.fillStyle = s.warm ? `rgba(255,220,150,${o})` : `rgba(255,248,235,${o})`;
-        ctx.fill();
-      });
-      rafRef.current = requestAnimationFrame(draw);
-    }
-
-    window.addEventListener("resize", resize);
-    resize();
-    draw();
-    return () => {
-      window.removeEventListener("resize", resize);
-      cancelAnimationFrame(rafRef.current);
-    };
-  }, []);
-
-  // ── GSAP idle animations ──────────────────────────────────
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    const shadeGroup = el.querySelector("#ag-shade-group");
-    const cordEnd = el.querySelector("#ag-cord-end");
-
-    if (shadeGroup) {
-      gsap.to(shadeGroup, { rotation: 1.4, transformOrigin: "-10px -28px", duration: 4, ease: "sine.inOut", yoyo: true, repeat: -1 });
-    }
-    if (cordEnd) {
-      gsap.to(cordEnd, { attr: { transform: "translate(113, 231)" }, duration: 4.2, ease: "sine.inOut", yoyo: true, repeat: -1 });
-    }
-
-    // Blink
-    function doBlink() {
-      const bl = el.querySelector("#ag-blink-l");
-      const br = el.querySelector("#ag-blink-r");
-      if (!bl || !br) return;
-      gsap.to([bl, br], {
-        attr: { height: 20, y: -10 }, duration: 0.07, ease: "power2.in",
-        onComplete() {
-          gsap.to([bl, br], {
-            attr: { height: 0 }, duration: 0.09, ease: "power2.out",
-            onComplete: scheduleBlink,
-          });
-        },
-      });
-    }
-    function scheduleBlink() {
-      blinkRef.current = setTimeout(() => {
-        doBlink();
-        if (Math.random() < 0.3) setTimeout(doBlink, 220);
-      }, (1.8 + Math.random() * 3.5) * 1000);
-    }
-    scheduleBlink();
-
-    // Look around
-    function doLook() {
-      const pl = el.querySelector("#ag-pupil-l");
-      const pr = el.querySelector("#ag-pupil-r");
-      if (!pl || !pr) return;
-      const dx = (Math.random() - 0.5) * 7;
-      const dy = (Math.random() - 0.5) * 3;
-      gsap.to([pl, pr], {
-        x: dx, y: dy, duration: 0.35, ease: "power2.out",
-        onComplete() {
-          setTimeout(() => {
-            gsap.to([pl, pr], {
-              x: 0, y: 0, duration: 0.28, ease: "power2.inOut",
-              onComplete: scheduleLook,
-            });
-          }, 600 + Math.random() * 1400);
-        },
-      });
-    }
-    function scheduleLook() {
-      lookRef.current = setTimeout(doLook, (3 + Math.random() * 6) * 1000);
-    }
-    scheduleLook();
-
-    // Nod
-    function scheduleNod() {
-      nodRef.current = setTimeout(() => {
-        if (!shadeGroup) { scheduleNod(); return; }
-        gsap.to(shadeGroup, {
-          rotation: 5, transformOrigin: "-10px -28px",
-          duration: 0.25, ease: "power2.out", yoyo: true, repeat: 1,
-          onComplete: scheduleNod,
-        });
-      }, (8 + Math.random() * 10) * 1000);
-    }
-    scheduleNod();
-
-    return () => {
-      if (shadeGroup) gsap.killTweensOf(shadeGroup);
-      if (cordEnd) gsap.killTweensOf(cordEnd);
-      clearTimeout(blinkRef.current);
-      clearTimeout(lookRef.current);
-      clearTimeout(nodRef.current);
-    };
-  }, []);
 
   // ── Toggle lamp ───────────────────────────────────────────
   function toggleLamp() {
@@ -607,7 +499,7 @@ export default function AuthPage({ api, onLogin, onSkip }) {
                 <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: lampColor, letterSpacing: "0.12em", background: `hsla(${hue},55%,48%,0.12)`, border: `1px solid ${lampColor}30`, borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap" }}>
                   {isProvider ? "👨‍⚕️ PROVIDER" : "😷 PATIENT"}
                 </span>
-                <button onClick={() => { setStep("role"); setApiErr(""); setErrors({}); setOk(""); }}
+                <button onClick={() => { setStep("role"); dismissToast(); setErrors({}); setAuthSuccessPending(false); }}
                   style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "var(--body)", fontSize: 12, color: "rgba(240,228,210,0.4)", textDecoration: "underline", padding: 0, whiteSpace: "nowrap" }}>
                   change
                 </button>
@@ -615,7 +507,7 @@ export default function AuthPage({ api, onLogin, onSkip }) {
               {/* Row 2: mode toggle */}
               <div style={{ display: "flex", gap: 4, marginBottom: 16 }}>
                 {[{ id: "login", l: "Sign In" }, { id: "register", l: "Register" }].map(m => (
-                  <button key={m.id} onClick={() => { setMode(m.id); setErrors({}); setApiErr(""); setOk(""); }}
+                  <button key={m.id} onClick={() => { setMode(m.id); setErrors({}); dismissToast(); setAuthSuccessPending(false); }}
                     style={{
                       fontFamily: "var(--mono)", fontSize: 9, letterSpacing: "0.1em",
                       background: mode === m.id ? `hsla(${hue},55%,48%,0.18)` : "transparent",
@@ -625,10 +517,6 @@ export default function AuthPage({ api, onLogin, onSkip }) {
                     }}>{m.l}</button>
                 ))}
               </div>
-
-              {/* Banners */}
-              {ok && <div style={{ fontFamily: "var(--body)", fontSize: 13, color: "#7ecf8e", background: "rgba(64,160,88,0.12)", border: "1px solid rgba(64,160,88,0.25)", borderRadius: 8, padding: "8px 12px", marginBottom: 12 }}>{ok}</div>}
-              {apiErr && <div style={{ fontFamily: "var(--body)", fontSize: 13, color: "#e07060", background: "rgba(190,48,40,0.12)", border: "1px solid rgba(190,48,40,0.25)", borderRadius: 8, padding: "8px 12px", marginBottom: 12 }}>{apiErr}</div>}
 
               {/* Fields */}
               {mode === "register" && (
@@ -645,20 +533,20 @@ export default function AuthPage({ api, onLogin, onSkip }) {
 
               <button
                 onClick={submit}
-                disabled={loading || !!ok}
+                disabled={loading || authSuccessPending}
                 style={{
                   width: "100%", marginTop: 8, padding: 14,
                   background: lampColor, border: "none", borderRadius: 12,
                   color: "#1a1208", fontFamily: "var(--body)", fontSize: 17, fontWeight: 600,
-                  cursor: loading || ok ? "not-allowed" : "pointer",
-                  opacity: loading || ok ? 0.6 : 1,
+                  cursor: loading || authSuccessPending ? "not-allowed" : "pointer",
+                  opacity: loading || authSuccessPending ? 0.6 : 1,
                   boxShadow: `0 4px 24px ${lampGlow}`,
                   transition: "transform 0.15s, filter 0.2s",
                 }}
-                onMouseEnter={e => { if (!loading && !ok) { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.filter = "brightness(1.1)"; } }}
+                onMouseEnter={e => { if (!loading && !authSuccessPending) { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.filter = "brightness(1.1)"; } }}
                 onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.filter = "none"; }}
               >
-                {loading ? "Signing in…" : mode === "login" ? "Sign In →" : "Create Account →"}
+                {loading ? t("auth.signing_in", { defaultValue: "Signing in…" }) : authSuccessPending ? t("auth.redirecting", { defaultValue: "Redirecting…" }) : mode === "login" ? "Sign In →" : "Create Account →"}
               </button>
             </>
           )}
@@ -672,11 +560,51 @@ export default function AuthPage({ api, onLogin, onSkip }) {
         </div>
       </div>
 
+      {toast && (() => {
+        const success = toast.variant === "success";
+        return (
+          <div
+            key={toast.id}
+            role={success ? "status" : "alert"}
+            aria-live={success ? "polite" : "assertive"}
+            className="auth-toast-snackbar"
+            style={{
+              position: "fixed",
+              left: "50%",
+              bottom: 28,
+              zIndex: 60,
+              maxWidth: "min(420px, calc(100vw - 32px))",
+              padding: "12px 16px",
+              borderRadius: 12,
+              fontFamily: "var(--body)",
+              fontSize: 14,
+              lineHeight: 1.45,
+              textAlign: "center",
+              color: success ? "#dff5e4" : "#f5e8e4",
+              background: success ? "rgba(16,28,22,0.92)" : "rgba(28,18,14,0.92)",
+              border: success ? "1px solid rgba(90,170,110,0.5)" : "1px solid rgba(224,112,96,0.45)",
+              boxShadow: "0 12px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(0,0,0,0.2)",
+              backdropFilter: "blur(10px)",
+            }}
+          >
+            {toast.message}
+          </div>
+        );
+      })()}
+
       {/* Inline keyframe for hint float */}
       <style>{`
         @keyframes hintFloat {
           0%,100%{opacity:.32;transform:translateX(-50%) translateY(0)}
           50%{opacity:.65;transform:translateX(-50%) translateY(-5px)}
+        }
+        @keyframes authToastIn {
+          from { opacity: 0; transform: translateX(-50%) translateY(14px); }
+          to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        .auth-toast-snackbar {
+          transform: translateX(-50%);
+          animation: authToastIn 0.32s ease-out forwards;
         }
       `}</style>
     </div>

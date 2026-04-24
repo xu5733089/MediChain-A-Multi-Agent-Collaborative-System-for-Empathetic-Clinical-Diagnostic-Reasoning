@@ -1,5 +1,5 @@
 """
-eval.py — PROJ-14 MedQA 评估模块
+eval/evaluator.py — PROJ-14 MedQA 评估模块
 对比 Multi-Agent vs Single-LLM 在 USMLE 风格题目上的表现
 Mistral 作为独立 judge 评估 Claude 多智能体诊断是否正确
 """

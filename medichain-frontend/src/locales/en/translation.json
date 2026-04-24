@@ -91,6 +91,8 @@
     "err_not_patient": "This account is not a patient account. Please use Provider Login.",
     "success_signin": "Welcome back.",
     "success_register": "Account created successfully.",
+    "signing_in": "Signing in…",
+    "redirecting": "Redirecting…",
     "err_generic": "An error occurred."
   },
   "input": {
@@ -143,6 +145,7 @@
     "context_files": "CONTEXT FILES ({{count}})",
     "analysis_preview": "AI ANALYSIS PREVIEW",
     "queued": "{{count}} file(s) queued for next send.",
+    "err_too_long": "Message too long (max 2000 characters).",
     "upload_error": "Upload error: {{error}}",
     "listening": "Listening…",
     "placeholder": "Type your response…",
