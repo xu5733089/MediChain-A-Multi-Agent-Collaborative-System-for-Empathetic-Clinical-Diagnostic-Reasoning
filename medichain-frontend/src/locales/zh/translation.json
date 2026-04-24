@@ -37,7 +37,16 @@
     "label": "语言",
     "en": "English",
     "zh": "中文",
-    "ja": "日本語"
+    "ja": "日本語",
+    "es": "Español",
+    "fr": "Français",
+    "de": "Deutsch",
+    "pt": "Português",
+    "ru": "Русский",
+    "ar": "العربية",
+    "hi": "हिन्दी",
+    "ko": "한국어",
+    "it": "Italiano"
   },
   "auth": {
     "welcome": "欢迎来到 MediChain",
@@ -264,6 +273,7 @@
     "no_messages": "暂无消息。"
   },
   "upload": {
+    "audio_lang": "🎙 音频语言：",
     "drop_title": "拖拽文件至此，或",
     "drop_browse": "点击浏览",
     "drop_types": "图像 · 音频 · 视频 · PDF · TXT",

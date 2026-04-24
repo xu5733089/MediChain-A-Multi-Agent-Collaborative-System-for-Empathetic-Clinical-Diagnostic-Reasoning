@@ -37,7 +37,16 @@
     "label": "Language",
     "en": "English",
     "zh": "中文",
-    "ja": "日本語"
+    "ja": "日本語",
+    "es": "Español",
+    "fr": "Français",
+    "de": "Deutsch",
+    "pt": "Português",
+    "ru": "Русский",
+    "ar": "العربية",
+    "hi": "हिन्दी",
+    "ko": "한국어",
+    "it": "Italiano"
   },
   "auth": {
     "welcome": "Welcome to MediChain",
@@ -264,6 +273,7 @@
     "no_messages": "No messages."
   },
   "upload": {
+    "audio_lang": "🎙 Audio language:",
     "drop_title": "Drop files here or",
     "drop_browse": "click to browse",
     "drop_types": "Images · Audio · Video · PDF · TXT",

@@ -2,12 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Caduceus } from "./illustrations";
 import { Button } from "./ui/button";
-
-const LANGS = [
-  { code: "en", label: "EN", full: "English" },
-  { code: "zh", label: "中", full: "中文" },
-  { code: "ja", label: "日", full: "日本語" },
-];
+import { UI_LANGUAGES } from "../config/uiLanguages";
 
 export default function TopNav({ user, onLogout, onNav, page, dark, toggle, forceDark }) {
   const { t, i18n } = useTranslation();
@@ -20,7 +15,8 @@ export default function TopNav({ user, onLogout, onNav, page, dark, toggle, forc
     ? [{ id: "provider", l: t("nav.dashboard") }, { id: "history", l: t("nav.history") }]
     : [{ id: "input", l: t("nav.consult") }, { id: "patients", l: t("nav.patients") }, { id: "history", l: t("nav.history") }, { id: "eval", l: t("nav.medqa") }];
 
-  const currentLang = LANGS.find(l => l.code === i18n.language) || LANGS[0];
+  const langCode = (i18n.resolvedLanguage || i18n.language || "en").split("-")[0];
+  const currentLang = UI_LANGUAGES.find(l => l.code === langCode) || UI_LANGUAGES[0];
 
   const navBg = forceDark ? "rgba(8,15,26,0.97)" : "var(--nav-bg)";
   const navBorder = forceDark ? "1px solid rgba(255,255,255,0.07)" : "1px solid rgba(127,99,21,0.12)";
@@ -61,23 +57,23 @@ export default function TopNav({ user, onLogout, onNav, page, dark, toggle, forc
               {currentLang.label}
             </Button>
             {langMenu && (
-              <div className="card scale-in" style={{ position: "absolute", right: 0, top: 42, width: 130, boxShadow: "var(--shadow-xl)", zIndex: 200, overflow: "hidden" }}>
-                {LANGS.map(lang => (
+              <div className="card scale-in" style={{ position: "absolute", right: 0, top: 42, width: 228, maxHeight: "min(70vh, 360px)", boxShadow: "var(--shadow-xl)", zIndex: 200, overflowX: "hidden", overflowY: "auto" }}>
+                {UI_LANGUAGES.map(lang => (
                   <button
                     key={lang.code}
                     onClick={() => { i18n.changeLanguage(lang.code); setLangMenu(false); }}
                     style={{
                       display: "flex", alignItems: "center", gap: 10, width: "100%",
-                      textAlign: "left", background: lang.code === i18n.language ? "var(--paper3)" : "none",
+                      textAlign: "left", background: lang.code === langCode ? "var(--paper3)" : "none",
                       border: "none", borderBottom: "1px solid rgba(22,15,6,0.06)",
                       padding: "10px 14px", cursor: "pointer", transition: "background 0.14s",
                     }}
                     onMouseEnter={e => e.currentTarget.style.background = "var(--paper3)"}
-                    onMouseLeave={e => e.currentTarget.style.background = lang.code === i18n.language ? "var(--paper3)" : "none"}
+                    onMouseLeave={e => e.currentTarget.style.background = lang.code === langCode ? "var(--paper3)" : "none"}
                   >
-                    <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--rose)", fontWeight: 700, width: 18 }}>{lang.label}</span>
-                    <span style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--ink2)" }}>{lang.full}</span>
-                    {lang.code === i18n.language && <span style={{ marginLeft: "auto", color: "var(--rose)", fontSize: 10 }}>✓</span>}
+                    <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--rose)", fontWeight: 700, minWidth: 22 }}>{lang.label}</span>
+                    <span style={{ fontFamily: "var(--body)", fontSize: 13, color: "var(--ink2)", flex: 1 }}>{lang.native}</span>
+                    {lang.code === langCode && <span style={{ color: "var(--rose)", fontSize: 10, flexShrink: 0 }}>✓</span>}
                   </button>
                 ))}
               </div>

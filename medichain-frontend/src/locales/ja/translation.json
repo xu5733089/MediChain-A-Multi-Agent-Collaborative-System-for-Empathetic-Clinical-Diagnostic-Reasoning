@@ -37,7 +37,16 @@
     "label": "言語",
     "en": "English",
     "zh": "中文",
-    "ja": "日本語"
+    "ja": "日本語",
+    "es": "Español",
+    "fr": "Français",
+    "de": "Deutsch",
+    "pt": "Português",
+    "ru": "Русский",
+    "ar": "العربية",
+    "hi": "हिन्दी",
+    "ko": "한국어",
+    "it": "Italiano"
   },
   "auth": {
     "welcome": "MediChain へようこそ",
@@ -120,6 +129,8 @@
     "session": "セッション {{id}}",
     "hide_reasoning": "推論を非表示",
     "show_reasoning": "推論を表示",
+    "hide_agents": "エージェントを非表示",
+    "show_agents": "エージェントを表示",
     "active_case": "現在のケース",
     "safety_warning": "安全警告：",
     "safety_seek": "深刻な状態の可能性があります。至急医療機関を受診してください。",
@@ -262,6 +273,7 @@
     "no_messages": "メッセージがありません。"
   },
   "upload": {
+    "audio_lang": "🎙 音声の言語：",
     "drop_title": "ここにファイルをドロップするか、",
     "drop_browse": "クリックして選択",
     "drop_types": "画像 · 音声 · 動画 · PDF · TXT",

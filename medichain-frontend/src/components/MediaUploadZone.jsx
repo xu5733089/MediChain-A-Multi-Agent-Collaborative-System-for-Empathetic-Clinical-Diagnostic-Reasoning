@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "./ui/button";
+import { SPEECH_LOCALES } from "../config/uiLanguages";
 
 const ACCEPTED_TYPES = {
   image: { exts: [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".dcm"], icon: "🩻", label: "Image", color: "var(--rose)" },
@@ -11,12 +12,6 @@ const ACCEPTED_TYPES = {
 };
 
 const ALL_ACCEPT = Object.values(ACCEPTED_TYPES).flatMap(t => t.exts).join(",");
-
-const AUDIO_LANGS = [
-  { code: "en-US", label: "EN" },
-  { code: "zh-CN", label: "中" },
-  { code: "ja-JP", label: "日" },
-];
 
 function getFileKind(filename) {
   const ext = ("." + filename.split(".").pop()).toLowerCase();
@@ -238,9 +233,9 @@ export default function MediaUploadZone({ api, onUpdate, disabled }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {/* Audio language selector */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", letterSpacing: "0.08em" }}>🎙 Audio language:</span>
-        {AUDIO_LANGS.map(l => (
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink5)", letterSpacing: "0.08em" }}>{t("upload.audio_lang")}</span>
+        {SPEECH_LOCALES.map(l => (
           <button
             key={l.code}
             onClick={() => setAudioLang(l.code)}
