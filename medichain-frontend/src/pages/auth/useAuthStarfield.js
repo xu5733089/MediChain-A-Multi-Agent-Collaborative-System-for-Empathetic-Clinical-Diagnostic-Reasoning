@@ -24,11 +24,13 @@ export function useAuthStarfield(canvasRef, rafRef) {
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const t = Date.now() * 0.001;
-      stars.forEach(s => {
+      stars.forEach((s) => {
         const o = s.base * (0.55 + 0.45 * Math.sin(t * s.speed * 60 + s.phase));
         ctx.beginPath();
         ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-        ctx.fillStyle = s.warm ? `rgba(255,220,150,${o})` : `rgba(255,248,235,${o})`;
+        ctx.fillStyle = s.warm
+          ? `rgba(255,220,150,${o})`
+          : `rgba(255,248,235,${o})`;
         ctx.fill();
       });
       rafRef.current = requestAnimationFrame(draw);

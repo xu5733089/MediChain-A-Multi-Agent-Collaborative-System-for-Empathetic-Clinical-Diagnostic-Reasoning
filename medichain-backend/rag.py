@@ -329,16 +329,15 @@ def search(query: str, n_results: int = 5) -> list[dict]:
         return []
 
     model = _get_dense_model()
-    # 初检候选数：取 RERANKER_CANDIDATES 或 n_results*4 中的较大值，供 reranker 使用
+    # Keep the first-stage pool wider than the final result set so reranking can
+    # recover useful PubMed/MedQuAD evidence that dense or sparse search alone
+    # may have under-ranked.
     prefetch_limit = min(max(RERANKER_CANDIDATES, n_results * 4), count)
 
-    # Dense query vector
     dense_vec = model.encode([query], normalize_embeddings=True).tolist()[0]
 
-    # Sparse query vector
     sp_indices, sp_values = _text_to_sparse(query)
 
-    # 构建 prefetch 列表
     prefetch = [
         models.Prefetch(
             query=dense_vec,
@@ -347,7 +346,8 @@ def search(query: str, n_results: int = 5) -> list[dict]:
         ),
     ]
 
-    # 仅在有有效 sparse 向量时添加 sparse prefetch
+    # BM25 can be empty for short or out-of-vocabulary queries; in that case
+    # dense retrieval still gives a usable fallback instead of failing the search.
     if sp_indices:
         prefetch.append(
             models.Prefetch(
@@ -357,7 +357,8 @@ def search(query: str, n_results: int = 5) -> list[dict]:
             ),
         )
 
-    # RRF 融合查询，多取候选供 reranker 使用
+    # RRF balances semantic similarity with exact medical terms, which matters
+    # for symptoms, drug names, and disease abbreviations that embeddings can blur.
     results = client.query_points(
         collection_name=COLLECTION_NAME,
         prefetch=prefetch,
@@ -376,6 +377,8 @@ def search(query: str, n_results: int = 5) -> list[dict]:
 
     for hit in results.points:
         score = round(hit.score / max_score, 4)
+        # Drop very weak fused matches before prompting the diagnostician; low
+        # relevance citations are worse than no citation in a clinical answer.
         if score < 0.15:
             continue
         payload = hit.payload or {}
@@ -394,7 +397,8 @@ def search(query: str, n_results: int = 5) -> list[dict]:
             "score":       score,
         })
 
-    # MedCPT cross-encoder rerank，覆盖 RRF 分数，返回 top n_results
+    # Cross-encoder scores replace the fused score because this final pass judges
+    # the query and excerpt together, reducing citation drift in the prompt.
     return _rerank(query, output, n_results)
 
 

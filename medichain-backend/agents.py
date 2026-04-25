@@ -114,7 +114,7 @@ Always respond in this exact format:
 # ── Agent Invocation ────────────────────────────────────────────
 
 def call_interviewer(messages: list[dict]) -> str:
-    """调用 Interviewer Agent"""
+    """Run the interviewer prompt that gathers history without diagnosing."""
     response = client.messages.create(
         model=MODEL,
         max_tokens=600,
@@ -255,7 +255,7 @@ Use only relevant retrieved evidence and cite using [Source | Focus | QID]."""
 
 
 def call_critic(case_text: str, diagnosis: str) -> str:
-    """调用 Critic Agent"""
+    """Run the safety-focused reviewer before a diagnosis is presented."""
     prompt = f"""Please review this diagnostic assessment:
 
 {diagnosis}
@@ -266,6 +266,8 @@ Original patient case:
 
 Provide your senior consultant review focusing on evidence quality, safety, and clinical gaps."""
 
+    # The critic is deliberately separate from the diagnostician so safety gaps
+    # and weak evidence are reviewed from a second role before results reach users.
     response = client.messages.create(
         model=MODEL,
         max_tokens=800,
@@ -336,7 +338,8 @@ def call_agent_commentary(user_message: str, interviewer_reply: str, symptoms_co
             messages=[{"role": "user", "content": prompt}],
         )
         raw = resp.content[0].text.strip()
-        # Strip markdown code fences if present
+        # Models sometimes wrap JSON despite the instruction; tolerate that so
+        # optional UI commentary does not disappear for a formatting mistake.
         raw = re.sub(r"^```(?:json)?\s*", "", raw, flags=re.MULTILINE)
         raw = re.sub(r"\s*```$", "", raw, flags=re.MULTILINE)
         return json.loads(raw.strip())

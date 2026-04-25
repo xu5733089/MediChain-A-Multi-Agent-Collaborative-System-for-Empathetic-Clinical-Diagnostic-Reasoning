@@ -5,13 +5,16 @@ import { cn } from "@/lib/utils";
 const Select = SelectPrimitive.Root;
 const SelectValue = SelectPrimitive.Value;
 
-const SelectTrigger = React.forwardRef(function SelectTrigger({ className, children, style, ...props }, ref) {
+const SelectTrigger = React.forwardRef(function SelectTrigger(
+  { className, children, style, ...props },
+  ref,
+) {
   return (
     <SelectPrimitive.Trigger
       ref={ref}
       className={cn(
         "flex h-12 w-full items-center justify-between rounded-md border border-[rgba(22,15,6,0.16)] bg-[var(--paper)] px-5 py-3 text-sm text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--rose)] focus:ring-offset-2 focus:ring-offset-[var(--paper)] disabled:cursor-not-allowed disabled:opacity-50",
-        className
+        className,
       )}
       style={{
         height: 48,
@@ -24,12 +27,17 @@ const SelectTrigger = React.forwardRef(function SelectTrigger({ className, child
       {...props}
     >
       {children}
-      <SelectPrimitive.Icon className="text-[var(--ink5)]">▾</SelectPrimitive.Icon>
+      <SelectPrimitive.Icon className="text-[var(--ink5)]">
+        ▾
+      </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   );
 });
 
-const SelectContent = React.forwardRef(function SelectContent({ className, children, position = "popper", ...props }, ref) {
+const SelectContent = React.forwardRef(function SelectContent(
+  { className, children, position = "popper", ...props },
+  ref,
+) {
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
@@ -38,23 +46,28 @@ const SelectContent = React.forwardRef(function SelectContent({ className, child
         className={cn(
           "z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-md border border-[rgba(22,15,6,0.13)] bg-[var(--paper2)] text-[var(--ink)] shadow-lg",
           position === "popper" && "translate-y-1",
-          className
+          className,
         )}
         {...props}
       >
-        <SelectPrimitive.Viewport className="p-1">{children}</SelectPrimitive.Viewport>
+        <SelectPrimitive.Viewport className="p-1">
+          {children}
+        </SelectPrimitive.Viewport>
       </SelectPrimitive.Content>
     </SelectPrimitive.Portal>
   );
 });
 
-const SelectItem = React.forwardRef(function SelectItem({ className, children, ...props }, ref) {
+const SelectItem = React.forwardRef(function SelectItem(
+  { className, children, ...props },
+  ref,
+) {
   return (
     <SelectPrimitive.Item
       ref={ref}
       className={cn(
         "relative flex w-full cursor-default select-none items-center rounded-sm py-2.5 pl-10 pr-4 text-sm outline-none focus:bg-[var(--paper3)]",
-        className
+        className,
       )}
       {...props}
     >

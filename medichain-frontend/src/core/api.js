@@ -15,14 +15,14 @@ async function _readSSE(response, onEvent) {
   // sse-starlette uses \r\n line endings so the separator is \r\n\r\n,
   // NOT \n\n — must use a regex that matches both variants.
   const EVENT_SEP = /\r?\n\r?\n/;
-  const LINE_SEP  = /\r?\n/;
+  const LINE_SEP = /\r?\n/;
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
       buf += decoder.decode(value, { stream: true });
       const parts = buf.split(EVENT_SEP);
-      buf = parts.pop() ?? "";          // keep the incomplete trailing chunk
+      buf = parts.pop() ?? ""; // keep the incomplete trailing chunk
       for (const part of parts) {
         for (const line of part.split(LINE_SEP)) {
           if (line.startsWith("data: ")) {
@@ -30,7 +30,9 @@ async function _readSSE(response, onEvent) {
               const evt = JSON.parse(line.slice(6));
               onEvent(evt);
               if (evt.type === "done" || evt.type === "error") return;
-            } catch { /* malformed frame — skip */ }
+            } catch {
+              /* malformed frame — skip */
+            }
           }
         }
       }
@@ -41,15 +43,22 @@ async function _readSSE(response, onEvent) {
 }
 
 export function makeApi(token) {
-  const h = { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+  const h = {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
   const hForm = { ...(token ? { Authorization: `Bearer ${token}` } : {}) };
-  const get = async p => {
+  const get = async (p) => {
     const r = await fetch(BACKEND + p, { headers: h });
     if (!r.ok) throw new Error(`${r.status}`);
     return r.json();
   };
   const post = async (p, b) => {
-    const r = await fetch(BACKEND + p, { method: "POST", headers: h, body: JSON.stringify(b) });
+    const r = await fetch(BACKEND + p, {
+      method: "POST",
+      headers: h,
+      body: JSON.stringify(b),
+    });
     if (!r.ok) {
       const e = await r.json().catch(() => ({ detail: r.status }));
       throw new Error(e.detail || r.status);
@@ -57,7 +66,11 @@ export function makeApi(token) {
     return r.json();
   };
   const postForm = async (p, formData) => {
-    const r = await fetch(BACKEND + p, { method: "POST", headers: hForm, body: formData });
+    const r = await fetch(BACKEND + p, {
+      method: "POST",
+      headers: hForm,
+      body: formData,
+    });
     if (!r.ok) {
       const e = await r.json().catch(() => ({ detail: r.status }));
       throw new Error(e.detail || r.status);
@@ -65,17 +78,25 @@ export function makeApi(token) {
     return r.json();
   };
   const put = async (p, b) => {
-    const r = await fetch(BACKEND + p, { method: "PUT", headers: h, body: JSON.stringify(b) });
+    const r = await fetch(BACKEND + p, {
+      method: "PUT",
+      headers: h,
+      body: JSON.stringify(b),
+    });
     if (!r.ok) throw new Error(`${r.status}`);
     return r.json();
   };
-  const del = async p => {
+  const del = async (p) => {
     const r = await fetch(BACKEND + p, { method: "DELETE", headers: h });
     if (!r.ok) throw new Error(`${r.status}`);
     return r.json();
   };
   const patch = async (p, b) => {
-    const r = await fetch(BACKEND + p, { method: "PATCH", headers: h, body: JSON.stringify(b) });
+    const r = await fetch(BACKEND + p, {
+      method: "PATCH",
+      headers: h,
+      body: JSON.stringify(b),
+    });
     if (!r.ok) {
       const e = await r.json().catch(() => ({ detail: r.status }));
       throw new Error(e.detail || r.status);
@@ -83,7 +104,9 @@ export function makeApi(token) {
     return r.json();
   };
   const withQuery = (path, params = {}) => {
-    const entries = Object.entries(params || {}).filter(([, v]) => v !== undefined && v !== null && v !== "");
+    const entries = Object.entries(params || {}).filter(
+      ([, v]) => v !== undefined && v !== null && v !== "",
+    );
     if (!entries.length) return path;
     const qs = new URLSearchParams();
     entries.forEach(([k, v]) => qs.append(k, String(v)));
@@ -91,20 +114,22 @@ export function makeApi(token) {
   };
 
   return {
-    register: b => post("/api/auth/register", b),
-    loginJson: b => post("/api/auth/login/json", b),
+    register: (b) => post("/api/auth/register", b),
+    loginJson: (b) => post("/api/auth/login/json", b),
     patients: () => get("/api/patients"),
-    createPatient: b => post("/api/patients", b),
+    createPatient: (b) => post("/api/patients", b),
     updatePatient: (id, b) => put(`/api/patients/${id}`, b),
-    deletePatient: id => del(`/api/patients/${id}`),
-    patientSessions: id => get(`/api/patients/${id}/sessions`),
-    start: s => post("/api/session/start", s),
-    chat: b => post("/api/session/chat", b),
-    diagnose: b => post("/api/session/diagnose", b),
+    deletePatient: (id) => del(`/api/patients/${id}`),
+    patientSessions: (id) => get(`/api/patients/${id}/sessions`),
+    start: (s) => post("/api/session/start", s),
+    chat: (b) => post("/api/session/chat", b),
+    diagnose: (b) => post("/api/session/diagnose", b),
     // ── SSE streaming versions ──
     chatStream: async (b, onEvent) => {
       const r = await fetch(BACKEND + "/api/session/chat/stream", {
-        method: "POST", headers: h, body: JSON.stringify(b),
+        method: "POST",
+        headers: h,
+        body: JSON.stringify(b),
       });
       if (!r.ok) {
         const e = await r.json().catch(() => ({ detail: r.status }));
@@ -114,7 +139,9 @@ export function makeApi(token) {
     },
     diagnoseStream: async (b, onEvent) => {
       const r = await fetch(BACKEND + "/api/session/diagnose/stream", {
-        method: "POST", headers: h, body: JSON.stringify(b),
+        method: "POST",
+        headers: h,
+        body: JSON.stringify(b),
       });
       if (!r.ok) {
         const e = await r.json().catch(() => ({ detail: r.status }));
@@ -123,10 +150,11 @@ export function makeApi(token) {
       await _readSSE(r, onEvent);
     },
     sessions: (filters = {}) => get(withQuery("/api/sessions", filters)),
-    providerSessions: (filters = {}) => get(withQuery("/api/provider/sessions", filters)),
-    session: id => get(`/api/session/${id}`),
-    sessionMessages: id => get(`/api/sessions/${id}/messages`),
-    sessionUploads: id => get(`/api/sessions/${id}/uploads`),
+    providerSessions: (filters = {}) =>
+      get(withQuery("/api/provider/sessions", filters)),
+    session: (id) => get(`/api/session/${id}`),
+    sessionMessages: (id) => get(`/api/sessions/${id}/messages`),
+    sessionUploads: (id) => get(`/api/sessions/${id}/uploads`),
     storeSessionMessage: (id, b) => post(`/api/sessions/${id}/messages`, b),
     uploadSessionFile: (id, file) => {
       const fd = new FormData();
@@ -145,16 +173,17 @@ export function makeApi(token) {
     },
     analyzeCompare: (files) => {
       const fd = new FormData();
-      files.forEach(f => fd.append("files", f));
+      files.forEach((f) => fd.append("files", f));
       return postForm("/api/analyze/compare", fd);
     },
     questions: () => get("/api/eval/questions"),
-    evalRun: b => post("/api/eval/run", b),
+    evalRun: (b) => post("/api/eval/run", b),
     evalHist: () => get("/api/eval/history"),
     exportUrl: (id, t) => `${BACKEND}/api/session/${id}/export/${t}`,
-    sessionVerdict: (id, verdict, note) => patch(`/api/sessions/${id}/verdict`, { verdict, note }),
+    sessionVerdict: (id, verdict, note) =>
+      patch(`/api/sessions/${id}/verdict`, { verdict, note }),
     ragStatus: () => get("/api/rag/status"),
     ragIngest: (b = {}) => post("/api/rag/ingest", b),
-    peerReview: id => get(`/api/session/${id}/peer-review`),
+    peerReview: (id) => get(`/api/session/${id}/peer-review`),
   };
 }

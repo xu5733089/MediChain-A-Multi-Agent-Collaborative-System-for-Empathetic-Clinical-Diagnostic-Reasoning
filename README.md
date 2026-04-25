@@ -244,6 +244,69 @@ Full API docs: `http://localhost:8000/docs`
 
 ---
 
+## ✅ Code Style & Testing / 质量门禁
+
+MediChain uses explicit quality gates so code style and regression coverage can be verified before submission.
+
+### Frontend Checks
+
+```bash
+cd medichain-frontend
+npm run lint
+npm run format:check
+npm run test:run
+```
+
+For Cypress E2E, start the frontend dev server first:
+
+```bash
+cd medichain-frontend
+npm run dev
+# in another terminal
+npm run e2e
+```
+
+Current frontend test evidence:
+- `npm run lint`: **0 errors / 0 warnings**
+- `npm run format:check`: **passed**
+- `npm run test:run`: **8 passed**
+- `npm run e2e`: **3 passed**
+
+Current Cypress E2E coverage:
+- Auth entry flow: patient/provider role selection and switching.
+- Consultation flow: intake example -> consent -> session start -> chat message send, with backend APIs mocked for deterministic execution.
+- Diagnosis/export flow: chat trigger -> diagnosis stream -> result page -> PDF/JSON export links.
+
+### Regression Coverage
+
+The following previously observed UI failure modes are locked by tests:
+- Auth login failure shows a visible error toast: `src/pages/AuthPage.test.jsx`
+- Unsupported media files are rejected before analysis: `src/components/MediaUploadZone.test.jsx`
+- Oversized media files are rejected before analysis: `src/components/MediaUploadZone.test.jsx`
+- Chat streaming failures are surfaced in the reasoning log: `src/pages/ChatPage.test.jsx`
+
+### Backend Checks
+
+```bash
+cd medichain-backend
+python -m pytest -q
+python -m pytest --cov=. --cov-report=term-missing -q
+```
+
+Current backend test evidence:
+- `python -m pytest -q`: **210 passed**
+- `python -m pytest --cov=. --cov-report=term-missing -q`: **TOTAL 96%**
+- Core module coverage includes `main.py 91%`, `rag.py 93%`, `agents.py 100%`, `agents_async.py 100%`, `export.py 92%`, `db.py 90%`, `auth.py 96%`, and `safety.py 92%`.
+
+### Passing Standard
+
+- Frontend lint must pass with **0 errors / 0 warnings**.
+- Backend core API, authentication, session, RAG, safety, export, media, and streaming tests must pass.
+- Coverage target: **overall >= 80%** and core backend modules **>= 90%** where applicable.
+- External AI, PubMed, Qdrant, media, and authentication boundaries are covered with mocks to keep tests deterministic.
+
+---
+
 ## 🛠️ Tech Stack / 技术栈
 
 | Layer | Technology |

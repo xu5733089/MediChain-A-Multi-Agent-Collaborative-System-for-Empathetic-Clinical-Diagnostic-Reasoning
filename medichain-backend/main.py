@@ -1438,15 +1438,17 @@ def chat(body: ChatMessage, user=Depends(get_current_user)):
         user_id=user["id"] if user else None,
     )
 
-    MAX_TURNS = 12  # Safety ceiling — prevent runaway sessions
+    # Hard-stop the interview so a reluctant model cannot keep asking questions
+    # indefinitely; the diagnosis phase should receive the best available case.
+    MAX_TURNS = 12
     reply = call_interviewer(normalize_history_for_interviewer(history))
     ready = "[READY_FOR_DIAGNOSIS]" in reply
     clean = reply.replace("[READY_FOR_DIAGNOSIS]","").strip()
 
     clean, quick_replies = _extract_quick_replies(clean)
 
-    # If we hit the turn ceiling and Claude hasn't wrapped up yet, append a
-    # natural closing sentence so the patient isn't left hanging.
+    # When the cap is reached, close the intake politely even if the model did
+    # not emit READY_FOR_DIAGNOSIS. This keeps the UX deterministic.
     force_trigger = turns >= MAX_TURNS
     if force_trigger and not ready:
         clean = clean + "\n\nThank you for sharing all of that. I now have enough information to proceed with a thorough analysis."
@@ -1458,7 +1460,6 @@ def chat(body: ChatMessage, user=Depends(get_current_user)):
     session_update(body.session_id,history=history,messages=messages,
         turns=turns,status="analyzing" if trigger else "interviewing")
 
-    # Generate inter-agent commentary (Safety ↔ Interviewer) asynchronously-ish
     symptoms_ctx = ""
     try:
         s_payload = sess.get("symptoms") or {}
@@ -1499,14 +1500,14 @@ def diagnose(body: DiagnoseRequest, user=Depends(get_current_user)):
         raise HTTPException(403, "Forbidden")
     s = sess["symptoms"]
 
-    # Separate image analyses from regular conversation messages
+    # Image reports are treated as clinical context for RAG, not as chat turns,
+    # so the diagnostician can cite text evidence while still seeing imaging data.
     image_analyses = []
     lines = []
     for m in sess["messages"]:
         role = m["role"]
         text = m.get("text", "")
         if role == "system" and text.startswith("Uploaded file:") and "image" in text.lower():
-            # Extract the AI analysis portion (everything after the metadata line)
             analysis_body = text.split("\n\n", 1)[1] if "\n\n" in text else text
             image_analyses.append(analysis_body)
         elif role == "user":
@@ -1535,11 +1536,13 @@ def diagnose(body: DiagnoseRequest, user=Depends(get_current_user)):
         + "\n\n".join(lines)
     )
 
-    # Enrich RAG query with image findings via LLM medical term extraction
+    # Visual findings often use descriptive language; rewriting them into medical
+    # terms improves retrieval without letting uploaded text control instructions.
     image_medical_terms = rewrite_image_findings_for_rag(image_analyses) if image_analyses else ""
     rag_query = f"{s['description']} {s['bodyPart']} {s['duration']} {image_medical_terms}".strip()
 
-    # Use extended thinking (CoT) — fall back to standard call if not supported
+    # Extended thinking improves difficult differentials, but it is provider/model
+    # dependent. The standard path preserves diagnosis availability if CoT fails.
     try:
         diagnosis, diag_cot, refs = call_diagnostician_cot(case_text, rag_query)
         review, critic_cot = call_critic_cot(case_text, diagnosis)
@@ -1552,7 +1555,8 @@ def diagnose(body: DiagnoseRequest, user=Depends(get_current_user)):
     session_message_create(body.session_id, role="agent", content=diagnosis, agent_type="diagnostician", user_id=user["id"] if user else None)
     session_message_create(body.session_id, role="agent", content=review, agent_type="critic", user_id=user["id"] if user else None)
 
-    # Generate Diagnostician ↔ Critic debate logs
+    # Roundtable logs are explanatory UI evidence only; diagnosis persistence
+    # should not fail if this secondary commentary cannot be generated.
     agent_logs = []
     try:
         agent_logs = call_diagnostic_roundtable(case_text, diagnosis, review)

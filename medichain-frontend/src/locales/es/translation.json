@@ -124,8 +124,27 @@
     "moderate_desc": "La molestia es notable y ya afecta algunas actividades diarias.",
     "severe_desc": "Los síntomas son intensos, alteran gravemente la vida normal o son difíciles de tolerar.",
     "begin": "Iniciar consulta →",
-    "body_parts": ["General", "Cabeza / Cara", "Cuello", "Tórax", "Abdomen", "Espalda", "Brazo / Hombro", "Pierna / Cadera", "Piel", "Varias zonas"],
-    "durations": ["< 24 horas", "1–3 días", "4–7 días", "1–2 semanas", "2–4 semanas", "> 1 mes", "Crónico (> 3 meses)"]
+    "body_parts": [
+      "General",
+      "Cabeza / Cara",
+      "Cuello",
+      "Tórax",
+      "Abdomen",
+      "Espalda",
+      "Brazo / Hombro",
+      "Pierna / Cadera",
+      "Piel",
+      "Varias zonas"
+    ],
+    "durations": [
+      "< 24 horas",
+      "1–3 días",
+      "4–7 días",
+      "1–2 semanas",
+      "2–4 semanas",
+      "> 1 mes",
+      "Crónico (> 3 meses)"
+    ]
   },
   "chat": {
     "session": "Sesión {{id}}",

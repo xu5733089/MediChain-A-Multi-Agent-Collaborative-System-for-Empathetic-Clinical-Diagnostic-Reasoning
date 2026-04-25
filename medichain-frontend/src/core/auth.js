@@ -3,7 +3,9 @@ import { BACKEND } from "./api";
 
 export function useAuth() {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(() => localStorage.getItem("mc_token") || "");
+  const [token, setToken] = useState(
+    () => localStorage.getItem("mc_token") || "",
+  );
   const [ready, setReady] = useState(false);
 
   const logout = useCallback(() => {
@@ -14,7 +16,9 @@ export function useAuth() {
 
   const me = useCallback(async () => {
     try {
-      const r = await fetch(BACKEND + "/api/auth/me", { headers: { Authorization: `Bearer ${token}` } });
+      const r = await fetch(BACKEND + "/api/auth/me", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (r.ok) setUser(await r.json());
       else logout();
     } catch {

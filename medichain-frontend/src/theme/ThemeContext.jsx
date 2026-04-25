@@ -15,7 +15,10 @@ function ThemeProvider({ children }) {
   });
 
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+    document.documentElement.setAttribute(
+      "data-theme",
+      dark ? "dark" : "light",
+    );
     localStorage.setItem("medichain-theme", dark ? "dark" : "light");
   }, [dark]);
 
