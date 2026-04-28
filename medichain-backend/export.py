@@ -1,6 +1,6 @@
 """
-export.py — MediChain 诊断报告 PDF 生成模块
-使用 reportlab 生成专业医疗报告
+export.py — PDF report generation for MediChain
+Builds a structured medical report using reportlab
 """
 import io
 from datetime import datetime
@@ -14,7 +14,7 @@ from reportlab.platypus import (
 )
 from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
 
-# ── 配色方案 ──────────────────────────────────────────────
+# ── colour palette ───────────────────────────────────────────
 CYAN   = colors.HexColor("#22d3ee")
 PURPLE = colors.HexColor("#a78bfa")
 ORANGE = colors.HexColor("#fb923c")
@@ -130,11 +130,11 @@ def _severity_label(n) -> str:
 
 
 def _header_footer(canvas, doc):
-    """每页的页眉页脚"""
+    """Draw the header and footer on every page."""
     canvas.saveState()
     w, h = A4
 
-    # 页眉
+    # header
     canvas.setFillColor(DARK)
     canvas.rect(0, h - 30*mm, w, 30*mm, fill=True, stroke=False)
     canvas.setFillColor(CYAN)
@@ -150,7 +150,7 @@ def _header_footer(canvas, doc):
     canvas.drawRightString(w - 20*mm, h - 23*mm,
         f"Page {doc.page}")
 
-    # 页脚
+    # footer
     canvas.setFillColor(colors.HexColor("#f1f5f9"))
     canvas.rect(0, 0, w, 14*mm, fill=True, stroke=False)
     canvas.setFillColor(SLATE)
@@ -164,8 +164,8 @@ def _header_footer(canvas, doc):
 
 def generate_pdf(session: dict) -> bytes:
     """
-    根据会话数据生成完整的诊断报告 PDF
-    返回 bytes
+    Build a complete diagnostic report PDF from session data.
+    Returns raw bytes.
     """
     buf = io.BytesIO()
     doc = SimpleDocTemplate(
@@ -183,7 +183,7 @@ def generate_pdf(session: dict) -> bytes:
     messages  = session.get("messages", [])
     created   = session.get("created_at", datetime.utcnow().isoformat())
 
-    # ── 1. 封面标题 ─────────────────────────────────────────
+    # ── 1. cover title ──────────────────────────────────────
     story.append(Spacer(1, 6*mm))
     story.append(Paragraph("Diagnostic Report", s["title"]))
     story.append(Paragraph(
@@ -192,7 +192,7 @@ def generate_pdf(session: dict) -> bytes:
         s["subtitle"]))
     story.append(HRFlowable(width="100%", thickness=1, color=CYAN, spaceAfter=12))
 
-    # ── 2. 病例摘要卡片 ──────────────────────────────────────
+    # ── 2. case summary card ────────────────────────────────
     story.append(Paragraph("PATIENT CASE SUMMARY", s["section"]))
 
     sev = symptoms.get("severity_level") or symptoms.get("severity", 0)
@@ -230,7 +230,7 @@ def generate_pdf(session: dict) -> bytes:
     ]))
     story.append(tbl)
 
-    # ── 3. 诊断结果 ──────────────────────────────────────────
+    # ── 3. diagnosis results ────────────────────────────────
     story.append(Spacer(1, 4*mm))
     story.append(_agent_header("🔬  DIAGNOSTIC AGENT OUTPUT", PURPLE, s))
     story.append(Spacer(1, 2*mm))
@@ -252,7 +252,7 @@ def generate_pdf(session: dict) -> bytes:
     else:
         story.append(Paragraph("No diagnostic output available.", s["body"]))
 
-    # ── 4. Critic 审查 ───────────────────────────────────────
+    # ── 4. critic review ────────────────────────────────────
     story.append(PageBreak())
     story.append(_agent_header("⚖️  CRITIC AGENT REVIEW", ORANGE, s))
     story.append(Spacer(1, 2*mm))
@@ -282,7 +282,7 @@ def generate_pdf(session: dict) -> bytes:
     else:
         story.append(Paragraph("No critic review available.", s["body"]))
 
-    # ── 5. RAG 参考文献 ──────────────────────────────────────
+    # ── 5. RAG references ───────────────────────────────────
     if refs:
         story.append(PageBreak())
         story.append(Paragraph("📚  RAG MEDICAL LITERATURE REFERENCES", s["section"]))
@@ -320,7 +320,7 @@ def generate_pdf(session: dict) -> bytes:
             story.append(rt)
             story.append(Spacer(1, 1*mm))
 
-    # ── 6. 对话记录 ──────────────────────────────────────────
+    # ── 6. conversation transcript ──────────────────────────
     if messages:
         story.append(PageBreak())
         story.append(Paragraph("💬  CONSULTATION TRANSCRIPT", s["section"]))
@@ -350,7 +350,7 @@ def generate_pdf(session: dict) -> bytes:
             story.append(HRFlowable(width="100%", thickness=0.3,
                 color=colors.HexColor("#e2e8f0"), spaceAfter=2))
 
-    # ── 7. 免责声明 ──────────────────────────────────────────
+    # ── 7. disclaimer ───────────────────────────────────────
     story.append(Spacer(1, 6*mm))
     disc_data = [[
         Paragraph(
@@ -380,7 +380,7 @@ def generate_pdf(session: dict) -> bytes:
 # ── helpers ───────────────────────────────────────────────
 
 def _lv(label: str, value: str, s: dict, val_color=None) -> list:
-    """Label + Value 单元格"""
+    """Render a label + value cell pair."""
     val_style = s["val"]
     if val_color:
         val_style = ParagraphStyle("mc_val_c", parent=s["val"], textColor=val_color,
@@ -392,7 +392,7 @@ def _lv(label: str, value: str, s: dict, val_color=None) -> list:
 
 
 def _agent_header(title: str, color, s: dict):
-    """智能体标题块"""
+    """Render an agent section header block."""
     data = [[Paragraph(title, ParagraphStyle("ah",
         fontSize=9, textColor=WHITE, fontName="Helvetica-Bold",
         leading=13, letterSpacing=1))]]

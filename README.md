@@ -1,340 +1,407 @@
-# MediChain — Multi-Agent Collaborative System for Empathetic Clinical Diagnostic Reasoning
+# MediChain
 
 > **COMP9900 Capstone Project · Team 9900-W18C-CAKE · UNSW Sydney**
 >
-> ⚠️ **Educational Use Only** — This system is a research prototype and does not provide certified medical advice. Always consult a qualified healthcare professional.
+> **Educational Use Only** — This is a research prototype, not a certified medical device. Always consult a qualified healthcare professional.
+
+MediChain is a multi-agent AI system for collaborative clinical diagnostic reasoning. Five specialised agents work in sequence: a Safety Guard screens every message before it reaches the pipeline; an Interviewer takes a structured SOCRATES history; a Diagnostician grounds its differential in real medical literature via hybrid RAG; a Critic checks evidence quality and flags gaps; and a Diagnostic Roundtable runs a multi-perspective peer review. The whole pipeline streams token-by-token to the browser via Server-Sent Events.
 
 ---
 
-## 📖 Project Overview / 项目简介
-
-**English:**
-MediChain is a multi-agent AI medical diagnostic system that simulates collaborative clinical reasoning through three specialized AI agents. It performs empathetic patient history-taking, evidence-grounded differential diagnosis using Retrieval-Augmented Generation (RAG) from real PubMed literature, and senior consultant-level safety review — all powered by Anthropic Claude. The system supports multimodal input including medical images, audio, video, and documents, with a dual patient/provider authentication flow.
-
-**中文：**
-MediChain 是一个多智能体 AI 医疗诊断系统，通过三个专业 AI 智能体模拟协作临床推理流程。系统基于真实 PubMed 文献的检索增强生成（RAG）技术，完成富有同理心的患者问诊、循证鉴别诊断以及高级顾问级安全审查，全程由 Anthropic Claude 驱动。系统支持医学图像、音频、视频和文档等多模态输入，并提供患者/医疗提供者双向认证流程。
-
----
-
-## 🤖 Agent Pipeline / 智能体流程
+## Agent Pipeline
 
 ```
-Patient Input (Text + Multimodal Media)
-     ↓
-🩺 Interviewer Agent      — SOCRATES-based empathetic history-taking (5–8 exchanges)
-     ↓              ↘
-🔬 Diagnostician Agent  ←  📚 RAG (ChromaDB + PubMed, 180+ articles)
-     ↓                      + Medical image/audio/video analysis
-⚖️  Critic Agent          — Safety review, evidence quality check
-     ↓
-📄 Diagnostic Report      — PDF / JSON export
+Patient input (text + optional media)
+        │
+        ▼
+┌─────────────────┐
+│  Safety Guard   │  two-layer classifier (regex + Claude LLM)
+└────────┬────────┘
+         │ safe
+         ▼
+┌─────────────────┐       ┌──────────────────────────────────┐
+│   Interviewer   │◄──────│  SOCRATES history (5–12 turns)   │
+│     Agent       │       │  LLM-generated quick-reply chips │
+└────────┬────────┘       └──────────────────────────────────┘
+         │
+         ▼
+┌─────────────────┐       ┌──────────────────────────────────┐
+│  Diagnostician  │◄──────│  Qdrant hybrid RAG               │
+│     Agent       │       │  BioLORD dense + BM25 sparse     │
+└────────┬────────┘       │  RRF fusion + MedCPT reranking   │
+         │                └──────────────────────────────────┘
+         ▼
+┌─────────────────┐
+│  Critic Agent   │  evidence check, safety flags, verdict
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Diagnostic     │  multi-specialist peer review debate
+│  Roundtable     │
+└────────┬────────┘
+         │
+         ▼
+    PDF / JSON export
 ```
 
-| Agent | Role | Color |
-|-------|------|-------|
-| 🩺 Interviewer | Empathetic SOCRATES-based history taking | Cyan |
-| 🔬 Diagnostician | Differential diagnosis grounded in RAG literature + media analysis | Purple |
-| ⚖️ Critic | Safety flags, evidence gaps, final recommendation | Orange |
+| Agent | Role |
+|-------|------|
+| Safety Guard | Two-layer risk classifier — runs before every agent turn |
+| Interviewer | Empathetic SOCRATES-based history taking with quick-reply chips |
+| Diagnostician | Differential diagnosis grounded in RAG literature and media findings |
+| Critic | Evidence quality check, safety flags, APPROVED / NEEDS REVISION verdict |
+| Roundtable | Multi-specialist peer review to stress-test the primary diagnosis |
 
 ---
 
-## ✨ Features / 功能特性
+## Features
 
-- **Multi-Agent Reasoning** — 3 specialized agents working sequentially
-- **RAG Medical Literature** — 180+ PubMed articles indexed in ChromaDB
-- **Multimodal Input** — Upload medical images (X-ray, photos), audio recordings, video, PDF, and TXT files before or during consultation
-- **Voice Recording** — Browser-native Web Speech API mic recording with continuous transcription
-- **Medical Image Analysis** — Claude Vision API for per-image clinical interpretation
-- **Audio Transcription** — Google Speech Recognition for audio file transcription
-- **Video Analysis** — OpenCV frame extraction with per-frame Claude Vision analysis
-- **Dual Auth Roles** — Separate Patient and Provider login flows with role-based dashboards
-- **Reasoning Flow Visualization** — Interactive pipeline trace
-- **MedQA Evaluation Dashboard** — Multi-Agent vs Single-LLM benchmark on USMLE-style questions
-- **PDF / JSON Export** — Professional diagnostic report generation
-- **SQLite Persistence** — Sessions, messages, and uploads survive backend restarts
-- **Session History** — Browse and re-export all past sessions
+- **Five-agent pipeline** with real-time SSE streaming to the browser
+- **Hybrid RAG** — BioLORD-2023 dense vectors + corpus-fitted BM25 sparse + Qdrant RRF fusion + MedCPT cross-encoder reranking over 800+ PubMed articles
+- **Two-layer Safety Guard** — regex pattern matching (Layer 1) + Claude LLM classifier (Layer 2); emergency banner shown before any agent response
+- **SOCRATES interview** — structured history-taking with LLM-generated quick-reply suggestions and a live progress panel
+- **Multimodal input** — images (Claude Vision), audio (Google SpeechRecognition, 12 locales), video (OpenCV frame extraction + Vision), DICOM, PDF, TXT; files can be uploaded before or during the consultation
+- **Diagnostic Roundtable** — multi-specialist peer review streamed live under a PEER REVIEW phase separator
+- **Dual auth roles** — Patient and Provider with role-scoped dashboards; Provider can annotate diagnoses with APPROVE / FLAG verdicts
+- **i18n** — 12 UI languages (English, Chinese, Japanese, Spanish, French, German, Portuguese, Russian, Arabic, Hindi, Korean, Italian)
+- **Session history** — browse and re-export all past sessions
+- **PDF / JSON export** — professional diagnostic report generated by ReportLab
+- **MedQA evaluation dashboard** — compare multi-agent vs. single-LLM accuracy on USMLE-style questions
+- **Docker Compose** — one-command deployment of all three services
 
 ---
 
-## 🗂️ Project Structure / 项目结构
+## Project Structure
 
 ```
 medichain/
-├── medichain-frontend/          # React + Vite frontend
-│   ├── src/
-│   │   ├── pages/
-│   │   │   ├── InputPage.jsx        # Symptom intake + pre-consultation media upload
-│   │   │   ├── ChatPage.jsx         # Live consultation with multimodal upload + mic
-│   │   │   ├── ResultsPage.jsx      # Diagnostic report viewer
-│   │   │   ├── HistoryPage.jsx      # Session history
-│   │   │   ├── AuthPage.jsx         # Dual patient/provider auth flow
-│   │   │   ├── PatientsPage.jsx     # Provider patient management
-│   │   │   ├── ProviderDashboard.jsx
-│   │   │   └── EvalPage.jsx         # MedQA evaluation dashboard
-│   │   ├── components/
-│   │   │   ├── MediaUploadZone.jsx  # Drag-drop upload + mic recording component
-│   │   │   ├── TopNav.jsx
-│   │   │   ├── ui/                  # Button, Badge, Input, Select, Textarea, Alert
-│   │   │   └── illustrations.jsx
-│   │   ├── core/
-│   │   │   ├── api.js               # API client
-│   │   │   ├── constants.js
-│   │   │   └── utils.js
-│   │   └── MediChain.jsx            # Root app + routing
-│   ├── index.html
-│   ├── vite.config.js
-│   └── package.json
-│
-├── medichain-backend/           # FastAPI Python backend
-│   ├── main.py                  # API routes + file analysis endpoints
-│   ├── agents.py                # Three AI agent functions
-│   ├── rag.py                   # ChromaDB vector search
-│   ├── db.py                    # SQLite schema + migrations
-│   ├── ingest.py                # PubMed data ingestion
-│   ├── export.py                # PDF report generation (ReportLab)
-│   ├── eval.py                  # MedQA evaluation module
+├── docker-compose.yml
+├── medichain-backend/
+│   ├── main.py              # all REST + SSE endpoints
+│   ├── agents.py            # Interviewer, Diagnostician, Critic, Roundtable
+│   ├── agents_async.py      # async variants used in the SSE stream
+│   ├── rag.py               # hybrid retrieval pipeline
+│   ├── safety.py            # two-layer safety classifier
+│   ├── auth.py              # JWT auth + bcrypt
+│   ├── db.py                # SQLite schema and migrations
+│   ├── ingest.py            # PubMed ingestion (primary)
+│   ├── ingest_jsonl.py      # JSONL bulk import (secondary)
+│   ├── export.py            # PDF report generation
+│   ├── eval.py              # MedQA evaluation module
+│   ├── Dockerfile
 │   ├── requirements.txt
-│   └── .env.example
+│   ├── .env                 # ANTHROPIC_API_KEY (provided to assessors)
+│   └── tests/               # 210 pytest tests
 │
-├── .gitignore
-└── README.md
+└── medichain-frontend/
+    ├── src/
+    │   ├── pages/
+    │   │   ├── InputPage.jsx        # symptom intake + pre-consultation upload
+    │   │   ├── ChatPage.jsx         # live consultation, SSE stream, SOCRATES panel
+    │   │   ├── ResultsPage.jsx      # diagnostic report viewer
+    │   │   ├── HistoryPage.jsx      # session history
+    │   │   ├── AuthPage.jsx         # patient / provider login
+    │   │   ├── PatientsPage.jsx     # provider patient management
+    │   │   ├── ProviderDashboard.jsx
+    │   │   └── EvalPage.jsx         # MedQA benchmark dashboard
+    │   ├── components/
+    │   │   ├── MediaUploadZone.jsx  # drag-drop upload + mic recording
+    │   │   └── TopNav.jsx           # language switcher + nav
+    │   ├── core/
+    │   │   ├── api.js               # API client (REST + SSE helpers)
+    │   │   └── i18n.js              # i18next setup
+    │   └── MediChain.jsx            # root app + routing
+    ├── Dockerfile
+    ├── nginx.conf           # proxy /api/* to backend; SSE buffering disabled
+    └── package.json
 ```
 
 ---
 
-## 🚀 Getting Started / 快速开始
+## Getting Started
 
-### Prerequisites / 环境要求
+### Option A — Docker (recommended)
 
-| Tool | Version | 说明 |
-|------|---------|------|
-| Python | 3.10+ | Backend |
-| Node.js | 18+ | Frontend |
-| Git | any | Version control |
-| Anthropic API Key | — | [Get one here](https://console.anthropic.com/) |
+Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+
+```bash
+# 1. Clone and enter the project
+git clone <repo-url>
+cd medichain
+
+# 2. Add your Anthropic API key
+#    (the .env file is already present for assessors — skip this step)
+echo "ANTHROPIC_API_KEY=sk-ant-..." > medichain-backend/.env
+
+# 3. Build and start all three services
+docker compose up --build -d
+
+# 4. Ingest the medical knowledge base (first run only, ~2 min)
+docker compose exec backend python ingest.py
+```
+
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost |
+| Backend API | http://localhost:8000 |
+| API docs (Swagger) | http://localhost:8000/docs |
+
+On subsequent runs just `docker compose up -d` — the Qdrant volume persists between restarts.
 
 ---
 
-### Backend Setup / 后端配置
+### Option B — Manual setup
+
+**Backend**
 
 ```bash
-# 1. Enter backend directory / 进入后端目录
 cd medichain-backend
-
-# 2. Create virtual environment / 创建虚拟环境
 python -m venv venv
-
-# 3. Activate virtual environment / 激活虚拟环境
-# Windows:
-.\venv\Scripts\activate
-# macOS / Linux:
+# Windows: .\venv\Scripts\activate
 source venv/bin/activate
 
-# 4. Install dependencies / 安装依赖
 pip install -r requirements.txt
 
-# 5. Create .env file / 创建环境变量文件
-cp .env.example .env
-# Edit .env and set: ANTHROPIC_API_KEY=sk-ant-...
-
-# 6. Ingest PubMed literature into ChromaDB / 摄取 PubMed 文献
+# First run: populate the knowledge base
 python ingest.py
-# Expected output: "✅ Ingested 180 documents"
 
-# 7. Start the backend server / 启动后端服务
 uvicorn main:app --reload --port 8000
-# Expected: "Application startup complete."
 ```
 
-Verify at: `http://localhost:8000`
-Expected response:
-```json
-{"service": "MediChain API", "version": "3.0.0", "rag_db_size": 180, "status": "ok"}
-```
-
----
-
-### Frontend Setup / 前端配置
-
-Open a **new terminal window** / 打开**新的终端窗口**：
+**Frontend** (new terminal)
 
 ```bash
-# 1. Enter frontend directory / 进入前端目录
 cd medichain-frontend
-
-# 2. Install dependencies / 安装依赖
 npm install
-
-# 3. Start development server / 启动开发服务器
 npm run dev
+# opens at http://localhost:5173
 ```
 
-Open in browser / 浏览器访问: `http://localhost:5173`
+---
+
+## Usage
+
+1. Open http://localhost (Docker) or http://localhost:5173 (manual)
+2. Register as **Patient** or **Provider**
+3. On the intake page: describe symptoms, optionally upload medical files, set severity, click **Begin consultation**
+4. Chat with the Interviewer — use quick-reply chips or type freely; upload more files mid-chat if needed
+5. Diagnosis triggers automatically after 5–12 exchanges — watch the Agent Reasoning Panel update in real time
+6. Results page: four tabs — Diagnosis / Critic Review / RAG Refs / Transcript
+7. Export as **PDF** or **JSON**
+
+Providers see all patient sessions and can annotate diagnoses with APPROVE / FLAG verdicts.
 
 ---
 
-### Running Both Services / 同时运行两个服务
-
-> ⚠️ You need **two terminal windows** running simultaneously.
-> ⚠️ 需要同时保持**两个终端窗口**运行。
-
-| Terminal | Command | URL |
-|----------|---------|-----|
-| Terminal 1 (Backend) | `uvicorn main:app --reload --port 8000` | `localhost:8000` |
-| Terminal 2 (Frontend) | `npm run dev` | `localhost:5173` |
-
----
-
-## 🖥️ Usage Guide / 使用指南
-
-### Registration & Login / 注册与登录
-
-1. Open `http://localhost:5173`
-2. Click **Sign in** and select your role: **Patient** or **Provider**
-3. Register a new account or log in with existing credentials
-4. Providers see a dashboard with all patient sessions; Patients see their own history
-
-### Main Consultation / 主要诊断流程
-
-1. On the intake page, describe your symptoms (minimum 15 characters)
-2. Optionally upload medical files (images, audio, video, PDF, TXT) or record voice via the **Medical media** panel — files are analyzed before the consultation begins
-3. Set body location, duration, and severity (Mild / Moderate / Severe)
-4. Click **Begin consultation →**
-5. Chat with the Interviewer Agent (5–8 dynamic exchanges); you can also upload files and record voice during the chat
-6. Diagnosis is automatically triggered — watch the Agent Reasoning Panel
-7. View results across 4 tabs: Diagnosis / Critic Review / RAG Refs / Transcript
-8. Export as **PDF** or **JSON**
-
-### MedQA Evaluation / 医学问答评估
-
-1. Click **📊 MedQA Eval →** on the intake page
-2. Click **▶ Run** on any USMLE-style question
-3. Compare Single LLM vs Multi-Agent accuracy
-4. Click **▶ Run All Questions** for full benchmark
-
----
-
-## 🔌 API Endpoints / API 接口
+## API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/` | Health check + RAG DB size |
-| GET | `/api/rag/status` | RAG database status |
+| GET | `/` | Health check + RAG doc count |
+| GET | `/api/rag/status` | Qdrant collection status |
+| POST | `/api/rag/ingest` | Trigger PubMed ingestion (provider only) |
 | POST | `/api/auth/register` | Register new user |
-| POST | `/api/auth/login/json` | Login (returns JWT token) |
-| POST | `/api/analyze/file` | Stateless file analysis (image/audio/video/pdf/txt) |
-| POST | `/api/session/start` | Start new diagnostic session |
-| POST | `/api/session/chat` | Continue interview |
-| POST | `/api/session/diagnose` | Trigger diagnosis + RAG |
+| POST | `/api/auth/login/json` | Login — returns JWT |
+| GET | `/api/auth/me` | Current user profile |
+| POST | `/api/session/start` | Start a new session |
+| POST | `/api/session/chat` | Send a chat message (blocking) |
+| POST | `/api/session/chat/stream` | Send a chat message (SSE stream) |
+| POST | `/api/session/diagnose` | Trigger diagnosis (blocking) |
+| POST | `/api/session/diagnose/stream` | Trigger diagnosis (SSE stream) |
 | GET | `/api/session/{id}` | Get session data |
+| DELETE | `/api/sessions/{id}` | Delete a session |
 | GET | `/api/sessions` | List user sessions |
-| GET | `/api/sessions/{id}/messages` | Get session messages |
-| GET | `/api/sessions/{id}/uploads` | Get session uploads |
-| POST | `/api/sessions/{id}/upload` | Upload file to session |
-| GET | `/api/session/{id}/export/pdf` | Export PDF report |
-| GET | `/api/session/{id}/export/json` | Export JSON data |
+| GET | `/api/sessions/{id}/messages` | Get messages |
+| GET | `/api/sessions/{id}/uploads` | Get uploads |
+| POST | `/api/sessions/{id}/upload` | Upload a file |
+| GET | `/api/session/{id}/export/pdf` | Download PDF report |
+| GET | `/api/session/{id}/export/json` | Download JSON data |
+| GET | `/api/session/{id}/peer-review` | Get Mistral peer review |
+| POST | `/api/analyze/file` | One-shot file analysis |
+| POST | `/api/analyze/compare` | Compare two files |
+| POST | `/api/analyze/ocr` | OCR a document |
 | GET | `/api/patients` | List patients (provider) |
 | POST | `/api/patients` | Create patient record |
+| GET | `/api/patients/{id}` | Get patient record |
+| PUT | `/api/patients/{id}` | Update patient record |
+| DELETE | `/api/patients/{id}` | Delete patient record |
 | GET | `/api/provider/sessions` | All sessions (provider) |
-| GET | `/api/eval/questions` | Get MedQA questions |
-| POST | `/api/eval/run` | Run evaluation |
+| GET | `/api/eval/questions` | MedQA questions |
+| POST | `/api/eval/run` | Run a question through both pipelines |
 | GET | `/api/eval/history` | Evaluation history + stats |
 
-Full API docs: `http://localhost:8000/docs`
+Full interactive docs: http://localhost:8000/docs
 
 ---
 
-## ✅ Code Style & Testing / 质量门禁
+## Testing
 
-MediChain uses explicit quality gates so code style and regression coverage can be verified before submission.
+### One-command test runner
 
-### Frontend Checks
-
-```bash
-cd medichain-frontend
-npm run lint
-npm run format:check
-npm run test:run
-```
-
-For Cypress E2E, start the frontend dev server first:
+Run the full test suite (backend + frontend) from the `medichain/` root:
 
 ```bash
-cd medichain-frontend
-npm run dev
-# in another terminal
-npm run e2e
+# Git Bash / macOS / Linux
+bash run_tests.sh
+
+# Windows CMD
+run_tests.bat
 ```
 
-Current frontend test evidence:
-- `npm run lint`: **0 errors / 0 warnings**
-- `npm run format:check`: **passed**
-- `npm run test:run`: **8 passed**
-- `npm run e2e`: **3 passed**
+The script creates a Python venv automatically (if none exists), installs all dependencies, runs pytest with coverage, then runs ESLint and Vitest. A pass/fail summary is printed at the end. No manual `cd` or venv activation required.
 
-Current Cypress E2E coverage:
-- Auth entry flow: patient/provider role selection and switching.
-- Consultation flow: intake example -> consent -> session start -> chat message send, with backend APIs mocked for deterministic execution.
-- Diagnosis/export flow: chat trigger -> diagnosis stream -> result page -> PDF/JSON export links.
+---
 
-### Regression Coverage
+### Quick summary
 
-The following previously observed UI failure modes are locked by tests:
-- Auth login failure shows a visible error toast: `src/pages/AuthPage.test.jsx`
-- Unsupported media files are rejected before analysis: `src/components/MediaUploadZone.test.jsx`
-- Oversized media files are rejected before analysis: `src/components/MediaUploadZone.test.jsx`
-- Chat streaming failures are surfaced in the reasoning log: `src/pages/ChatPage.test.jsx`
+| Layer | Tool | Result |
+|-------|------|--------|
+| Backend unit + integration | pytest | **210 passed, 0 failed** |
+| Backend coverage | pytest-cov | **96% overall** |
+| Frontend unit | Vitest | **8 passed, 0 failed** |
+| Frontend E2E | Cypress | **3 scenarios passed** |
+| Lint | ESLint | **0 errors / 0 warnings** |
+| Format | Prettier | **passed** |
 
-### Backend Checks
+### Backend
 
 ```bash
 cd medichain-backend
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+
 python -m pytest -q
 python -m pytest --cov=. --cov-report=term-missing -q
 ```
 
-Current backend test evidence:
-- `python -m pytest -q`: **210 passed**
-- `python -m pytest --cov=. --cov-report=term-missing -q`: **TOTAL 96%**
-- Core module coverage includes `main.py 91%`, `rag.py 93%`, `agents.py 100%`, `agents_async.py 100%`, `export.py 92%`, `db.py 90%`, `auth.py 96%`, and `safety.py 92%`.
+#### Coverage by module
 
-### Passing Standard
+| Module | Coverage | What's tested |
+|--------|----------|---------------|
+| `main.py` | 91% | All REST + SSE endpoints, happy and error paths |
+| `agents.py` | 100% | All four agent functions |
+| `agents_async.py` | 100% | Async variants under concurrent load |
+| `rag.py` | 93% | BM25 encoding, dense embedding, RRF fusion, MedCPT reranking |
+| `safety.py` | 92% | HIGH / MEDIUM / LOW risk scenarios, LLM fallback |
+| `auth.py` | 96% | JWT creation/validation, bcrypt, role enforcement |
+| `export.py` | 92% | PDF page structure, JSON field completeness |
+| `db.py` | 90% | Schema migrations, CRUD, cascade deletes |
+| `eval.py` | 95% | Scoring logic, multi-agent vs baseline comparison |
 
-- Frontend lint must pass with **0 errors / 0 warnings**.
-- Backend core API, authentication, session, RAG, safety, export, media, and streaming tests must pass.
-- Coverage target: **overall >= 80%** and core backend modules **>= 90%** where applicable.
-- External AI, PubMed, Qdrant, media, and authentication boundaries are covered with mocks to keep tests deterministic.
+#### Test file index
+
+| File | Scope |
+|------|-------|
+| `test_auth_api.py` | Register, login, wrong password, duplicate user, token validation |
+| `test_session_chat_api.py` | Safety intercept, agent turns, READY_FOR_DIAGNOSIS trigger |
+| `test_session_diagnose_api.py` | Full diagnostic pipeline, RAG injection, Critic review |
+| `test_main_streaming_unit.py` | SSE frame types, event ordering, stream close |
+| `test_main_access_routes.py` | 401 with no token, 403 wrong role |
+| `test_main_patient_provider_routes.py` | Provider CRUD, provider-scoped session listing |
+| `test_main_analyze_file_routes.py` | Image, audio, video, PDF, TXT — success + unsupported type + oversized |
+| `test_main_peer_review_routes.py` | Peer review endpoint, cache hit |
+| `test_rag_unit.py` | BM25 vocab fit, dense encode, RRF, MedCPT reranking |
+| `test_agents_unit.py` | All agent functions with mocked Anthropic client |
+| `test_safety_unit.py` | All risk levels, edge cases, LLM mock fallback |
+| `test_export_unit.py` | PDF page structure, JSON completeness |
+| `test_db_unit.py` | Schema, upsert, cascade delete |
+| *(+ 16 more)* | Validators, helpers, eval, ingest, streaming, delete routes … |
+
+#### Mocking strategy
+
+External dependencies are mocked so tests are deterministic and require no network:
+
+- **Anthropic Claude** — `unittest.mock.patch` with fixture responses; both success and `APIError` paths covered
+- **Qdrant** — collection operations mocked via `MagicMock`; correct vector payloads verified without a live instance
+- **Google SpeechRecognition** — preset transcripts or `UnknownValueError` for sad-path coverage
+- **OpenCV / Pillow** — patched to return test frames; file I/O intercepted
+- **PubMed NCBI Entrez API** — fixture XML response; rate-limiting path tested
+
+### Frontend
+
+```bash
+cd medichain-frontend
+npm install
+
+npm run lint          # 0 errors / 0 warnings
+npm run format:check  # passed
+npm run test:run      # 8 passed
+
+# E2E — needs dev server running first
+npm run dev           # terminal 1
+npm run e2e           # terminal 2
+```
+
+#### Unit tests (Vitest)
+
+| File | What's covered |
+|------|----------------|
+| `AuthPage.test.jsx` | Login failure shows error toast; form validation |
+| `MediaUploadZone.test.jsx` | Unsupported and oversized files rejected; valid files accepted |
+| `ChatPage.test.jsx` | SSE failure surfaced in Agent Reasoning Panel; SOCRATES progress |
+
+#### E2E (Cypress)
+
+| Scenario | Flow |
+|----------|------|
+| Auth entry | Role card selection, form render, role switching |
+| Consultation | Intake → consent → session start → send message (APIs mocked) |
+| Diagnosis/export | Diagnosis stream → results page → PDF/JSON export links |
+
+Backend calls are mocked with `cy.intercept()` — E2E tests don't need a running backend.
+
+#### Regression locks
+
+Previously seen failures that are now covered by tests:
+- Auth login failure shows an error toast → `AuthPage.test.jsx`
+- Unsupported file types rejected before upload → `MediaUploadZone.test.jsx`
+- Oversized files rejected before upload → `MediaUploadZone.test.jsx`
+- SSE stream failure shown in reasoning log → `ChatPage.test.jsx`
 
 ---
 
-## 🛠️ Tech Stack / 技术栈
+## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
 | Frontend | React 19 + Vite + Tailwind CSS + shadcn/ui |
-| Backend | FastAPI + Uvicorn |
+| Backend | FastAPI + Uvicorn + sse-starlette |
 | AI | Anthropic Claude (claude-sonnet-4-5) |
-| Vision | Claude Vision API (medical image & video frame analysis) |
-| Speech | Web Speech API (browser mic) + SpeechRecognition (audio files) |
-| Video | OpenCV (frame extraction) |
-| RAG | ChromaDB + sentence-transformers (all-MiniLM-L6-v2) |
-| Database | SQLite (users, sessions, messages, uploads) |
-| Auth | JWT (python-jose) |
+| Vision | Claude Vision API |
+| Speech | Web Speech API (mic) + SpeechRecognition (audio files, 12 locales) |
+| Video | OpenCV frame extraction |
+| RAG — Dense | FremyCompany/BioLORD-2023 (768d, SNOMED CT + MeSH) |
+| RAG — Sparse | Custom BM25 (k₁=1.5, b=0.75, corpus IDF) |
+| RAG — Fusion | Qdrant FusionQuery (RRF) |
+| RAG — Reranking | ncbi/MedCPT-Cross-Encoder |
+| Vector DB | Qdrant |
+| Knowledge Base | PubMed via NCBI Entrez API |
+| Database | SQLite |
+| Auth | JWT (python-jose) + bcrypt |
+| i18n | i18next + react-i18next (12 languages) |
 | PDF Export | ReportLab |
-| Literature | PubMed / NCBI Entrez API |
+| Deployment | Docker Compose |
 
 ---
 
-## 👥 Team / 团队
+## Team
 
-**Team 9900-W18C-CAKE · UNSW Sydney · COMP9900**
+Team 9900-W18C-CAKE · UNSW Sydney · COMP9900
+
+| Name | Student ID | Role |
+|------|------------|------|
+| Zeyi Xu | z5527311 | Full-Stack Developer |
+| Yaowen Zhang | z5505892 | Frontend Developer |
+| Jikun Lyu | z5545110 | Backend Developer |
+| Qinfeng Xiang | z5415672 | Backend Developer |
+| Shaoran Liu | z5574599 | Backend Developer |
+| Ziru Chen | z5571364 | Frontend Developer |
 
 Client: Dr. Jianwei Wang
 
 ---
 
-## ⚠️ Disclaimer / 免责声明
+## Disclaimer
 
-**English:** MediChain is developed for educational and research purposes as part of UNSW COMP9900. It is NOT a certified medical device and does NOT provide medical advice, diagnosis, or treatment. In case of medical emergency, call **000** (Australia) or your local emergency services immediately.
-
-**中文：** MediChain 作为 UNSW COMP9900 课程项目开发，仅供教育和研究用途。本系统**不是**经过认证的医疗设备，**不提供**医疗建议、诊断或治疗方案。如遇医疗紧急情况，请立即拨打 **000**（澳大利亚）或当地急救电话。
+MediChain is developed for educational and research purposes as part of UNSW COMP9900. It is **not** a certified medical device and does **not** provide medical advice, diagnosis, or treatment. In a medical emergency, call **000** (Australia) or your local emergency services immediately.

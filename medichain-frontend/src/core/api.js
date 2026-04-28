@@ -1,5 +1,5 @@
-// Docker 部署时 Nginx 把 /api/* 代理到 backend，所以用空字符串（同域）
-// 本地开发时用环境变量 VITE_BACKEND_URL=http://localhost:8000
+// In Docker, Nginx proxies /api/* to the backend, so an empty base URL keeps requests same-origin.
+// For local dev, set VITE_BACKEND_URL=http://localhost:8000 in your .env.
 export const BACKEND = import.meta.env.VITE_BACKEND_URL || "";
 
 /**

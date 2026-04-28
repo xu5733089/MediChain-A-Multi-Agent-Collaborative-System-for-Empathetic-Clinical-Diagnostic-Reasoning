@@ -1,7 +1,7 @@
 """
-main.py — MediChain FastAPI 后端 v4.0
-新增：用户认证 (JWT) + 患者档案管理
-启动：uvicorn main:app --reload --port 8000
+main.py — MediChain FastAPI backend v4.0
+JWT auth + patient record management
+Run: uvicorn main:app --reload --port 8000
 """
 import os, json, uuid
 import re
@@ -86,7 +86,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 init_db()
 
-# ── 启动时打印 RAG 库状态 + 可选自动抓取 ──────────────────────
+# ── print RAG status on startup; optionally auto-ingest ──────────
 _rag_size = get_collection_size()
 print(f"\n{'='*50}")
 print(f"  MediChain RAG Knowledge Base")
@@ -102,7 +102,7 @@ print(f"    python ingest.py --status     # check DB size")
 print(f"    AUTO_INGEST=1 uvicorn main:app  # auto-ingest on startup")
 print(f"{'='*50}\n")
 
-# 环境变量 AUTO_INGEST=1 → 启动时自动抓取 PubMed 文章
+# set AUTO_INGEST=1 to pull PubMed articles automatically on startup
 if os.getenv("AUTO_INGEST", "").strip() in ("1", "true", "yes"):
     from ingest import run_ingestion, DEFAULT_TERMS as _INGEST_TERMS
     print("🔄 AUTO_INGEST enabled — starting PubMed ingestion...")
@@ -948,15 +948,15 @@ def rag_status():
 @app.post("/api/rag/ingest")
 async def rag_ingest(body: IngestRequest, user=Depends(require_user)):
     """
-    按需从 PubMed 抓取最新文章并写入 RAG 向量库。
-    仅限 provider 角色用户。
+    Fetch fresh PubMed articles and write them into the RAG vector store.
+    Provider role only.
     """
     if user.get("role") != "provider":
         raise HTTPException(403, "Only providers can trigger ingestion")
     import time as _time
 
     terms = body.terms if body.terms else DEFAULT_TERMS
-    per_term = min(body.per_term, 50)  # 上限保护
+    per_term = min(body.per_term, 50)  # cap per-term to avoid runaway fetches
 
     initial_size = get_collection_size()
     total_added = 0
@@ -996,14 +996,14 @@ async def rag_ingest(body: IngestRequest, user=Depends(require_user)):
 # ── Auth Routes ───────────────────────────────────────────
 @app.post("/api/auth/register")
 def register(body: RegisterInput):
-    """用户注册"""
+    """Register a new user account."""
     user = user_create(body.username, body.email, body.password, body.full_name, body.role)
     token = create_token(user["id"], user["username"])
     return {"token": token, "user": user}
 
 @app.post("/api/auth/login")
 def login(form: OAuth2PasswordRequestForm = Depends()):
-    """用户登录 (OAuth2 form)"""
+    """OAuth2 form login."""
     user = user_get_by_username(form.username)
     if not user or not verify_password(form.password, user["password"]):
         raise HTTPException(401, "Incorrect username or password")
@@ -1014,7 +1014,7 @@ def login(form: OAuth2PasswordRequestForm = Depends()):
 
 @app.post("/api/auth/login/json")
 def login_json(body: dict):
-    """用户登录 (JSON body)"""
+    """JSON body login — returns a JWT token."""
     username = body.get("username","")
     password = body.get("password","")
     user = user_get_by_username(username)
@@ -1026,23 +1026,23 @@ def login_json(body: dict):
 
 @app.get("/api/auth/me")
 def me(user=Depends(require_user)):
-    """获取当前用户信息"""
+    """Return the currently authenticated user's profile."""
     return user
 
 # ── Patient Routes ────────────────────────────────────────
 @app.get("/api/patients")
 def list_patients(user=Depends(require_user)):
-    """获取当前用户的患者列表"""
+    """List patients belonging to the current user."""
     return patients_list(user["id"])
 
 @app.post("/api/patients")
 def create_patient(body: PatientInput, user=Depends(require_user)):
-    """创建患者档案"""
+    """Create a new patient record."""
     return patient_create(user["id"], body.model_dump())
 
 @app.get("/api/patients/{patient_id}")
 def get_patient(patient_id: str, user=Depends(require_user)):
-    """获取患者档案"""
+    """Fetch a patient record by ID."""
     p = patient_get(patient_id)
     if not p: raise HTTPException(404, "Patient not found")
     if p["user_id"] != user["id"]: raise HTTPException(403, "Forbidden")
@@ -1054,7 +1054,7 @@ def get_patient(patient_id: str, user=Depends(require_user)):
 
 @app.put("/api/patients/{patient_id}")
 def update_patient(patient_id: str, body: PatientInput, user=Depends(require_user)):
-    """更新患者档案"""
+    """Update a patient record."""
     p = patient_get(patient_id)
     if not p: raise HTTPException(404, "Patient not found")
     if p["user_id"] != user["id"]: raise HTTPException(403, "Forbidden")
@@ -1063,7 +1063,7 @@ def update_patient(patient_id: str, body: PatientInput, user=Depends(require_use
 
 @app.delete("/api/patients/{patient_id}")
 def delete_patient(patient_id: str, user=Depends(require_user)):
-    """删除患者档案"""
+    """Delete a patient record."""
     p = patient_get(patient_id)
     if not p: raise HTTPException(404, "Patient not found")
     if p["user_id"] != user["id"]: raise HTTPException(403, "Forbidden")
@@ -1072,7 +1072,7 @@ def delete_patient(patient_id: str, user=Depends(require_user)):
 
 @app.get("/api/patients/{patient_id}/sessions")
 def patient_sessions(patient_id: str, user=Depends(require_user)):
-    """获取患者的所有会话"""
+    """List all sessions for a given patient."""
     p = patient_get(patient_id)
     if not p: raise HTTPException(404, "Patient not found")
     if p["user_id"] != user["id"]: raise HTTPException(403, "Forbidden")
@@ -1749,7 +1749,7 @@ async def _diagnose_stream_gen(body: "DiagnoseRequest", user):
         image_medical_terms = await asyncio.to_thread(_rw, image_analyses) if image_analyses else ""
         rag_query = f"{s['description']} {s['bodyPart']} {s['duration']} {image_medical_terms}".strip()
 
-        # ── IMAGING ANALYSIS phase（仅当存在上传影像时）──
+        # ── IMAGING ANALYSIS phase — only runs when the session has uploaded images ──
         if image_analyses:
             yield _sse("phase_sep", label="IMAGING ANALYSIS")
             await asyncio.sleep(0.15)
@@ -1758,7 +1758,7 @@ async def _diagnose_stream_gen(body: "DiagnoseRequest", user):
                        text=f"Reviewing {len(image_analyses)} uploaded medical image(s). Extracting clinical findings…",
                        phase="imaging")
             for idx, analysis in enumerate(image_analyses, 1):
-                # 提取 Key Findings 段落，否则截取前200字
+                # pull the Key Findings block if present, otherwise fall back to first 200 chars
                 import re as _re
                 findings_match = _re.search(
                     r"\*\*Key Findings\*\*[:\s]*(.*?)(?=\n\*\*|\Z)", analysis, _re.DOTALL
@@ -2163,8 +2163,8 @@ def export_json(session_id: str):
 @app.get("/api/session/{session_id}/peer-review")
 def session_peer_review(session_id: str, user=Depends(get_current_user)):
     """
-    Mistral Large 对本次 Claude 诊断出具独立第二意见。
-    结果缓存在 sessions.mistral_peer_review（JSON），避免重复计费。
+    Get an independent second opinion from Mistral on the Claude diagnosis.
+    Result is cached in sessions.mistral_peer_review so we don't charge twice.
     """
     sess = session_get(session_id)
     if not sess:
@@ -2224,7 +2224,7 @@ def run_eval(body: EvalRequest):
     if body.mode in ("multi","both"):
         m = run_multi_agent(q["question"], q["options"])
         result["multi"] = m; result["multi_correct"] = m["answer"]==q["correct"]
-        # Mistral独立评委：评估 Claude 多智能体答案
+        # Mistral acts as an independent reviewer for the Claude multi-agent output
         mj = run_mistral_judge(
             question=q["question"],
             options=q["options"],

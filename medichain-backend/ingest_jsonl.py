@@ -1,7 +1,7 @@
 """
-ingest_jsonl.py — 从本地 JSONL 批量导入 RAG 文献到 ChromaDB
+ingest_jsonl.py — bulk-load RAG documents from a local JSONL file
 
-用法示例：
+Usage:
     python ingest_jsonl.py --input medquad_clean.jsonl --reset-db
     python ingest_jsonl.py --input medquad_clean.jsonl --batch-size 1000
 """
@@ -15,7 +15,7 @@ from typing import Optional
 
 
 def normalize_doc(row: dict, fallback_id: str) -> Optional[dict]:
-    """把任意 JSONL 行转成 rag.add_documents 所需格式。"""
+    """Normalise a raw JSONL row into the format expected by rag.add_documents."""
     doc_id = (
         str(row.get("id") or "").strip()
         or str(row.get("qid") or "").strip()

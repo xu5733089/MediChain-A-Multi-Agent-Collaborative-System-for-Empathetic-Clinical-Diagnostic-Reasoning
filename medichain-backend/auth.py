@@ -1,6 +1,6 @@
 """
-auth.py — MediChain 用户认证模块
-JWT Token + 密码哈希
+auth.py — user authentication for MediChain
+JWT tokens + bcrypt password hashing
 """
 import os
 import uuid

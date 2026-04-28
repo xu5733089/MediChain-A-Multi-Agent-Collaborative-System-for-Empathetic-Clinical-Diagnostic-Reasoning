@@ -1,5 +1,6 @@
 """
-rag.py — Qdrant 向量数据库 + 医学文献混合检索模块 (Dense + BM25 Hybrid Search, RRF Fusion)
+rag.py — hybrid retrieval over medical literature
+Dense (BioLORD-2023) + BM25 sparse + RRF fusion + MedCPT cross-encoder reranking
 """
 import atexit
 import json
@@ -12,20 +13,20 @@ from typing import Optional
 from qdrant_client import QdrantClient, models
 from sentence_transformers import SentenceTransformer, CrossEncoder
 
-# ── 路径配置 ──────────────────────────────────────────────
+# ── paths ────────────────────────────────────────────────
 DB_DIR = Path(__file__).parent / "qdrant_db"
 BM25_PARAMS_PATH = DB_DIR / "bm25_params.json"
 COLLECTION_NAME = "medical_literature"
 
-# ── Embedding 配置 ────────────────────────────────────────
+# ── embedding config ────────────────────────────────────
 DENSE_MODEL_NAME = "FremyCompany/BioLORD-2023"
 DENSE_DIM = 768
 
-# ── Reranker 配置 ─────────────────────────────────────────
+# ── reranker config ─────────────────────────────────────
 RERANKER_MODEL_NAME = "ncbi/MedCPT-Cross-Encoder"
-RERANKER_CANDIDATES = 20   # 初检候选数，rerank 后取 top-n_results
+RERANKER_CANDIDATES = 20   # fetch this many from Qdrant, then rerank down to n_results
 
-# ── 全局单例 ──────────────────────────────────────────────
+# ── module-level singletons ─────────────────────────────
 _client: Optional[QdrantClient] = None
 _dense_model: Optional[SentenceTransformer] = None
 _reranker: Optional[CrossEncoder] = None
@@ -58,11 +59,11 @@ def _get_client() -> QdrantClient:
         qdrant_port = int(os.environ.get("QDRANT_PORT", 6333))
         _client = QdrantClient(host=qdrant_host, port=qdrant_port)
     else:
-        # 本地文件模式（开发用）
+        # fall back to local file store for dev
         DB_DIR.mkdir(exist_ok=True)
         _client = QdrantClient(path=str(DB_DIR))
 
-    # 若 collection 不存在则创建
+    # create the collection on first run if it doesn't exist yet
     existing = [c.name for c in _client.get_collections().collections]
     if COLLECTION_NAME not in existing:
         _create_collection()
@@ -85,7 +86,7 @@ def _get_reranker() -> CrossEncoder:
 
 
 def _rerank(query: str, results: list[dict], top_n: int) -> list[dict]:
-    """用 MedCPT cross-encoder 对初检结果重排，返回 top_n 条。"""
+    """Re-rank candidates with MedCPT cross-encoder and return the top_n."""
     if not results:
         return results
     reranker = _get_reranker()
@@ -97,7 +98,7 @@ def _rerank(query: str, results: list[dict], top_n: int) -> list[dict]:
 
 
 def _create_collection():
-    """创建 Qdrant Collection，包含 dense 和 sparse named vectors"""
+    """Create the Qdrant collection with named dense and sparse vector fields."""
     _client.create_collection(
         collection_name=COLLECTION_NAME,
         vectors_config={
@@ -113,20 +114,20 @@ def _create_collection():
 
 
 def _str_to_point_id(s: str) -> str:
-    """将字符串 ID 转为 Qdrant 兼容的确定性 UUID"""
+    """Map a string ID to a deterministic hex digest that Qdrant accepts as a point ID."""
     return hashlib.md5(s.encode()).hexdigest()[:32]
-    # 返回32位hex，可作为 Qdrant point id
+
 
 
 def _str_to_int_id(s: str) -> int:
-    """将字符串 ID 转为 Qdrant 兼容的正整数 ID"""
+    """Map a string ID to a deterministic integer point ID via SHA-256 truncation."""
     return int(hashlib.sha256(s.encode()).hexdigest()[:15], 16)
 
 
-# ── BM25 稀疏向量 ────────────────────────────────────────
+# ── BM25 sparse vectors ─────────────────────────────────
 
 def _tokenize(text: str) -> list[str]:
-    """简单分词：小写 + 按字母数字拆分"""
+    """Lowercase and split on non-alphanumeric characters."""
     return re.findall(r"[a-z0-9]+", text.lower())
 
 
@@ -149,7 +150,7 @@ def _save_bm25_vocab():
 
 
 def fit_bm25(documents: list[str]):
-    """根据语料库计算 IDF 并保存"""
+    """Fit IDF weights over the full corpus and save to disk."""
     global _bm25_vocab
     n = len(documents)
     if n == 0:
@@ -167,7 +168,7 @@ def fit_bm25(documents: list[str]):
 
 
 def _text_to_sparse(text: str) -> tuple[list[int], list[float]]:
-    """将文本转换为 BM25 稀疏向量 (indices, values)"""
+    """Convert text to a BM25 sparse vector (token indices + TF-IDF values)."""
     _load_bm25_vocab()
     if not _bm25_vocab:
         return [], []
@@ -196,10 +197,10 @@ def _text_to_sparse(text: str) -> tuple[list[int], list[float]]:
     return indices, values
 
 
-# ── 公开 API（签名不变）────────────────────────────────────
+# ── public API ───────────────────────────────────────────
 
 def get_collection_size() -> int:
-    """返回当前文献库中的文档数量"""
+    """Return the number of documents in the collection."""
     try:
         client = _get_client()
         info = client.get_collection(collection_name=COLLECTION_NAME)
@@ -210,26 +211,26 @@ def get_collection_size() -> int:
 
 def add_documents(documents: list[dict]) -> int:
     """
-    批量添加文献到向量库。
-    每个 document 格式：
+    Add documents to the vector store in bulk.
+    Each document dict should have:
     {
-        "id":       str,   # 唯一 ID（主键）
-        "text":     str,   # 用于向量化的正文
+        "id":       str,   # unique primary key
+        "text":     str,   # body text to embed
         "title":    str,
         "authors":  str,
         "year":     str,
         "source":   str,
         "url":      str,
-        "qid":      str,   # MedQuAD 问题 ID（可选）
-        "focus":    str,   # 疾病主题（可选）
-        "qtype":    str,   # 问题类型（可选）
-        "document_id": str,# 原始文档 ID（可选）
+        "qid":      str,   # MedQuAD question ID (optional)
+        "focus":    str,   # disease topic (optional)
+        "qtype":    str,   # question type (optional)
+        "document_id": str,# original document ID (optional)
     }
     """
     client = _get_client()
     model = _get_dense_model()
 
-    # 去重：检查已存在的 ID
+    # skip docs we already have
     existing_ids: set[str] = set()
     try:
         for d in documents:
@@ -247,11 +248,11 @@ def add_documents(documents: list[dict]) -> int:
     if not new_docs:
         return 0
 
-    # 如果 BM25 词表尚未建立，先 fit
+    # fit BM25 vocab on first insert if we don't have one yet
     _load_bm25_vocab()
     if not _bm25_vocab:
         all_texts: list[str] = []
-        # 从已有数据获取文本（用于 fit BM25）
+        # pull existing texts so the IDF reflects the full corpus, not just this batch
         try:
             scroll_result = client.scroll(
                 collection_name=COLLECTION_NAME,
@@ -264,11 +265,11 @@ def add_documents(documents: list[dict]) -> int:
         all_texts.extend([d["text"] for d in new_docs])
         fit_bm25(all_texts)
 
-    # 编码 dense 向量
+    # encode dense vectors
     texts = [d["text"] for d in new_docs]
     dense_vectors = model.encode(texts, normalize_embeddings=True).tolist()
 
-    # 构建 points
+    # build Qdrant points
     points = []
     for i, d in enumerate(new_docs):
         sp_indices, sp_values = _text_to_sparse(d["text"])
@@ -298,7 +299,7 @@ def add_documents(documents: list[dict]) -> int:
             )
         )
 
-    # 分批 upsert（Qdrant 建议每批不超过 100）
+    # upsert in batches — Qdrant recommends staying under 100 per call
     batch_size = 100
     for start in range(0, len(points), batch_size):
         client.upsert(
@@ -310,15 +311,15 @@ def add_documents(documents: list[dict]) -> int:
 
 def search(query: str, n_results: int = 5) -> list[dict]:
     """
-    混合检索：Dense + BM25 Sparse，RRF 融合。
-    返回格式：
+    Hybrid search: BioLORD dense + BM25 sparse, fused with RRF, then reranked by MedCPT.
+    Each result looks like:
     [
         {
             "title": ..., "authors": ..., "year": ...,
             "source": ..., "url": ...,
             "qid": ..., "focus": ..., "qtype": ..., "document_id": ...,
-            "excerpt": ...,   # 摘要前300字
-            "score": float,   # 融合分数 (0~1, 越高越相关)
+            "excerpt": ...,   # first 300 chars of the document
+            "score": float,   # reranker score (higher = more relevant)
         },
         ...
     ]
@@ -404,8 +405,9 @@ def search(query: str, n_results: int = 5) -> list[dict]:
 
 def multi_search(queries: list[str], n_results: int = 5) -> list[dict]:
     """
-    多查询融合检索：对多个 query 分别用 Qdrant hybrid search，
-    去重后按分数排序返回，提高召回率。
+    Run hybrid search for each query independently, deduplicate by document identity,
+    and return the top hits by score. Helps recall when the same condition has
+    multiple ways of being described.
     """
     seen: dict[str, dict] = {}  # qid/excerpt → result (keep highest score)
 
@@ -421,7 +423,7 @@ def multi_search(queries: list[str], n_results: int = 5) -> list[dict]:
 
 
 def format_references_for_prompt(refs: list[dict]) -> str:
-    """将检索到的文献格式化为 prompt 中使用的字符串"""
+    """Serialise retrieved references into a citation block for the agent prompt."""
     if not refs:
         return "No relevant medical literature found in local database."
 
