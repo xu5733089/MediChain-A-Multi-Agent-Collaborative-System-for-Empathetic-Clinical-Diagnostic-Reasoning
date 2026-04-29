@@ -92,3 +92,5 @@ medichain-frontend/coverage/
 *.log
 *.tmp
 *.temp
+# Abandoned migration experiments
+medichain-backend/docker-compose.milvus.yml

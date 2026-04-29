@@ -88,7 +88,10 @@ medichain/
 │   ├── ingest.py            # PubMed ingestion (primary)
 │   ├── ingest_jsonl.py      # JSONL bulk import (secondary)
 │   ├── export.py            # PDF report generation
-│   ├── eval.py              # MedQA evaluation module
+│   ├── eval/                # MedQA evaluation package
+│   │   ├── evaluator.py     #   single-LLM vs multi-agent runner + Mistral judge
+│   │   ├── judge.py         #   LLM-as-a-Judge rubrics and JudgeResult dataclass
+│   │   └── questions/       #   15 clinical benchmark cases (JSON)
 │   ├── Dockerfile
 │   ├── requirements.txt
 │   ├── .env                 # ANTHROPIC_API_KEY (provided to assessors)
@@ -287,7 +290,7 @@ python -m pytest --cov=. --cov-report=term-missing -q
 | `auth.py` | 96% | JWT creation/validation, bcrypt, role enforcement |
 | `export.py` | 92% | PDF page structure, JSON field completeness |
 | `db.py` | 90% | Schema migrations, CRUD, cascade deletes |
-| `eval.py` | 95% | Scoring logic, multi-agent vs baseline comparison |
+| `eval/evaluator.py` | 95% | Scoring logic, multi-agent vs baseline comparison, Mistral judge |
 
 #### Test file index
 
