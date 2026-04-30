@@ -1,19 +1,76 @@
 """
-eval/evaluator.py — PROJ-14 MedQA 评估模块
-对比 Multi-Agent vs Single-LLM 在 USMLE 风格题目上的表现
-Mistral 作为独立 judge 评估 Claude 多智能体诊断是否正确
+eval/evaluator.py — PROJ-14 MedQA evaluation module
+Compares Multi-Agent vs Single-LLM on USMLE-style questions.
+Mistral as independent judge evaluating Claude multi-agent diagnosis.
+
+Backend priority:
+  1. ANTHROPIC_API_KEY  → Anthropic SDK (claude-sonnet-4-20250514)
+  2. OPENROUTER_API_KEY → OpenRouter httpx (anthropic/claude-3.5-sonnet)
 """
 import os
 import httpx
-import anthropic
 
-client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-MODEL  = "claude-sonnet-4-20250514"
+# ── API configuration ──────────────────────────────────────────────────────────
+_ANT_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+_OR_KEY  = (
+    os.environ.get("OPENROUTER_API_KEY")
+    or os.environ.get("MISTRAL_API_KEY", "")
+)
+_OR_BASE = "https://openrouter.ai/api/v1/chat/completions"
 
-# OpenRouter key — supports Mistral, Llama, Gemini, etc. via OpenAI-compatible API
-_OR_KEY   = os.environ.get("MISTRAL_API_KEY", "")   # reuse same env var
-_OR_BASE  = "https://openrouter.ai/api/v1/chat/completions"
-_OR_MODEL = "mistralai/mistral-large"                # OpenRouter model ID
+_ANT_MODEL    = "claude-sonnet-4-20250514"
+_OR_CLAUDE    = "anthropic/claude-sonnet-4.5"     # OpenRouter model slug
+_OR_MISTRAL   = "mistralai/mistral-large"        # OpenRouter model slug for judge
+
+# Lazy-init Anthropic client only when the key is present
+_ant_client = None
+if _ANT_KEY:
+    import anthropic as _anthropic
+    _ant_client = _anthropic.Anthropic(api_key=_ANT_KEY)
+
+
+# ── low-level LLM call (Anthropic SDK or OpenRouter) ──────────────────────────
+
+def _llm_call(system: str, user: str, max_tokens: int = 300) -> str:
+    """Call Claude via Anthropic SDK (preferred) or OpenRouter (fallback)."""
+    if _ant_client:
+        resp = _ant_client.messages.create(
+            model=_ANT_MODEL, max_tokens=max_tokens,
+            system=system,
+            messages=[{"role": "user", "content": user}],
+        )
+        return resp.content[0].text
+
+    # OpenRouter path (no Anthropic key available)
+    if not _OR_KEY:
+        raise RuntimeError(
+            "No LLM credentials found. "
+            "Set ANTHROPIC_API_KEY or OPENROUTER_API_KEY in .env"
+        )
+    resp = httpx.post(
+        _OR_BASE,
+        headers={
+            "Authorization": f"Bearer {_OR_KEY}",
+            "Content-Type":  "application/json",
+            "HTTP-Referer":  "https://medichain.app",
+            "X-Title":       "MediChain Eval",
+        },
+        json={
+            "model":    _OR_CLAUDE,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user",   "content": user},
+            ],
+            "max_tokens":  max_tokens,
+            "temperature": 0.1,
+        },
+        timeout=60.0,
+    )
+    resp.raise_for_status()
+    return resp.json()["choices"][0]["message"]["content"]
+
+
+# ── prompt templates ───────────────────────────────────────────────────────────
 
 MISTRAL_REVIEW_PROMPT = """You are an independent senior physician AI providing a second opinion on a clinical diagnosis made by another AI system.
 
@@ -69,57 +126,55 @@ REASONING: [2-3 sentence clinical justification]
 AGENT_NOTES: [what the multi-agent pipeline added vs single LLM]"""
 
 
-def run_single_llm(question: str, options: dict) -> dict:
-    """单 LLM 基线测试"""
-    opts_text = "\n".join(f"{k}. {v}" for k, v in options.items())
-    prompt = f"Question:\n{question}\n\nOptions:\n{opts_text}"
+# ── evaluation functions ───────────────────────────────────────────────────────
 
-    resp = client.messages.create(
-        model=MODEL, max_tokens=300,
+def run_single_llm(question: str, options: dict) -> dict:
+    """Single-LLM baseline."""
+    opts_text = "\n".join(f"{k}. {v}" for k, v in options.items())
+    text = _llm_call(
         system=SINGLE_LLM_PROMPT,
-        messages=[{"role": "user", "content": prompt}],
+        user=f"Question:\n{question}\n\nOptions:\n{opts_text}",
+        max_tokens=300,
     )
-    text = resp.content[0].text
     answer, reasoning = _parse_answer(text)
     return {"answer": answer, "reasoning": reasoning, "raw": text}
 
 
 def run_multi_agent(question: str, options: dict) -> dict:
-    """三智能体管道测试"""
+    """Three-agent pipeline: Interviewer → Diagnostician → Critic."""
     opts_text = "\n".join(f"{k}. {v}" for k, v in options.items())
 
-    # Step 1: Interviewer — 提取关键临床特征
-    int_resp = client.messages.create(
-        model=MODEL, max_tokens=300,
+    # Step 1: Interviewer — extract key clinical features
+    interviewer_output = _llm_call(
         system="""You are the Interviewer Agent in a medical reasoning pipeline.
 Extract and list the key clinical features from this USMLE question that are most relevant for diagnosis.
 Be concise — list 4-6 bullet points.""",
-        messages=[{"role": "user", "content": f"Question:\n{question}\n\nOptions:\n{opts_text}"}],
+        user=f"Question:\n{question}\n\nOptions:\n{opts_text}",
+        max_tokens=300,
     )
-    interviewer_output = int_resp.content[0].text
 
-    # Step 2: Diagnostician — 分析鉴别诊断
-    diag_resp = client.messages.create(
-        model=MODEL, max_tokens=400,
+    # Step 2: Diagnostician — analyze differential diagnoses
+    diagnostician_output = _llm_call(
         system="""You are the Diagnostician Agent. Based on the clinical features provided,
 analyze the differential diagnoses and identify the most likely answer.
 Consider each option systematically.""",
-        messages=[{"role": "user", "content":
+        user=(
             f"Clinical features identified:\n{interviewer_output}\n\n"
-            f"Original question:\n{question}\n\nOptions:\n{opts_text}"}],
+            f"Original question:\n{question}\n\nOptions:\n{opts_text}"
+        ),
+        max_tokens=400,
     )
-    diagnostician_output = diag_resp.content[0].text
 
-    # Step 3: Critic — 最终审查和答案
-    critic_resp = client.messages.create(
-        model=MODEL, max_tokens=400,
+    # Step 3: Critic — final review and answer
+    critic_output = _llm_call(
         system=MULTI_AGENT_SYSTEM,
-        messages=[{"role": "user", "content":
+        user=(
             f"Interviewer Analysis:\n{interviewer_output}\n\n"
             f"Diagnostician Analysis:\n{diagnostician_output}\n\n"
-            f"Original question:\n{question}\n\nOptions:\n{opts_text}"}],
+            f"Original question:\n{question}\n\nOptions:\n{opts_text}"
+        ),
+        max_tokens=400,
     )
-    critic_output = critic_resp.content[0].text
     answer, reasoning = _parse_answer(critic_output)
 
     return {
@@ -127,20 +182,26 @@ Consider each option systematically.""",
         "reasoning": reasoning,
         "raw": critic_output,
         "pipeline": {
-            "interviewer": interviewer_output,
+            "interviewer":   interviewer_output,
             "diagnostician": diagnostician_output,
-            "critic": critic_output,
+            "critic":        critic_output,
         },
     }
 
 
-def run_mistral_diagnosis_review(symptoms_text: str, diagnosis_text: str, review_text: str = "") -> dict:
+def run_mistral_diagnosis_review(
+    symptoms_text: str, diagnosis_text: str, review_text: str = ""
+) -> dict:
     """
-    Mistral Large via OpenRouter — 对 Claude 多智能体产生的临床诊断给出独立第二意见。
-    返回结构化评估结果 dict。
+    Mistral Large via OpenRouter — independent second opinion on Claude's
+    multi-agent clinical diagnosis. Returns structured assessment dict.
     """
     if not _OR_KEY:
-        return {"verdict": "UNAVAILABLE", "confidence": "N/A", "missed_diagnoses": "", "safety_flags": "", "assessment": "OpenRouter API key not configured."}
+        return {
+            "verdict": "UNAVAILABLE", "confidence": "N/A",
+            "missed_diagnoses": "", "safety_flags": "",
+            "assessment": "OpenRouter API key not configured.",
+        }
 
     user_msg = (
         f"Patient symptoms / chief complaint:\n{symptoms_text}\n\n"
@@ -152,24 +213,28 @@ def run_mistral_diagnosis_review(symptoms_text: str, diagnosis_text: str, review
             _OR_BASE,
             headers={
                 "Authorization": f"Bearer {_OR_KEY}",
-                "Content-Type": "application/json",
-                "HTTP-Referer": "https://medichain.app",
-                "X-Title": "MediChain PeerReview",
+                "Content-Type":  "application/json",
+                "HTTP-Referer":  "https://medichain.app",
+                "X-Title":       "MediChain PeerReview",
             },
             json={
-                "model": _OR_MODEL,
+                "model":    _OR_MISTRAL,
                 "messages": [
                     {"role": "system", "content": MISTRAL_REVIEW_PROMPT},
                     {"role": "user",   "content": user_msg},
                 ],
-                "max_tokens": 400,
+                "max_tokens":  400,
                 "temperature": 0.15,
             },
             timeout=30.0,
         )
         resp.raise_for_status()
         text = resp.json()["choices"][0]["message"]["content"]
-        out = {"verdict": "PLAUSIBLE", "confidence": "MEDIUM", "missed_diagnoses": "None", "safety_flags": "None", "assessment": text}
+        out = {
+            "verdict": "PLAUSIBLE", "confidence": "MEDIUM",
+            "missed_diagnoses": "None", "safety_flags": "None",
+            "assessment": text,
+        }
         for line in text.split("\n"):
             line = line.strip()
             for key in ("VERDICT", "CONFIDENCE", "MISSED_DIAGNOSES", "SAFETY_FLAGS", "ASSESSMENT"):
@@ -178,16 +243,28 @@ def run_mistral_diagnosis_review(symptoms_text: str, diagnosis_text: str, review
                     break
         return out
     except Exception as e:
-        return {"verdict": "ERROR", "confidence": "N/A", "missed_diagnoses": "", "safety_flags": "", "assessment": str(e)}
+        return {
+            "verdict": "ERROR", "confidence": "N/A",
+            "missed_diagnoses": "", "safety_flags": "",
+            "assessment": str(e),
+        }
 
 
-def run_mistral_judge(question: str, options: dict, claude_answer: str, claude_reasoning: str, correct_answer: str) -> dict:
+def run_mistral_judge(
+    question: str, options: dict,
+    claude_answer: str, claude_reasoning: str,
+    correct_answer: str,
+) -> dict:
     """
-    Mistral Large via OpenRouter 作为独立评委，评估 Claude 多智能体的诊断答案。
-    返回 {"verdict": "CORRECT"|"INCORRECT", "confidence": str, "assessment": str, "correct": bool}
+    Mistral Large via OpenRouter as independent judge.
+    Returns {"verdict": "CORRECT"|"INCORRECT", "confidence", "assessment", "correct": bool}
     """
     if not _OR_KEY:
-        return {"verdict": "UNAVAILABLE", "confidence": "N/A", "assessment": "MISTRAL_API_KEY (OpenRouter) not configured.", "correct": None}
+        return {
+            "verdict": "UNAVAILABLE", "confidence": "N/A",
+            "assessment": "OPENROUTER_API_KEY / MISTRAL_API_KEY not configured.",
+            "correct": None,
+        }
 
     opts_text = "\n".join(f"{k}. {v}" for k, v in options.items())
     user_msg = (
@@ -202,17 +279,17 @@ def run_mistral_judge(question: str, options: dict, claude_answer: str, claude_r
             _OR_BASE,
             headers={
                 "Authorization": f"Bearer {_OR_KEY}",
-                "Content-Type": "application/json",
-                "HTTP-Referer": "https://medichain.app",
-                "X-Title": "MediChain Eval",
+                "Content-Type":  "application/json",
+                "HTTP-Referer":  "https://medichain.app",
+                "X-Title":       "MediChain Eval",
             },
             json={
-                "model": _OR_MODEL,
+                "model":    _OR_MISTRAL,
                 "messages": [
                     {"role": "system", "content": MISTRAL_JUDGE_PROMPT},
                     {"role": "user",   "content": user_msg},
                 ],
-                "max_tokens": 300,
+                "max_tokens":  300,
                 "temperature": 0.1,
             },
             timeout=30.0,
@@ -229,14 +306,22 @@ def run_mistral_judge(question: str, options: dict, claude_answer: str, claude_r
                 confidence = line.split(":", 1)[1].strip().upper()
             elif line.upper().startswith("ASSESSMENT:"):
                 assessment = line.split(":", 1)[1].strip()
-        return {"verdict": verdict, "confidence": confidence, "assessment": assessment, "correct": verdict == "CORRECT"}
+        return {
+            "verdict": verdict, "confidence": confidence,
+            "assessment": assessment, "correct": verdict == "CORRECT",
+        }
     except Exception as e:
-        return {"verdict": "ERROR", "confidence": "N/A", "assessment": str(e), "correct": None}
+        return {
+            "verdict": "ERROR", "confidence": "N/A",
+            "assessment": str(e), "correct": None,
+        }
 
+
+# ── helpers ────────────────────────────────────────────────────────────────────
 
 def _parse_answer(text: str) -> tuple:
-    """从输出中解析答案字母和推理"""
-    answer = "?"
+    """Parse answer letter and reasoning from LLM output."""
+    answer   = "?"
     reasoning = text[:200]
 
     for line in text.split("\n"):
@@ -245,7 +330,6 @@ def _parse_answer(text: str) -> tuple:
             parts = line.split(":", 1)
             if len(parts) > 1:
                 ans = parts[1].strip().upper()
-                # 提取第一个字母
                 for c in ans:
                     if c in "ABCDE":
                         answer = c
@@ -258,7 +342,8 @@ def _parse_answer(text: str) -> tuple:
     return answer, reasoning
 
 
-# USMLE 示例题库（内置5道经典题）
+# ── built-in USMLE question bank (5 classic questions) ────────────────────────
+
 SAMPLE_QUESTIONS = [
     {
         "id": "q1",

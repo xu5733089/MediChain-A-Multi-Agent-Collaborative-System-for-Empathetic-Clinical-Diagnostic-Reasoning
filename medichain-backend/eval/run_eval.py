@@ -40,27 +40,35 @@ def _tick(label: str) -> None:
 
 
 def _done(ok: bool, answer: str, expected: str) -> None:
-    mark = "✓" if ok else "✗"
+    mark = "[OK]" if ok else "[X]"
     print(f"  {mark}  answered {answer}  (correct: {expected})")
 
 
 def _bar(n: int, total: int) -> str:
     filled = round(n / total * 20)
-    return "[" + "█" * filled + "░" * (20 - filled) + f"]  {n}/{total}"
+    return "[" + "#" * filled + "-" * (20 - filled) + f"]  {n}/{total}"
 
 
 # ── main ───────────────────────────────────────────────────────────────────────
 
 def main(use_mistral: bool = True, out_path: Path | None = None) -> dict:
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        sys.exit("ERROR: ANTHROPIC_API_KEY not set. Add it to .env or export it.")
+    has_ant = bool(os.environ.get("ANTHROPIC_API_KEY"))
+    has_or  = bool(os.environ.get("OPENROUTER_API_KEY") or os.environ.get("MISTRAL_API_KEY"))
+    if not has_ant and not has_or:
+        sys.exit(
+            "ERROR: No API key found.\n"
+            "  Set ANTHROPIC_API_KEY  (Anthropic Console)\n"
+            "  or OPENROUTER_API_KEY  (openrouter.ai) in .env"
+        )
+    backend = "Anthropic" if has_ant else "OpenRouter"
 
     print()
-    print("══════════════════════════════════════════════════════")
-    print("  MediChain  —  MedQA / USMLE Evaluation")
+    print("=" * 54)
+    print("  MediChain -- MedQA / USMLE Evaluation")
     print(f"  Questions : {len(SAMPLE_QUESTIONS)}")
+    print(f"  Backend   : {backend}")
     print(f"  Mistral   : {'enabled' if use_mistral else 'disabled'}")
-    print("══════════════════════════════════════════════════════")
+    print("=" * 54)
 
     records = []
     single_correct = 0
@@ -71,7 +79,7 @@ def main(use_mistral: bool = True, out_path: Path | None = None) -> dict:
         category = q["category"]
         expected = q["correct"]
 
-        print(f"\n── Q{i} / {len(SAMPLE_QUESTIONS)}  [{category}]  ({qid}) ──")
+        print(f"\n-- Q{i} / {len(SAMPLE_QUESTIONS)}  [{category}]  ({qid}) --")
         print(f"  {q['question'][:120]}{'…' if len(q['question']) > 120 else ''}")
 
         # ── single LLM ──────────────────────────────────────────────────
@@ -129,14 +137,14 @@ def main(use_mistral: bool = True, out_path: Path | None = None) -> dict:
     ma = round(multi_correct  / n * 100)
 
     print()
-    print("══════════════════════════════════════════════════════")
+    print("=" * 54)
     print("  RESULTS")
-    print("══════════════════════════════════════════════════════")
+    print("=" * 54)
     print(f"  Single-LLM   accuracy : {_bar(single_correct, n)}  ({sa}%)")
     print(f"  Multi-Agent  accuracy : {_bar(multi_correct,  n)}  ({ma}%)")
     delta = multi_correct - single_correct
     sign  = "+" if delta >= 0 else ""
-    print(f"  Δ (multi − single)    : {sign}{delta} questions  ({sign}{ma - sa}pp)")
+    print(f"  Delta (multi-single)  : {sign}{delta} questions  ({sign}{ma - sa}pp)")
     print()
 
     summary = {
