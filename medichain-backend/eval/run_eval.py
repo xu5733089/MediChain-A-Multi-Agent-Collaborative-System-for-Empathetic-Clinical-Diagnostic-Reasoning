@@ -31,6 +31,7 @@ from .evaluator import (
 )
 
 RESULTS_DIR = Path(__file__).parent / "results"
+CASES_PATH  = Path(__file__).parent / "questions" / "clinical_cases.json"
 
 
 # ── helpers ────────────────────────────────────────────────────────────────────
@@ -52,6 +53,14 @@ def _bar(n: int, total: int) -> str:
 # ── main ───────────────────────────────────────────────────────────────────────
 
 def main(use_mistral: bool = True, out_path: Path | None = None) -> dict:
+    # Load cases from CASES_PATH if it exists, otherwise fall back to SAMPLE_QUESTIONS
+    if CASES_PATH.exists():
+        with open(CASES_PATH) as f:
+            cases = json.load(f)
+        print(f"Loaded {len(cases)} evaluation cases.")
+        print("(scaffold only — full runner not yet wired to clinical_cases.json)")
+        return {"cases": len(cases)}
+
     has_ant = bool(os.environ.get("ANTHROPIC_API_KEY"))
     has_or  = bool(os.environ.get("OPENROUTER_API_KEY") or os.environ.get("MISTRAL_API_KEY"))
     if not has_ant and not has_or:

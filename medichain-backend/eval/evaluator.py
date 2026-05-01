@@ -28,13 +28,16 @@ if _ANT_KEY:
     import anthropic as _anthropic
     _ant_client = _anthropic.Anthropic(api_key=_ANT_KEY)
 
+# Public alias so tests can monkeypatch: monkeypatch.setattr(evaluator, "client", ...)
+client = _ant_client
+
 
 # ── low-level LLM call (Anthropic SDK or OpenRouter) ──────────────────────────
 
 def _llm_call(system: str, user: str, max_tokens: int = 300) -> str:
     """Call Claude via Anthropic SDK (preferred) or OpenRouter (fallback)."""
-    if _ant_client:
-        resp = _ant_client.messages.create(
+    if client:
+        resp = client.messages.create(
             model=_ANT_MODEL, max_tokens=max_tokens,
             system=system,
             messages=[{"role": "user", "content": user}],
@@ -262,7 +265,7 @@ def run_mistral_judge(
     if not _OR_KEY:
         return {
             "verdict": "UNAVAILABLE", "confidence": "N/A",
-            "assessment": "OPENROUTER_API_KEY / MISTRAL_API_KEY not configured.",
+            "assessment": "MISTRAL_API_KEY (OpenRouter) not configured.",
             "correct": None,
         }
 
