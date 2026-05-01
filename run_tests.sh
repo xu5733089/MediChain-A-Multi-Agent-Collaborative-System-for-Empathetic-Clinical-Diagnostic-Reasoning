@@ -30,7 +30,11 @@ if [ ! -d "venv" ]; then
   python -m venv venv
 fi
 
-source venv/Scripts/activate 2>/dev/null || source venv/bin/activate
+if [ -f "venv/Scripts/activate" ]; then
+  source venv/Scripts/activate
+else
+  source venv/bin/activate
+fi
 
 echo "  Installing dependencies..."
 pip install -r requirements.txt -q
